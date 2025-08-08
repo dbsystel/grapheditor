@@ -1,7 +1,7 @@
 # Intro
 
-This repo contains the GraphEditor. It is an editor for Labeled Property Graph Databases (as
-provided by neo4j or memgraph).
+This repo contains the GraphEditor. It is an editor for labeled property graph databases (as
+provided by e.g. neo4j or memgraph).
 
 ## Status and features
 
