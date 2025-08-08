@@ -1,5 +1,3 @@
-[[_TOC_]]
-
 # Intro
 
 This repo contains the GraphEditor. It is an editor for Labeled Property Graph Databases (as
