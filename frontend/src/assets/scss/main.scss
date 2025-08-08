@@ -1,0 +1,30 @@
+/*
+	************************************************************************************
+						GENERAL Styles for our project
+	************************************************************************************
+*/
+@forward '@db-ux/core-components/build/styles/rollup';
+@forward "../icons/index.css";
+
+:root {
+	--db-icon-font-family: 'grapheditor-icon-font';
+}
+
+#root {
+	min-height: 100dvh;
+}
+
+select,
+button {
+	cursor: pointer;
+}
+
+.db-accordion-item summary + div {
+	overflow: auto;
+}
+
+@media screen and (min-width: 64em) {
+	.db-section:not([data-force-mobile]) {
+		padding-inline: 0;
+	}
+}

@@ -1,0 +1,14 @@
+.item-properties-tabs {
+	&__add-new-property {
+		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+		display: flex;
+		flex-direction: column;
+		row-gap: var(--db-spacing-fixed-2xs);
+
+		> .db-button {
+			border: 1px solid var(--db-neutral-on-bg-basic-emphasis-60-default);
+			background: var(--db-adaptive-bg-basic-transparent-semi-default);
+			align-self: flex-end;
+		}
+	}
+}

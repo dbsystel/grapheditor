@@ -1,0 +1,15 @@
+.login-form {
+	display: flex;
+	min-height: 100dvh;
+	justify-content: center;
+	align-items: center;
+
+	&__form {
+		min-width: 400px;
+		margin: 0;
+	}
+
+	label {
+		max-inline-size: none;
+	}
+}

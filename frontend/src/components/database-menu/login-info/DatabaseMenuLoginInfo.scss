@@ -1,0 +1,11 @@
+.database-menu {
+	&__login-info {
+		display: flex;
+		align-items: center;
+		margin: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+
+		> p {
+			margin-left: var(--db-spacing-fixed-xs);
+		}
+	}
+}

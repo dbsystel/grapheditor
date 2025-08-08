@@ -1,0 +1,7 @@
+.loading {
+	&--semi-transparent {
+		opacity: 0.25 !important;
+		pointer-events: none !important;
+		user-select: none !important;
+	}
+}

@@ -1,0 +1,16 @@
+flask
+flask_cors
+flask_session
+flask-smorest
+neo4j
+markdown
+python-dotenv
+pyparsing
+pytest
+pylint
+git-pylint-commit-hook
+requests
+RestrictedPython
+waitress
+pre-commit
+testcontainers

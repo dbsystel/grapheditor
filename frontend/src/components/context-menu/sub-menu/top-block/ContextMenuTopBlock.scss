@@ -1,0 +1,12 @@
+.context-menu__sub-menu-top-block {
+	display: flex;
+	margin-top: 5px;
+
+	> *:first-child {
+		margin-right: auto;
+	}
+
+	button {
+		block-size: var(--db-sizing-sm);
+	}
+}

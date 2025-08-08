@@ -1,0 +1,17 @@
+.table {
+	display: table;
+	width: fit-content;
+	overflow-x: clip;
+
+	&__auto {
+		width: max-content;
+	}
+
+	&__full {
+		width: 100%;
+	}
+
+	&__grid {
+		display: grid;
+	}
+}

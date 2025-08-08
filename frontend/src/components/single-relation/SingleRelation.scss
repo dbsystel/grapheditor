@@ -1,0 +1,120 @@
+.single-relation {
+	margin-bottom: var(--db-spacing-fixed-lg);
+
+	&__title {
+		display: flex;
+		align-items: center;
+		column-gap: 5px;
+		padding: var(--db-spacing-fixed-3xs) var(--db-spacing-fixed-sm);
+		margin-bottom: var(--db-spacing-fixed-sm);
+	}
+
+	&__title-title {
+		width: max-content;
+		font-size: var(--db-type-headline-font-size-3xs);
+		margin: var(--db-spacing-fixed-3xs);
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
+		> .db-tooltip {
+			position: fixed !important;
+			inset-inline: auto !important;
+			inset-block: auto !important;
+			transform: translate(0, 100%) !important;
+		}
+
+		&:after {
+			content: '';
+			position: absolute;
+			background-color: var(--db-brand-origin-default);
+			border-radius: 10px;
+			width: 100%;
+			height: 3px;
+			bottom: -5px;
+			left: 0;
+		}
+	}
+
+	&__title-menu {
+		display: block;
+	}
+
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		margin-right: var(--db-spacing-fixed-xl);
+		margin-bottom: var(--db-spacing-fixed-md);
+		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+
+		p {
+			margin: var(--db-spacing-fixed-3xs);
+		}
+	}
+
+	&__header-namespace {
+		text-overflow: ellipsis;
+		min-width: 0;
+	}
+
+	&__header-headline {
+		color: var(--db-adaptive-on-bg-basic-emphasis-90-default);
+		font: var(--db-type-body-xs);
+	}
+
+	&__header-content {
+		font: var(--db-type-body-md);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__header-id {
+		display: flex;
+		align-items: center;
+		column-gap: var(--db-spacing-fixed-md);
+
+		> .db-button {
+			visibility: hidden;
+			opacity: 0;
+			transition:
+				visibility 0s,
+				opacity 0.5s ease;
+		}
+
+		&:hover {
+			> .db-button {
+				visibility: visible;
+				opacity: 1;
+				transition: opacity 0.5s ease;
+			}
+		}
+	}
+
+	&__add-property-icon {
+		margin-left: 10px;
+	}
+
+	.db-accordion {
+		.db-accordion-item[open] summary + div {
+			animation: none;
+		}
+	}
+
+	&__relation {
+		display: flex;
+		padding: 0 var(--db-spacing-fixed-md);
+	}
+
+	&__arrow-icon {
+		margin: 0 var(--db-spacing-fixed-xl);
+	}
+
+	.db-accordion {
+		.db-accordion-item summary + div {
+			overflow: visible;
+		}
+	}
+}

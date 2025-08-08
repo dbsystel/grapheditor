@@ -1,0 +1,14 @@
+.form {
+	$this: &;
+	margin: 30px 0;
+
+	&__input {
+		z-index: 0;
+
+		> label {
+			max-inline-size: none;
+			text-overflow: initial;
+			white-space: normal;
+		}
+	}
+}

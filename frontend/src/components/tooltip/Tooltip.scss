@@ -1,0 +1,16 @@
+.tooltip {
+	text-align: left;
+
+	// make db-tooltip visible all the time,
+	// the parent element will be shown/hidden
+	> .db-tooltip {
+		position: relative;
+		inset-block-end: auto;
+		visibility: visible;
+		display: block;
+		user-select: text;
+		--db-popover-center-x: 0 !important;
+		inset-inline-start: 0 !important;
+		border-radius: var(--db-border-radius-sm) !important;
+	}
+}

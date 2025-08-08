@@ -1,0 +1,15 @@
+.header-settings {
+	$this: &;
+
+	.db-popover-content {
+		width: 200px;
+	}
+
+	#{$this} {
+		&__autoconnect {
+			.db-checkbox {
+				padding-right: 0;
+			}
+		}
+	}
+}

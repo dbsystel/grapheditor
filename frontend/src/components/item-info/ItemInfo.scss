@@ -1,0 +1,9 @@
+.item-info {
+	position: relative;
+	display: inline-flex;
+
+	.db-button {
+		padding: 0 !important;
+		color: var(--db-informational-on-bg-basic-emphasis-70-pressed);
+	}
+}

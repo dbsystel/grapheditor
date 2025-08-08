@@ -1,0 +1,34 @@
+@use '../../NetworkGraph.variables';
+
+#{NetworkGraph.$network-graph-root-element-selector} {
+	&__search {
+		position: absolute;
+		z-index: #{NetworkGraph.$network-graph-elements-z-index};
+		top: 0;
+		right: 0;
+
+		&-list {
+			max-height: 200px;
+			overflow: auto;
+		}
+
+		&-list-option {
+			cursor: pointer;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+
+		.db-input {
+			input {
+				background-color: var(--db-neutral-bg-basic-level-3-default);
+
+				// override semi-transparent background-color on hover
+				&:hover {
+					background-color: var(--db-neutral-bg-basic-level-3-default);
+				}
+			}
+		}
+	}
+}

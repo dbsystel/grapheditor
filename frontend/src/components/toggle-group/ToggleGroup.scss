@@ -1,0 +1,35 @@
+@use '@db-ux/core-foundations/build/styles/variables';
+
+.toggle-group {
+	display: flex;
+	align-items: center;
+	column-gap: var(--db-spacing-fixed-md);
+	padding-inline: 0 !important;
+
+	&__select-type {
+		display: flex;
+		border-radius: var(--db-border-radius-2xs);
+		border: 1px solid var(--db-neutral-on-bg-basic-emphasis-70-default);
+	}
+
+	.db-button {
+		padding-inline: var(--db-spacing-fixed-3xs) !important;
+		font-weight: 400;
+		background-color: transparent;
+		border-radius: 0;
+
+		&.toggle-group--selected {
+			background-color: var(--db-neutral-on-bg-basic-emphasis-70-default);
+			color: #ffffff!important;
+
+			&:hover {
+				background-color: var(--db-neutral-on-bg-basic-emphasis-50-default);
+			}
+		}
+	}
+
+	p {
+		white-space: nowrap;
+		display: inline-block;
+	}
+}

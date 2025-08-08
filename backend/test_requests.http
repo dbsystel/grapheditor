@@ -1,0 +1,149 @@
+
+# @no-cookie-jar
+GET http://127.0.0.1:4999/dev/transaction_test
+Accept: application/json
+
+
+###
+
+
+GET http://127.0.0.1:4999/dev/reset
+
+###
+
+# @no-cookie-jar
+GET http://127.0.0.1:4999/v1/nodes/1
+
+
+###
+
+PUT http://127.0.0.1:4999/v1/nodes/1
+Content-Type: application/json
+
+{
+  "labels": [
+    "Human"
+  ],
+  "properties": {
+    "name": {
+      "edit": true,
+      "type": "string",
+      "value": "Alice"
+    },
+    "fullname": {
+      "edit": false,
+      "type": "string",
+      "value": "Alison"
+    }
+  }
+}
+
+###
+
+PATCH http://127.0.0.1:4999/v1/nodes/1
+Content-Type: application/json
+
+{
+  "labels": [
+    "Human",
+    "Person"
+  ]
+}
+
+###
+
+DELETE http://127.0.0.1:4999/v1/nodes/2
+
+###
+
+POST http://127.0.0.1:4999/v1/nodes
+Content-Type: application/json
+
+{
+  "labels": [
+    "Person"
+  ],
+  "properties": {
+    "name": {
+      "edit": true,
+      "type": "string",
+      "value": "Charlie"
+    }
+  }
+}
+
+###
+
+GET http://localhost:4999/v1/nodes?text=charlie
+
+###
+
+POST http://localhost:4999/v1/relations
+Content-Type: application/json
+
+{
+  "properties": {
+    "years": {
+      "edit": true,
+      "type": "integer",
+      "value": 2
+    }
+  },
+  "source_id": 0,
+  "target_id": 1,
+  "type": "likes"
+}
+
+
+###
+
+GET http://localhost:4999/v1/relations?text=year
+
+###
+
+GET http://localhost:4999/v1/relations/1
+
+###
+
+PUT http://localhost:4999/v1/relations/1
+Content-Type: application/json
+
+{
+  "properties": {
+    "years": {
+      "edit": true,
+      "type": "integer",
+      "value": 3
+    }
+  }
+}
+
+###
+
+PATCH http://localhost:4999/v1/relations/1
+Content-Type: application/json
+
+{
+  "properties": {
+    "years": {
+      "edit": true,
+      "type": "integer",
+      "value": 4
+    }
+  }
+}
+
+###
+
+DELETE http://localhost:4999/v1/relations/3
+
+
+###
+
+POST http://localhost:4999/v1/query/cypher
+Content-Type: application/json
+
+{
+  "querytext":
+    "match (n) return 13, n, 12"
+}

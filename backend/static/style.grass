@@ -1,0 +1,144 @@
+node {
+  color: #e0b6b6;
+  border-color: #818185;
+  border-width: 1px;
+  text-color-internal: #000000;
+  caption*: """
+    filtered_labels = sorted([l for l in [l.split("::")[-1] for l in o.labels] if l not in ['___tech_']])
+
+    labelstring = '<br>'.join(filtered_labels)
+    labelstring = labelstring and labelstring or f"# No labels # {o.id.split(':')[-1]}"
+
+    labelstring = f"{labelstring}<br/><br/><br/>{p.name or p.name__tech_ or p.name__dummy_}"
+    labelstring = labelstring + f"<br><br>({o.id.split(':')[-1]})"
+    labelstring = re.sub(r'(__.+?_)',r'<sub style="opacity: 0.6">\1</sub>',labelstring)
+    labelstring
+  """;
+}
+
+relationship {
+  color: #A5ABB6;
+  shaft-width: 3px;
+  padding: 3px;
+  text-color-external: #FFFFFF;
+  text-color-internal: #000000;
+  caption: "<type>";
+  caption*: "''+o.type.split('::')[-1]+''";
+}
+
+
+node.MetaLabel__tech_ {
+  color: #FFD965;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.MetaRelation__tech_ {
+  color: #31859B;
+  border-color: #000000;
+  text-color-internal: #ffffff;
+}
+
+node.Restriction__tech_ {
+  color: #B7DDE8;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.MetaID__tech_ {
+  color: #E5B9B5;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.MetaProperty__tech_ {
+  color: #D7E3BF;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+
+node.Namespace__tech_ {
+  color: #d8d8d8;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.Tail__fish_ {
+  color: #f9c499;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.Query__fish_ {
+
+  color:#7e649e;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.Datasource__fish_ {
+  color:#7e649e;
+  border-color: #000000;
+  text-color-internal: #ffffff;
+}
+
+node.Field__fish_ {
+  color:#ccc2d9;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.Literal__fish_ {
+  color:#eeeaf2;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.Code__fish_ {
+  color:#d8cfb4;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.PropGen__fish_ {
+  color:#d7e3bf;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.PropertyGen__fish_ {
+  color:#d7e3bf;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.IdGen__fish_ {
+  color:#e5b9b5;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.ObjectGen__fish_ {
+  color:#fee599;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.RelGen__fish_ {
+  color:#31859b;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.RelationGen__fish_ {
+  color:#31859b;
+  border-color: #000000;
+  text-color-internal: #ffffff;
+}
+
+node.Head__fish_ {
+  color:#f9c499;
+  border-color: #000000;
+  text-color-internal: #000000;
+}

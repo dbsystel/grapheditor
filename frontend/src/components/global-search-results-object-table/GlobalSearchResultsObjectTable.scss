@@ -1,0 +1,28 @@
+.global-search-results-object-table {
+	padding-inline: var(--db-spacing-fixed-md);
+	overflow: auto;
+
+	&__content {
+		position: absolute;
+	}
+
+	&__first-level-head {
+		display: block;
+		font-size: larger;
+		font-weight: bold;
+	}
+
+	&__head-group-1,
+	&__head-group-2 {
+		align-content: end;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		white-space: nowrap;
+	}
+
+	&__body-cell {
+		max-height: 5em;
+		overflow: auto;
+	}
+}

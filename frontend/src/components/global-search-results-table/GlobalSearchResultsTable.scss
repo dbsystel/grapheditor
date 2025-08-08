@@ -1,0 +1,17 @@
+.global-search-results-table {
+	position: absolute;
+	padding-inline: var(--db-spacing-fixed-md);
+
+	.table-head {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		white-space: nowrap;
+	}
+
+	.table-body {
+		.table-cell {
+			position: relative;
+		}
+	}
+}

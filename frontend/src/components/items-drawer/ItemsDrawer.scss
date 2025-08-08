@@ -1,0 +1,67 @@
+@use '@db-ux/core-foundations/build/styles/variables';
+
+.db-drawer {
+	.db-drawer-container {
+		block-size: auto;
+		min-inline-size: min-content !important;
+
+		.db-drawer-header {
+			&::before {
+				background-color: transparent;
+			}
+		}
+	}
+}
+
+.items-drawer {
+	--db-drawer-max-width: 578px;
+	position: absolute;
+	top: 128px;
+	bottom: 0;
+	padding: 0 var(--db-spacing-fixed-md);
+
+	&--collapsed {
+		max-inline-size: 50px !important;
+
+		.button-close-drawer {
+			display: none;
+		}
+
+		.db-drawer-content {
+			display: none;
+		}
+	}
+
+	&__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.db-drawer-header {
+		padding: var(--db-spacing-fixed-sm) 0;
+
+		.db-drawer-header-text {
+			width: 100%;
+		}
+	}
+
+	&__content {
+		padding: var(--db-spacing-fixed-sm) var(--db-spacing-fixed-sm) var(--db-spacing-fixed-sm) 0;
+		transition:
+			opacity 0.3s ease,
+			visibility 0.3s ease;
+		opacity: 1;
+		visibility: visible;
+
+		&.hidden {
+			opacity: 0;
+			display: none;
+		}
+	}
+
+	> .db-drawer-content {
+		overflow: auto;
+		height: 100%;
+	}
+}

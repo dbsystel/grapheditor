@@ -1,0 +1,60 @@
+@use '@db-ux/core-components/build/styles/internal/component';
+
+.item-info {
+	&__item-overview-tooltip--bold {
+		font-weight: bold;
+	}
+
+	&__item-overview-tooltip--normal {
+		font-weight: normal;
+	}
+
+	&__item-overview-tooltip-description {
+		font-size: 1.4em;
+	}
+
+	&__item-overview-tooltip-labels,
+	&__item-overview-tooltip-type {
+		margin: 15px 0;
+	}
+
+	&__item-overview-tooltip-label-names {
+		display: flex;
+		gap: 5px;
+	}
+
+	&__item-overview-tooltip--tooltip {
+		max-width: 50%;
+		max-height: 50%;
+		overflow: auto;
+		border-radius: var(--db-border-radius-sm);
+		// use db-tooltip border
+		@extend %component-border;
+		// use db-tooltip background-color and box-shadow
+		@extend %default-card;
+
+		&[data-has-tooltip='true'] {
+			&:hover {
+				.db-tooltip {
+					display: block;
+				}
+			}
+		}
+
+		> .db-tooltip {
+			border: none;
+			box-shadow: none;
+			max-inline-size: var(--db-container-lg);
+
+			// quickfix until https://github.com/db-ux-design-system/core-web/issues/4451 or
+			// https://github.com/db-ux-design-system/core-web/issues/4508 is fixed (or both)
+			position: static !important;
+			inset-inline: auto !important;
+			inset-block: auto !important;
+
+			&:before {
+				content: none;
+			}
+		}
+	}
+}

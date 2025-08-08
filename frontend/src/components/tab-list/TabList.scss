@@ -1,0 +1,9 @@
+.db-tabs:not([data-orientation='vertical']) .db-tab-list {
+	&::before {
+		block-size: 0%;
+	}
+
+	> ul {
+		gap: 0;
+	}
+}

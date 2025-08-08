@@ -1,0 +1,71 @@
+{
+	"settings": {
+		"react": {
+			"version": "detect"
+		}
+	},
+	"env": {
+		"browser": true,
+		"es2021": true
+	},
+	"extends": ["prettier", "plugin:react/recommended", "eslint:recommended", "plugin:@typescript-eslint/recommended"],
+	"overrides": [
+		{
+			"env": {
+				"node": true
+			},
+			"files": [".eslintrc.{js,cjs}"],
+			"parserOptions": {
+				"sourceType": "script"
+			}
+		}
+	],
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+		"ecmaFeatures": {
+			"jsx": true
+		},
+		"ecmaVersion": "latest",
+		"sourceType": "module"
+	},
+	"plugins": ["prettier", "react", "@typescript-eslint", "simple-import-sort"],
+	"rules": {
+		"simple-import-sort/imports": [
+			"error",
+			{
+				"groups": [["^\\u0000", "^@?\\w", "^[^.]", "^\\."]]
+			}
+		],
+		"simple-import-sort/exports": "error",
+		"max-params": ["warn", 6],
+		"prettier/prettier": ["error"],
+		"linebreak-style": ["error", "unix"],
+		"quotes": ["error", "single"],
+		"semi": ["error", "always"],
+		"no-multiple-empty-lines": [
+			"error",
+			{
+				"max": 3,
+				"maxBOF": 1,
+				"maxEOF": 0
+			}
+		],
+		"comma-dangle": ["error", "never"],
+		"jsx-quotes": ["error", "prefer-double"],
+		"react/function-component-definition": [
+			"error",
+			{
+				"namedComponents": "arrow-function"
+			}
+		],
+		"react/react-in-jsx-scope": "off",
+		"no-undef": "off",
+		"no-unused-vars": "off",
+		"prefer-destructuring": "off",
+		"object-curly-spacing": "off",
+		"arrow-parens": "off",
+		"capitalized-comments": "off",
+		"no-negated-condition": "off",
+		"no-mixed-spaces-and-tabs": "off"
+	}
+}

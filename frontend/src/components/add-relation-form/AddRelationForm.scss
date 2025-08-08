@@ -1,0 +1,25 @@
+.add-relation-form {
+	padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+	display: grid;
+	grid-template-columns: 40px auto;
+	row-gap: var(--db-spacing-fixed-2xs);
+	align-items: center;
+
+	&__icon-button-column {
+		justify-self: center;
+		margin-right: 10px;
+	}
+
+	&__change-direction-button {
+		.db-tooltip {
+			z-index: 10000000;
+		}
+	}
+
+	.add-relation-form__save-button {
+		grid-column: 2 / 3;
+		justify-self: end;
+		border: 1px solid var(--db-neutral-on-bg-basic-emphasis-60-default);
+		background: var(--db-adaptive-bg-basic-transparent-semi-default);
+	}
+}

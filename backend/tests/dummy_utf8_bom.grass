@@ -1,0 +1,7 @@
+node.Gerät
+{
+diameter: 70;
+color: #38761D;
+caption: "Bloß ein Gerät Modell {name}";
+}
+

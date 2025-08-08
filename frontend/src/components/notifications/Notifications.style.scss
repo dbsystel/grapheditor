@@ -1,0 +1,43 @@
+.notifications {
+	&[data-backdrop] {
+		z-index: 9997;
+	}
+
+	&__container {
+		position: fixed;
+		right: 15px;
+		bottom: 15px;
+		display: flex;
+		flex-direction: column;
+		max-height: 60dvh;
+		overflow-x: hidden;
+		overflow-y: auto;
+		gap: 5px;
+	}
+
+	&__notification {
+		display: grid;
+		align-items: flex-start;
+		animation: animateNotification ease-in-out 0.5s;
+
+		p {
+			word-wrap: break-word;
+			// "pre-wrap" to keep error stack formatting
+			white-space: pre-wrap;
+		}
+	}
+}
+
+@keyframes animateNotification {
+	0% {
+		opacity: 0.25;
+		scale: 0.75;
+		translate: 100% 0;
+	}
+
+	100% {
+		opacity: 1;
+		scale: 1;
+		translate: 0 0 ;
+	}
+}

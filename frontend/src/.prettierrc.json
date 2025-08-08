@@ -1,0 +1,9 @@
+{
+	"editor.formatOnSave": true,
+	"singleQuote": true,
+	"trailingComma": "none",
+	"printWidth": 100,
+	"[javascript, typescript, html, css]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	}
+}

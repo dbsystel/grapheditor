@@ -1,0 +1,43 @@
+.menu-button {
+	position: relative;
+
+	&__option {
+		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+	}
+
+	.db-popover-content {
+		z-index: 9999;
+
+		// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
+		position: absolute !important;
+		inset-inline: auto !important;
+		inset-block: auto !important;
+		inset-block-start: 100% !important;
+	}
+
+	button {
+		display: flex;
+		width: 100%;
+		justify-content: space-between;
+		font-weight: 400;
+
+		&[data-icon] {
+			&:before {
+				margin-right: 5px;
+			}
+		}
+	}
+
+	.db-card {
+		padding: var(--db-spacing-fixed-2xs);
+
+		> button {
+			justify-content: left;
+			font-weight: 400;
+		}
+
+		.db-popover {
+			width: 100%;
+		}
+	}
+}

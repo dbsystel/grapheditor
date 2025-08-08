@@ -1,0 +1,38 @@
+.header {
+	padding: var(--db-spacing-fixed-none) var(--db-spacing-fixed-md) var(--db-spacing-fixed-sm)
+		var(--db-spacing-fixed-md);
+
+	&__select {
+		min-inline-size: 75px;
+		margin: 0 var(--db-spacing-fixed-sm);
+	}
+
+	&__control-line {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-inline: var(--db-spacing-fixed-md);
+		width: 100%;
+
+		> div {
+			display: flex;
+			align-items: center;
+		}
+	}
+
+	.db-divider {
+		height: 24px;
+	}
+
+	&__divider-control-line {
+		margin: 0 var(--db-spacing-fixed-lg) !important;
+	}
+
+	&__search-button {
+		font-weight: 400;
+	}
+
+	&__search-line {
+		padding-inline: var(--db-spacing-fixed-md);
+	}
+}

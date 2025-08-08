@@ -1,0 +1,8 @@
+@use '../../NetworkGraph.variables';
+
+#{NetworkGraph.$network-graph-root-element-selector} {
+	&__node-relation-mouseover {
+		position: absolute;
+		z-index: #{NetworkGraph.$network-graph-elements-z-index};
+	}
+}

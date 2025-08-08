@@ -1,0 +1,35 @@
+.context-menu-modal {
+	.modal__content {
+		background-color: transparent;
+		border: none;
+	}
+
+	&__content {
+		position: fixed;
+		padding: 5px;
+		background-color: var(--db-adaptive-bg-basic-level-1-default);
+		border: 1px solid var(--db-neutral-border);
+		border-radius: var(--db-border-radius-md);
+		box-shadow: 0 0 6px 0 rgba(0,0,0, 0.5);
+	}
+
+	&__list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	&__list-options {
+		display: flex;
+		flex-direction: column;
+		margin-left: 15px;
+	}
+
+	&__button {
+		margin: 2px 0;
+	}
+
+	&--export {
+		cursor: none!important;
+	}
+}

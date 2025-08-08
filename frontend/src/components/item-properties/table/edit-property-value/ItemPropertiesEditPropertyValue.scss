@@ -1,0 +1,9 @@
+.item-properties-table {
+	&__edit-property-value {
+		position: relative;
+
+		textarea {
+			overflow: hidden;
+		}
+	}
+}

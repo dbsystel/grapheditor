@@ -1,0 +1,16 @@
+@use "../../NetworkGraph.variables";
+
+#{NetworkGraph.$network-graph-root-element-selector} {
+	&__selection {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		visibility: hidden;
+	}
+
+	&--no-text-selection {
+		user-select: none;
+	}
+}

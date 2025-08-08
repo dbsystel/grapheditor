@@ -1,0 +1,14 @@
+
+[MAIN]
+
+disable=
+    fixme,
+    missing-class-docstring,
+    missing-module-docstring,
+    missing-function-docstring,
+    use-dict-literal,
+    unnecessary-pass
+
+good-names=f,d,i,j,k,l,x,y,v,r,tx,n,p,ns,s,e,sk,db,ppu
+
+max-line-length=100

@@ -1,0 +1,13 @@
+node.Person__dummy_
+{
+condition*: """
+p['name__dummy_'] == 'Bob'
+""";
+diameter: 70;
+font-size*: "int(int(rule['properties']['diameter']) / 2)";
+color: #38761D;
+caption*: """
+    'My name is' \
+    + ' Bob'
+""";
+}

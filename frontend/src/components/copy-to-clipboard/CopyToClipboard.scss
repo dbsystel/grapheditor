@@ -1,0 +1,9 @@
+.copy-to-clipboard {
+	color: rgba(0, 0, 0, 0.15);
+	margin: 0;
+	z-index: 2000;
+
+	&:hover {
+		color: rgba(0, 0, 0, 0.7);
+	}
+}

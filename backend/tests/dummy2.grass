@@ -1,0 +1,11 @@
+node.Person__dummy_
+{
+condition*: """
+p['name__dummy_'] == 'Bob'
+""";
+diameter: 80;
+color: #38FFFF;
+caption*: """
+    'My name is Robert'
+""";
+}

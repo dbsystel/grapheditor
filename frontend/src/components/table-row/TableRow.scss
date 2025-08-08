@@ -1,0 +1,11 @@
+.table-row {
+	display: table-row;
+
+	/* 
+		This is a temporary solution until we get designs from UX/UI. 
+	*/
+	&--style-1 {
+		background-color: blue;
+		border: none;
+	}
+}

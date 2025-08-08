@@ -1,0 +1,49 @@
+services:
+  apache:
+    build:
+      context: .
+      dockerfile: apache/Dockerfile.base
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    image: "grapheditor-apache-base"
+    network_mode: host
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.base
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    image: "grapheditor-frontend-base"
+    network_mode: host
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
+    restart: on-failure
+    network_mode: host
+    image: "grapheditor-backend-base"
+
+  neo4j-enterprise:
+    image: "${DOCKER_REGISTRY}neo4j:5.26.5-enterprise" # change this to use a different version
+    container_name: "neo4j-enterprise"
+    ports:
+      - "${NEO4J_BOLT_LISTEN_ADDRESS}:7687"
+      - "${NEO4J_HTTP_LISTEN_ADDRESS}:7474"
+      - "${NEO4J_HTTPS_LISTEN_ADDRESS}:6477"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes # For development purposes
+      - NEO4J_dbms_security_procedures_whitelist=gds.*, apoc.*
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*, apoc.*
+      - NEO4J_AUTH=${GUI_USER}/${GUI_PASSWORD}
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_trigger_enabled=true
+      - NEO4J_apoc_trigger_refresh=10000
+      - NEO4J_dbms_connector_http_listen__address=:7474
+      - NEO4J_dbms_connector_https_listen__address=:6477
+      - NEO4J_dbms_connector_bolt_listen__address=:7687
+    volumes:
+      - './neo4j/plugins:/var/lib/neo4j/plugins'

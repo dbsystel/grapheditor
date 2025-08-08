@@ -1,0 +1,76 @@
+@use 'NetworkGraph.variables';
+@use '@db-ux/core-foundations/build/styles/variables';
+
+#{NetworkGraph.$network-graph-root-element-selector} {
+	--sigma-controls-zindex: 1;
+
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	padding: variables.$db-spacing-fixed-md;
+
+	&--is-loading {
+		opacity: 0.4;
+		pointer-events: none;
+	}
+
+	&__container {
+		flex-grow: 1;
+		position: relative;
+		z-index: 1;
+		overflow: hidden;
+
+		&--hide {
+			visibility: hidden;
+		}
+	}
+
+	&__options {
+		position: absolute;
+		top: 100px;
+		left: 10px;
+		z-index: #{NetworkGraph.$network-graph-elements-z-index};
+		max-width: 260px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+
+		// disable semi-transparent background on form elements
+		.db-select select,
+		.db-input input {
+			background-color: var(--db-adaptive-bg-basic-level-1-default);
+
+			&:not(:disabled):not([aria-disabled='true']) {
+				&:hover {
+					background-color: var(--db-adaptive-bg-basic-level-1-default);
+				}
+			}
+		}
+	}
+
+	// sigma layers elements order
+	// https://www.sigmajs.org/docs/advanced/layers
+	.sigma-edges {
+		z-index: 0;
+	}
+	.sigma-edgeLabels {
+		z-index: 10;
+	}
+	.sigma-nodes {
+		z-index: 20;
+	}
+	.sigma-labels {
+		z-index: 30;
+		/*opacity: 0;*/
+	}
+	.sigma-hoverNodes {
+		z-index: 40;
+	}
+	.sigma-hovers {
+		z-index: 50;
+		opacity: 0;
+	}
+	.sigma-mouse {
+		z-index: 60;
+	}
+}

@@ -1,0 +1,27 @@
+.breadcrumbs {
+	display: flex;
+	column-gap: 5px;
+	flex-wrap: wrap;
+
+	&__delimiter {
+		color: var(--db-neutral-on-bg-basic-emphasis-80-default);
+	}
+
+	&__item {
+		cursor: pointer;
+		color: var(--db-neutral-on-bg-basic-emphasis-80-default);
+		font-weight: 400;
+		font: var(--db-type-body-sm);
+
+		&--active {
+			font-weight: 700;
+			color: var(--db-neutral-on-bg-basic-emphasis-100-default);
+		}
+
+		&:hover {
+			~ * {
+				opacity: 0.33;
+			}
+		}
+	}
+}

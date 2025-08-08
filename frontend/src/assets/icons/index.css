@@ -1,0 +1,11 @@
+@font-face {
+	font-family: "grapheditor-icon-font";
+	src: url("grapheditor-icon-font.woff2?t=1753946920078") format("woff2");
+}
+
+.grapheditor-icon-font {
+	font-family: 'grapheditor-icon-font' !important;
+	font-style:normal;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}

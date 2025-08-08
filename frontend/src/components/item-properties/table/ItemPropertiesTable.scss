@@ -1,0 +1,92 @@
+.item-properties-table {
+	$this: &;
+
+	border-top: var(--db-border-width-2xs) solid var(--db-adaptive-on-bg-basic-emphasis-60-default);
+	table-layout: fixed;
+
+	&__cell {
+		padding: var(--db-spacing-fixed-sm, 8px);
+		word-wrap: break-word;
+
+		&:first-of-type {
+			vertical-align: top;
+		}
+
+		.item-info {
+			.db-button {
+				white-space: normal;
+				word-break: break-all;
+				text-align: left;
+			}
+		}
+	}
+
+	&__textarea {
+		vertical-align: top;
+		padding: 0;
+
+		.db-textarea {
+			label {
+				display: none;
+			}
+		}
+
+		textarea {
+			border: none;
+			background-color: var(--db-neutral-bg-basic-level-1-default);
+			border-radius: 0;
+			resize: none;
+			padding: var(--db-spacing-fixed-sm);
+		}
+	}
+
+	.db-popover-content {
+		#{$this}__card {
+			max-height: 145px;
+			overflow: auto;
+		}
+	}
+
+	&__menu {
+		padding: var(--db-spacing-fixed-3xs) 2px 0 0;
+		width: 34px;
+
+		.db-popover-content {
+			z-index: 60;
+		}
+	}
+
+	&__menu-button {
+		display: flex;
+		justify-content: end;
+	}
+
+	&__change-data-type-button {
+		.db-popover-content {
+			z-index: 60;
+		}
+	}
+
+	&__hoverable-row {
+		transition: background-color 0.2s ease-in-out;
+		vertical-align: top;
+
+		&:hover {
+			background-color: var(--db-neutral-bg-basic-level-1-hovered);
+		}
+
+		&:last-child {
+			> #{$this}__cell {
+				border-bottom: none;
+			}
+		}
+
+		#{$this}__textarea {
+			textarea {
+				&:hover {
+					background-color: var(--db-neutral-bg-basic-level-1-default);
+				}
+			}
+		}
+	}
+}

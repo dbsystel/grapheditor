@@ -1,0 +1,10 @@
+.database-menu {
+	.db-custom-select {
+		width: 200px;
+		margin: 0 var(--db-spacing-fixed-xs);
+
+		.db-custom-select-dropdown {
+			z-index: 9999 !important;
+		}
+	}
+}
