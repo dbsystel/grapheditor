@@ -124,7 +124,7 @@ services:
     user: "1000:1000"
 ```
 
-## Exe
+## .exe
 
 An executable can be build using pyinstaller.
 
