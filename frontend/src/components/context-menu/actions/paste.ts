@@ -5,8 +5,8 @@ import { useClipboardStore } from 'src/stores/clipboard';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { patchNode } from 'src/utils/fetch/patchNode';
-import { patchRelation } from 'src/utils/fetch/patchRelation';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { isNode } from 'src/utils/helpers/nodes';
 
 export const pasteAction = (pasteToId: NodeId | RelationId, actionExecutedInGraph?: boolean) => {
@@ -34,11 +34,11 @@ export const pasteAction = (pasteToId: NodeId | RelationId, actionExecutedInGrap
 		};
 
 		const patchApi = isNode(pasteTo)
-			? patchNode.bind(null, {
+			? nodesApi.patchNode.bind(null, {
 					nodeId: pasteTo.id,
 					properties: pasteTo.properties
 				})
-			: patchRelation.bind(null, {
+			: relationsApi.patchRelation.bind(null, {
 					relationId: pasteTo.id,
 					properties: pasteTo.properties
 				});

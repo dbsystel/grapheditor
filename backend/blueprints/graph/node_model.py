@@ -61,7 +61,12 @@ class NodeSchema(NodePostSchema):
     )
 
 
-class NodePatchSchema(NodeSchema):
+class NodePatchSchema(NodePostSchema):
+    id = fields.Str(
+        metadata={
+            "description": "Present on server responses, ignored on client updates"
+        }
+    )
     labels = fields.List(fields.Str())
     properties = fields.Dict(
         keys=fields.Str(), values=fields.Nested(PropertySchema())

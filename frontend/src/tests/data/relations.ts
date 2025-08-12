@@ -23,7 +23,7 @@ export const generateTestRelation = (
 		properties: propertyIds.reduce<Record<string, ItemProperty>>(
 			(previousValue, currentValue) => {
 				previousValue[
-					idFormatter.formatObjectId(
+					idFormatter.formatSemanticId(
 						GraphEditorTypeSimplified.META_PROPERTY,
 						currentValue,
 						'unknown'

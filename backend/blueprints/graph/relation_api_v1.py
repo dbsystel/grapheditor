@@ -98,15 +98,19 @@ class RelationsBulkPatch(MethodView):
     @blp.arguments(
         relation_model.RelationBulkPatchSchema, as_kwargs=True, location="json"
     )
+    @blp.response(200, relation_model.RelationBulkFetchResponseSchema)
     @require_tab_id()
     def patch(self, patches):
         """
         Update multiple relations at once.
 
         Each patch must contain the corresponding ID.
-        Return a dictionary containing the number of relations patched.
+        Return a map of the old IDs to the new relation objects. Note
+        that these may have a different ID, since changing a type forces
+        creation of a new relation.
         """
         current_app.logger.debug(f"patches: {patches}")
+        result = {}
         for patch in patches:
             if "id" not in patch:
                 abort_with_json(400, f"missing ID in patch: {id}")
@@ -116,10 +120,11 @@ class RelationsBulkPatch(MethodView):
                 abort_with_json(
                     400, f"Can't patch an unexisting relation: {rid}"
                 )
-            current_app.graph_db.update_relation_by_id(rid, patch)
-        num_patched = len(patches)
+            new_rel = current_app.graph_db.update_relation_by_id(rid, patch)
+            result[rid] = new_rel
+
         return dict(
-            num_patched=num_patched, message=f"Patched {num_patched} relations"
+            relations=result
         )
 
 
@@ -156,9 +161,9 @@ class Relation(MethodView):
     @require_tab_id()
     def put(self, json_relation, rid: str):
         """
-        Full update of a relation
+        Full update of a relation.
 
-        Returns the updated relation
+        Return the updated relation.
         """
         existing_relation = current_app.graph_db.get_relation_by_id(rid)
         if existing_relation is None:

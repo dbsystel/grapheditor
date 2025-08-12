@@ -21,9 +21,9 @@ import { RelationTypeChanger } from 'src/components/relation-type-changer/Relati
 import { MetaForMeta, Node } from 'src/models/node';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { metaForMetaApi } from 'src/utils/api/metaForMeta';
+import { relationsApi } from 'src/utils/api/relations';
 import { GraphEditorType } from 'src/utils/constants';
-import { postMetaForMeta } from 'src/utils/fetch/postMetaForMeta';
-import { deleteRelationAndUpdateApplication } from 'src/utils/helpers/relations';
 import { SingleRelationProps } from './SingleRelation.interfaces';
 
 /**
@@ -32,6 +32,7 @@ import { SingleRelationProps } from './SingleRelation.interfaces';
 export const SingleRelation = ({ relation, id, className, testId }: SingleRelationProps) => {
 	const { t } = useTranslation();
 	const [sourceAndTargetNodes, setSourceAndTargetNodes] = useState<Array<Node>>([]);
+	const [isLoadingSourceAndTargetNodes, setIsLoadingSourceAndTargetNodes] = useState(true);
 	const [isTypeMetaLoading, setIsTypeMetaLoading] = useState(false);
 	const [typeMeta, setTypeMeta] = useState<MetaForMeta>({});
 	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
@@ -40,6 +41,8 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 
 	useEffect(() => {
 		(async () => {
+			setIsLoadingSourceAndTargetNodes(true);
+
 			const nodes = await getNodesAsync([relation.source_id, relation.target_id]);
 
 			getMetaForMeta();
@@ -52,16 +55,19 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 					type: 'critical'
 				});
 			}
+
+			setIsLoadingSourceAndTargetNodes(false);
 		})();
 	}, [relation]);
 
 	const getMetaForMeta = () => {
 		setIsTypeMetaLoading(true);
 
-		postMetaForMeta({
-			ids: [relation.type],
-			resultType: GraphEditorType.META_PROPERTY
-		})
+		metaForMetaApi
+			.postMetaForMeta({
+				ids: [relation.type],
+				resultType: GraphEditorType.META_PROPERTY
+			})
 			.then((data) => {
 				setTypeMeta(data.data.nodes);
 			})
@@ -88,7 +94,8 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 					options={[
 						{
 							title: t('single-relation-delete-item-button'),
-							onClick: () => deleteRelationAndUpdateApplication(relation.id),
+							onClick: () =>
+								relationsApi.deleteRelationsAndUpdateApplication([relation.id]),
 							icon: 'bin'
 						}
 					]}
@@ -119,25 +126,27 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 
 			<DBAccordion behavior="multiple" initOpenIndex={[0, 1, 2, 3]}>
 				<DBAccordionItem headline={t('single-relation-relation')}>
-					<DBSection spacing="none" className="single-relation__relation">
-						{sourceAndTargetNodes.length === 2 ? (
-							<>
-								<ItemInfo item={sourceAndTargetNodes[0]} />
-								<DBIcon
-									icon="arrow_right"
-									className="single-relation__arrow-icon"
-								/>
-								<ItemInfo item={sourceAndTargetNodes[1]} />
-							</>
-						) : (
-							<DBNotification
-								semantic="critical"
-								headline={t('single-relation-failure-notification-headline')}
-							>
-								{t('single-relation-failure-notification-content')}
-							</DBNotification>
-						)}
-					</DBSection>
+					{isLoadingSourceAndTargetNodes === false && (
+						<DBSection spacing="none" className="single-relation__relation">
+							{sourceAndTargetNodes.length === 2 ? (
+								<>
+									<ItemInfo item={sourceAndTargetNodes[0]} />
+									<DBIcon
+										icon="arrow_right"
+										className="single-relation__arrow-icon"
+									/>
+									<ItemInfo item={sourceAndTargetNodes[1]} />
+								</>
+							) : (
+								<DBNotification
+									semantic="critical"
+									headline={t('single-relation-failure-notification-headline')}
+								>
+									{t('single-relation-failure-notification-content')}
+								</DBNotification>
+							)}
+						</DBSection>
+					)}
 				</DBAccordionItem>
 
 				<DBAccordionItem headline={t('single_relation_type')}>

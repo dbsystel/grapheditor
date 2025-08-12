@@ -1,6 +1,9 @@
 .notifications {
-	&[data-backdrop] {
-		z-index: 9997;
+	@at-root {
+		// put notifications above other dialogs
+		dialog:not([data-position=absolute])[data-backdrop]#{&} {
+			z-index: 9997;
+		}
 	}
 
 	&__container {

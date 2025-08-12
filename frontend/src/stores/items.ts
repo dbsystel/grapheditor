@@ -1,9 +1,8 @@
 import { StyleProperties } from 'src/models/general';
 import { Node, NodeId, NonPseudoNode } from 'src/models/node';
 import { Relation, RelationId } from 'src/models/relation';
-import { getNode } from 'src/utils/fetch/getNode';
-import { getRelation } from 'src/utils/fetch/getRelation';
-import { postNodesBulkFetch } from 'src/utils/fetch/postNodesBulkFetch';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { isNode, isNonPseudoNode } from 'src/utils/helpers/nodes';
 import { create } from 'zustand';
 
@@ -40,9 +39,10 @@ type ItemsStore = {
 	setIsItemBeingFetched: (itemId: NodeId | RelationId, isItemBeingFetched: boolean) => void;
 	// nodes storage API
 	nodes: NodeStorage;
+	getNode: (nodeId: NodeId, preventRerender?: boolean) => ReturnType<NodeStorage['get']>;
+	setNode: (node: Node, preventRerender?: boolean) => void;
 	setNodes: (nodes: Array<Node>, preventRerender?: boolean) => void;
 	clearNodes: (preventRerender?: boolean) => void;
-	getNode: (nodeId: NodeId, preventRerender?: boolean) => ReturnType<NodeStorage['get']>;
 	// get only locally available store node
 	getStoreNode: (nodeId: NodeId) => ReturnType<NodeStorage['get']>;
 	getStoreNodes: (nodeIds: Array<NodeId>) => Array<Node>;
@@ -50,7 +50,6 @@ type ItemsStore = {
 	getStoreNonPseudoNodes: () => Array<NonPseudoNode>;
 	getNodeAsync: (nodeId: NodeId, preventRerender?: boolean) => Promise<Node>;
 	getNodesAsync: (nodeIds: Array<NodeId>, preventRerender?: boolean) => Promise<Array<Node>>;
-	setNode: (node: Node, preventRerender?: boolean) => void;
 	removeNode: (nodeId: NodeId, preventRerender?: boolean) => void;
 	setNodePosition: (
 		data: { id: NodeId; x: number; y: number; z?: number },
@@ -58,21 +57,22 @@ type ItemsStore = {
 	) => void;
 	// relations storage API
 	relations: Map<RelationId, Relation>;
-	setRelations: (relations: Array<Relation>, preventRerender?: boolean) => void;
-	clearRelations: (preventRerender?: boolean) => void;
 	getRelation: (
 		relationId: RelationId,
 		preventRerender?: boolean
 	) => ReturnType<RelationsStorage['get']>;
+	setRelation: (relation: Relation, preventRerender?: boolean) => void;
+	setRelations: (relations: Array<Relation>, preventRerender?: boolean) => void;
+	clearRelations: (preventRerender?: boolean) => void;
 	// get only locally available store relation
 	getStoreRelation: (relationId: RelationId) => ReturnType<RelationsStorage['get']>;
 	getStoreRelations: (relationIds: Array<RelationId>) => Array<Relation>;
-	setRelation: (relation: Relation, preventRerender?: boolean) => void;
 	removeRelation: (relationId: RelationId, preventRerender?: boolean) => void;
 	// callbacks API (example, WIP)
 	callbacks: {
 		[T in ItemsStoreEventListenerType]: Array<(item: ItemsStoreEventCallbackItem<T>) => void>;
 	};
+	// TODO rename to "on" or "onCallback" or ... since instead of events we work with callbacks
 	addEventListener: <T extends ItemsStoreEventListenerType>(
 		eventType: T,
 		callback: (item: ItemsStoreEventCallbackItem<T>) => void
@@ -135,27 +135,27 @@ const getInitialState: () => InitialState = () => {
 		relations: new Map(),
 		itemsFetchInProgress: {},
 		callbacks: {
-			onNodeAdd: [],
-			onNodeUpdate: [],
-			onNodeRemove: [],
-			onRelationAdd: [],
-			onRelationUpdate: [],
-			onRelationRemove: []
+			onNodesAdd: [],
+			onNodesUpdate: [],
+			onNodesRemove: [],
+			onRelationsAdd: [],
+			onRelationsUpdate: [],
+			onRelationsRemove: []
 		}
 	};
 };
 
 type ItemsStoreEventListenerType =
-	| 'onNodeAdd'
-	| 'onNodeRemove'
-	| 'onNodeUpdate'
-	| 'onRelationAdd'
-	| 'onRelationRemove'
-	| 'onRelationUpdate';
-type ItemsStoreEventCallbackItem<T> = T extends 'onNodeAdd' | 'onNodeUpdate' | 'onNodeRemove'
-	? Node
-	: T extends 'onRelationAdd' | 'onRelationUpdate' | 'onRelationRemove'
-		? Relation
+	| 'onNodesAdd'
+	| 'onNodesRemove'
+	| 'onNodesUpdate'
+	| 'onRelationsAdd'
+	| 'onRelationsRemove'
+	| 'onRelationsUpdate';
+type ItemsStoreEventCallbackItem<T> = T extends 'onNodesAdd' | 'onNodesUpdate' | 'onNodesRemove'
+	? Array<Node>
+	: T extends 'onRelationsAdd' | 'onRelationsUpdate' | 'onRelationsRemove'
+		? Array<Relation>
 		: never;
 
 export const useItemsStore = create<ItemsStore>((set, get) => ({
@@ -221,15 +221,6 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 			});
 		}
 	},
-	setNodes: (nodes, preventRerender) => {
-		nodes.forEach((node) => {
-			get().nodes.set(node.id, node);
-		});
-
-		if (!preventRerender) {
-			set({ nodes: new Map(get().nodes) });
-		}
-	},
 	clearNodes: (preventRerender) => {
 		get().nodes = new Map();
 
@@ -275,7 +266,8 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 				get().setIsItemBeingFetched(nodeId, true);
 
 				return new Promise((resolve, reject) => {
-					getNode({ nodeId: nodeId })
+					nodesApi
+						.getNode({ nodeId: nodeId })
 						.then((response) => {
 							get().nodes.set(response.data.id, response.data);
 
@@ -295,13 +287,19 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 						});
 				});
 			} else {
-				return new Promise((resolve) => {
-					const onNodeAdd = (node: Node) => {
-						get().removeEventListener('onNodeAdd', onNodeAdd);
-						resolve(node);
+				return new Promise((resolve, reject) => {
+					const onNodeAdd = (nodes: Array<Node>) => {
+						get().removeEventListener('onNodesAdd', onNodeAdd);
+						const node = nodes.at(0);
+
+						if (node) {
+							resolve(node);
+						} else {
+							reject('Node not found');
+						}
 					};
 
-					get().addEventListener('onNodeAdd', onNodeAdd);
+					get().addEventListener('onNodesAdd', onNodeAdd);
 				});
 			}
 		}
@@ -323,7 +321,9 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 		});
 
 		if (nodeIdsNotAvailableLocally.length) {
-			const responseNodes = await postNodesBulkFetch({ nodeIds: nodeIdsNotAvailableLocally });
+			const responseNodes = await nodesApi.postNodesBulkFetch({
+				nodeIds: nodeIdsNotAvailableLocally
+			});
 
 			responseNodes.forEach((responseNode) => {
 				get().nodes.set(responseNode.id, responseNode);
@@ -349,7 +349,34 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 			});
 		}
 
-		get().executeCallbacks(nodeExists ? 'onNodeUpdate' : 'onNodeAdd', node);
+		get().executeCallbacks(nodeExists ? 'onNodesUpdate' : 'onNodesAdd', [node]);
+	},
+	setNodes: (nodes, preventRerender) => {
+		const newNodes: Array<Node> = [];
+		const updatedNodes: Array<Node> = [];
+
+		nodes.forEach((node) => {
+			const nodeExists = get().nodes.has(node.id);
+
+			if (nodeExists) {
+				updatedNodes.push(node);
+			} else {
+				newNodes.push(node);
+			}
+
+			get().nodes.set(node.id, node);
+		});
+
+		if (!preventRerender) {
+			set({ nodes: new Map(get().nodes) });
+		}
+
+		if (newNodes.length) {
+			get().executeCallbacks('onNodesAdd', newNodes);
+		}
+		if (updatedNodes.length) {
+			get().executeCallbacks('onNodesUpdate', updatedNodes);
+		}
 	},
 	setNodePosition: (data, preventRerender) => {
 		const node = get().getNode(data.id);
@@ -390,7 +417,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 		// https://graphology.github.io/mutation.html#dropnode
 		get().relations.forEach((relation) => {
 			if (relation.source_id === nodeId || relation.target_id === nodeId) {
-				get().relations.delete(relation.id);
+				get().removeRelation(relation.id, preventRerender);
 			}
 		});
 
@@ -401,15 +428,45 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 			});
 		}
 
-		get().executeCallbacks('onNodeRemove', node);
+		get().executeCallbacks('onNodesRemove', [node]);
+	},
+	setRelation: (relation, preventRerender) => {
+		const relationExists = get().relations.has(relation.id);
+		const updatedRelationMap = get().relations.set(relation.id, relation);
+
+		if (!preventRerender) {
+			set({
+				relations: new Map(updatedRelationMap)
+			});
+		}
+
+		get().executeCallbacks(relationExists ? 'onRelationsUpdate' : 'onRelationsAdd', [relation]);
 	},
 	setRelations: (relations, preventRerender) => {
+		const newRelations: Array<Relation> = [];
+		const updatedRelations: Array<Relation> = [];
+
 		relations.forEach((relation) => {
+			const relationExists = get().relations.has(relation.id);
+
+			if (relationExists) {
+				updatedRelations.push(relation);
+			} else {
+				newRelations.push(relation);
+			}
+
 			get().relations.set(relation.id, relation);
 		});
 
 		if (!preventRerender) {
-			set({ relations: get().relations });
+			set({ relations: new Map(get().relations) });
+		}
+
+		if (newRelations.length) {
+			get().executeCallbacks('onRelationsAdd', newRelations);
+		}
+		if (updatedRelations.length) {
+			get().executeCallbacks('onRelationsUpdate', updatedRelations);
 		}
 	},
 	clearRelations: (preventRerender) => {
@@ -428,9 +485,10 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 			get().setIsItemBeingFetched(relationId, true);
 
 			// fetch relation in parallel
-			getRelation({ relationId: relationId })
+			relationsApi
+				.getRelation({ relationId: relationId })
 				.then((response) => {
-					get().setRelation(response.data);
+					get().setRelations([response.data]);
 				})
 				.finally(() => {
 					get().setIsItemBeingFetched(relationId, false);
@@ -450,18 +508,6 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 				return relationIds.includes(relation.id);
 			});
 	},
-	setRelation: (relation, preventRerender) => {
-		const relationExists = get().relations.has(relation.id);
-		const updatedRelationMap = get().relations.set(relation.id, relation);
-
-		if (!preventRerender) {
-			set({
-				relations: new Map(updatedRelationMap)
-			});
-		}
-
-		get().executeCallbacks(relationExists ? 'onRelationUpdate' : 'onRelationAdd', relation);
-	},
 	removeRelation: (relationId, preventRerender) => {
 		const relation = get().relations.get(relationId);
 
@@ -477,7 +523,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
 			});
 		}
 
-		get().executeCallbacks('onRelationRemove', relation);
+		get().executeCallbacks('onRelationsRemove', [relation]);
 	},
 	refreshNodes: () => {
 		set({

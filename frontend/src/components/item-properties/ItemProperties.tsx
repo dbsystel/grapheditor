@@ -1,11 +1,7 @@
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-	changePropertyType,
-	deleteProperty,
-	processItemPropertiesEntries
-} from 'src/components/item-properties/helpers';
+import { processItemPropertiesEntries } from 'src/components/item-properties/helpers';
 import { ItemPropertiesTable } from 'src/components/item-properties/table/ItemPropertiesTable';
 import { ItemPropertiesTableEntries } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
 import { ItemPropertiesAddNewProperty } from 'src/components/item-properties/tabs/add-new-property/ItemPropertiesAddNewProperty';
@@ -13,11 +9,8 @@ import { TabItem } from 'src/components/tab-item/TabItem';
 import { TabList } from 'src/components/tab-list/TabList';
 import { TabPanel } from 'src/components/tab-panel/TabPanel';
 import { Tabs } from 'src/components/tabs/Tabs';
-import { Item, ItemPropertyKey, ItemPropertyType, ItemPropertyWithKey } from 'src/models/item';
-import { Node } from 'src/models/node';
-import { Relation } from 'src/models/relation';
+import { ItemPropertyKey, ItemPropertyWithKey } from 'src/models/item';
 import { useItemsStore } from 'src/stores/items';
-import { isNode } from 'src/utils/helpers/nodes';
 import { ItemPropertiesProps } from './ItemProperties.interfaces';
 
 export const ItemProperties = ({
@@ -96,25 +89,8 @@ export const ItemProperties = ({
 		processTableEntries();
 	}, [item, renderKey, metaData, filterMetaByNodeIds]);
 
-	const onPropertyCreate = (
-		updatedItem: Item,
-		property: ItemPropertyWithKey,
-		propertyNode: Node
-	) => {
+	const onPropertyCreate = (property: ItemPropertyWithKey) => {
 		topEntriesPropertyKeysCacheRef.current.push(property.key);
-		updateStores([updatedItem, propertyNode]);
-	};
-
-	const onPropertyEdit = (
-		updatedItem: Item,
-		property: ItemPropertyWithKey,
-		propertyNode: Node
-	) => {
-		updateStores([updatedItem, propertyNode]);
-	};
-
-	const onPropertyDelete = (updatedItem: Item) => {
-		updateStores([updatedItem]);
 	};
 
 	// sort as sort into complete/incomplete columns, not sort alphabetically
@@ -131,39 +107,6 @@ export const ItemProperties = ({
 	const onTabChange = (tabElement: HTMLInputElement, tabIndex: number) => {
 		tabsActiveIndexRef.current = tabIndex;
 		sortTopEntriesMap(true);
-	};
-
-	const updateStores = (updatedItems: Array<Item>) => {
-		if (updatedItems.length) {
-			let rerenderAtNodeNumber = 0;
-
-			updatedItems.forEach((updateItem) => {
-				if (isNode(updateItem)) {
-					rerenderAtNodeNumber += 1;
-				}
-			});
-
-			updatedItems.forEach((updatedItem, index) => {
-				if (isNode(updatedItem)) {
-					// use "index + 1 < rerenderAtNodeNumber" to update items store only once
-					useItemsStore.getState().setNode(updatedItem, index + 1 < rerenderAtNodeNumber);
-				} else {
-					useItemsStore.getState().setRelation(updatedItem);
-				}
-			});
-		}
-	};
-
-	const localOnPropertyDelete = (item: Node | Relation, property: ItemPropertyWithKey) => {
-		deleteProperty(item, property, onPropertyDelete);
-	};
-
-	const onPropertyTypeChange = (
-		item: Node | Relation,
-		property: ItemPropertyWithKey,
-		propertyType: ItemPropertyType
-	) => {
-		changePropertyType(item, property, propertyType, onPropertyEdit);
 	};
 
 	return (
@@ -185,9 +128,6 @@ export const ItemProperties = ({
 			<ItemPropertiesTable
 				topEntries={entriesState.top}
 				entries={entriesState.complete}
-				onPropertyEdit={onPropertyEdit}
-				onPropertyDelete={localOnPropertyDelete}
-				onPropertyTypeChange={onPropertyTypeChange}
 				onPropertyRowMouseEnter={onPropertyRowMouseEnter}
 				onPropertyRowMouseLeave={onPropertyRowMouseLeave}
 			/>

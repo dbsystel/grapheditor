@@ -12,8 +12,8 @@ import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { getNodes } from 'src/utils/fetch/getNodes';
-import { postRelation } from 'src/utils/fetch/postRelation';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { AddRelationFormProps } from './AddRelationForm.interfaces';
 
 export const AddRelationForm = ({
@@ -70,7 +70,7 @@ export const AddRelationForm = ({
 	}, [refNode]);
 
 	const fetchNodes = (type: 'from' | 'to', searchTerm: string) => {
-		getNodes({ searchTerm: searchTerm }).then((data) => {
+		nodesApi.getNodes({ searchTerm: searchTerm }).then((data) => {
 			if (type === 'from') {
 				setFromNodes(data.data);
 			} else if (type === 'to') {
@@ -101,40 +101,42 @@ export const AddRelationForm = ({
 		const type = getValues('type');
 
 		if (validationSuccessful && sourceNodeId && targetNodeId && type) {
-			postRelation({
-				properties: {},
-				sourceId: sourceNodeId,
-				targetId: targetNodeId,
-				type: type
-			}).then(async (data) => {
-				const relation = data.data;
-				const sourceNode = await getNodeAsync(relation.source_id, true);
-				const targetNode = await getNodeAsync(relation.target_id, true);
+			relationsApi
+				.postRelation({
+					properties: {},
+					sourceId: sourceNodeId,
+					targetId: targetNodeId,
+					type: type
+				})
+				.then(async (data) => {
+					const relation = data.data;
+					const sourceNode = await getNodeAsync(relation.source_id, true);
+					const targetNode = await getNodeAsync(relation.target_id, true);
 
-				if (onSave) {
-					onSave(sourceNode, targetNode, relation);
-				}
+					if (onSave) {
+						onSave(sourceNode, targetNode, relation);
+					}
 
-				addGraphNode(sourceNode);
-				addGraphNode(targetNode);
-				setRelation(relation, true);
-				addGraphRelation(relation);
-				indexParallelRelations();
-				adaptRelationTypeAndCurvature(relation.id);
+					addGraphNode(sourceNode);
+					addGraphNode(targetNode);
+					setRelation(relation, true);
+					addGraphRelation(relation);
+					indexParallelRelations();
+					adaptRelationTypeAndCurvature(relation.id);
 
-				if (isSourceNodeDisabled) {
-					resetField('targetNode');
-				} else {
-					resetField('sourceNode');
-				}
+					if (isSourceNodeDisabled) {
+						resetField('targetNode');
+					} else {
+						resetField('sourceNode');
+					}
 
-				addNotification({
-					title: t('notifications_success_relation_create'),
-					type: 'successful'
+					addNotification({
+						title: t('notifications_success_relation_create'),
+						type: 'successful'
+					});
+
+					useContextMenuStore.getState().close();
 				});
-
-				useContextMenuStore.getState().close();
-			});
 		}
 	};
 

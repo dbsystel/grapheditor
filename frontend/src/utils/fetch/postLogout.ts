@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
-import { backendApi } from '../api';
-import { endpoints } from '../endpoints';
+import { backendApi } from 'src/utils/api';
+import { endpoints } from 'src/utils/endpoints';
 
 export type PostLogoutResponse = string;
 

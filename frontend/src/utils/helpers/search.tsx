@@ -11,12 +11,16 @@ import { isRelation } from 'src/utils/helpers/relations';
 import { idFormatter } from 'src/utils/idFormatter';
 
 export const RenderContent = ({ content }: { content: unknown }): ReactNode => {
-	const getItem = useItemsStore((store) => store.getItem);
+	const getStoreItem = useItemsStore((store) => store.getStoreItem);
 	let contentToRender: ReactNode = null;
 
 	// if content type is primitive
 	if (isPrimitive(content)) {
-		if (typeof content === 'string') {
+		if (content === '' || content === null) {
+			const cellContent = content === '' ? '""' : 'null';
+
+			contentToRender = cellContent;
+		} else if (typeof content === 'string') {
 			contentToRender = idFormatter.parseIdToName(content);
 		} else {
 			contentToRender = content;
@@ -26,7 +30,7 @@ export const RenderContent = ({ content }: { content: unknown }): ReactNode => {
 	else if (isObject(content)) {
 		// if relation or node
 		if (isRelation(content) || isNode(content)) {
-			const item = getItem(content);
+			const item = getStoreItem(content.id);
 
 			if (item) {
 				contentToRender = <ItemInfo item={item} />;

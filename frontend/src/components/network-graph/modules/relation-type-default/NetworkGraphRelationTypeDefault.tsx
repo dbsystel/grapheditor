@@ -4,7 +4,7 @@ import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder
 import { Node } from 'src/models/node';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { postRelationDefaultTypeNode } from 'src/utils/fetch/postRelationDefaultTypeNode';
+import { relationsApi } from 'src/utils/api/relations';
 import { useGetRelationsDefaultTypeNode } from 'src/utils/hooks/useGetRelationsDefaultTypeNode';
 
 export const NetworkGraphRelationTypeDefault = () => {
@@ -27,7 +27,7 @@ export const NetworkGraphRelationTypeDefault = () => {
 	const initialDefaultTypeFetched = useRef(false);
 
 	const onDefaultRelationTypeChange = (item: Node) => {
-		postRelationDefaultTypeNode({ typeId: item.id }).then(() => {
+		relationsApi.postRelationDefaultTypeNode({ typeId: item.id }).then(() => {
 			setDefaultRelationType(item);
 		});
 	};

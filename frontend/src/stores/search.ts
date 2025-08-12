@@ -1,5 +1,6 @@
 import { isAxiosError } from 'axios';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
+import { searchApi } from 'src/utils/api/search';
 import {
 	GLOBAL_SEARCH_ALGORITHM_KEY,
 	GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE,
@@ -11,8 +12,6 @@ import {
 	GRAPH_LAYOUT_FORCE_ATLAS_2,
 	GRAPH_PRESENTATION_GRAPH
 } from 'src/utils/constants';
-import { getFullTextSearch } from 'src/utils/fetch/getFullTextSearch';
-import { postCypherQuerySearch } from 'src/utils/fetch/postCypherQuerySearch';
 import { parseError } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { create } from 'zustand';
@@ -97,13 +96,13 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
 		try {
 			// if cypher query search
 			if (type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
-				const response = await postCypherQuerySearch({ queryText: query || '' });
+				const response = await searchApi.postCypherQuerySearch({ queryText: query || '' });
 
 				responseResult = response.data.result;
 			}
 			// if regular, full-text search
 			else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
-				const responses = await getFullTextSearch({ searchTerm: query || '' });
+				const responses = await searchApi.getFullTextSearch({ searchTerm: query || '' });
 				// make full-text search results format consistent with the cypher query
 				// results format, so we can reuse existing components
 				const result: CypherQuerySearchResult = [];

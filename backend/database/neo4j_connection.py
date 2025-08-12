@@ -42,8 +42,8 @@ class Neo4jConnection:
         if self.ft_support:
             return True
         result = self.admin_tx.run(
-            """CALL apoc.trigger.list() YIELD name
-            RETURN 'addFulltextOnCreateNode' in collect(name)
+            """CALL apoc.custom.list() YIELD name
+            RETURN 'setNodeFt' in collect(name)
             """
         )
         val = result.single().value()

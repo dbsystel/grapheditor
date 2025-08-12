@@ -65,7 +65,7 @@ export const RelationTypeItemFinder = ({
 		// filtered options list
 		else {
 			const newOption = generateNode(
-				idFormatter.formatObjectId(GraphEditorTypeSimplified.META_RELATION, searchTerm)
+				idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_RELATION, searchTerm)
 			);
 
 			setFilteredRelationTypes([...filteredRelationTypes, newOption]);

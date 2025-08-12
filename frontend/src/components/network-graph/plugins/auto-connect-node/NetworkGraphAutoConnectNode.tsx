@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Coordinates, MouseCoords, SigmaNodeEventPayload } from 'sigma/types';
 import {
 	calculateNodeGraphSize,
@@ -12,10 +11,9 @@ import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
-import { useNotificationsStore } from 'src/stores/notifications';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { postNode } from 'src/utils/fetch/postNode';
-import { postRelation } from 'src/utils/fetch/postRelation';
 import { generateNode } from 'src/utils/helpers/nodes';
 import { generateRelation } from 'src/utils/helpers/relations';
 import { idFormatter } from 'src/utils/idFormatter';
@@ -37,7 +35,6 @@ const defaultData = {
  * and start moving your mouse.
  */
 export const NetworkGraphAutoConnectNode = () => {
-	const { t } = useTranslation();
 	const temporaryDataRef = useRef<{
 		sourceNodeId: string;
 		movingNodeId: string;
@@ -46,7 +43,6 @@ export const NetworkGraphAutoConnectNode = () => {
 		isModeActive: boolean;
 	}>({ ...defaultData });
 	const previousCoordinatesRef = useRef<Coordinates>({ x: 0, y: 0 });
-	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const {
 		setIsLoading,
 		defaultNodeLabels,
@@ -197,7 +193,7 @@ export const NetworkGraphAutoConnectNode = () => {
 
 	const createGraphRelation = (sourceId: string, targetId: string) => {
 		const relation = generateRelation(
-			idFormatter.formatObjectId(
+			idFormatter.formatSemanticId(
 				GraphEditorTypeSimplified.META_RELATION,
 				window.crypto.randomUUID()
 			),
@@ -271,7 +267,7 @@ export const NetworkGraphAutoConnectNode = () => {
 				? defaultNodeLabels.map((label) => label.id)
 				: [];
 			// store new node on server
-			const newNodeResponse = await postNode({
+			const newNodeResponse = await nodesApi.postNode({
 				labels: defaultNodeLabelIds,
 				properties: {}
 			});
@@ -290,7 +286,7 @@ export const NetworkGraphAutoConnectNode = () => {
 		}
 
 		// store new relation on server
-		const newRelationResponse = await postRelation({
+		const newRelationResponse = await relationsApi.postRelation({
 			properties: {},
 			sourceId: relation.source_id,
 			targetId: targetNodeId,

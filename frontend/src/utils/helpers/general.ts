@@ -120,10 +120,6 @@ export const toggleFullscreen = (setFullscreen: boolean) => {
 	}
 };
 
-export const getFirstRegExpGroup = (regExp: RegExp, string: string) => {
-	return Array.from(string.matchAll(regExp), (regExpArray) => regExpArray[1]).at(0);
-};
-
 export const setApplicationTheme = (theme: AppTheme) => {
 	// assign the color scheme to the body element in order to cover elements injected
 	// to the body element via React.portal (or similar).

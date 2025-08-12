@@ -1,5 +1,5 @@
 import { backendApi } from 'src/utils/api';
-import { endpoints } from '../endpoints';
+import { endpoints } from 'src/utils/endpoints';
 
 type GetLoginResponse = {
 	host: string;

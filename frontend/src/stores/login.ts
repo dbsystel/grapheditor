@@ -1,5 +1,5 @@
 import { setApiHeaderTabId } from 'src/utils/api';
-import { getLogin } from 'src/utils/fetch/getLogin';
+import { usersApi } from 'src/utils/api/users';
 import { getTabId, setTabId } from 'src/utils/tabId';
 import { create } from 'zustand';
 
@@ -30,7 +30,8 @@ export const useLoginStore = create<LoginStore>((set, get) => ({
 		setApiHeaderTabId(tabId);
 		set({ isConnecting: true });
 
-		getLogin()
+		usersApi
+			.getLogin()
 			.then((data) => {
 				get().connect(data.data.host, data.data.username);
 			})

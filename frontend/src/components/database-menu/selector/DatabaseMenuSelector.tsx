@@ -22,18 +22,13 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 	const [selectedDatabase, setSelectedDatabase] = useState('');
 	const previouslySelectedDatabaseRef = useRef('');
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const [isLoading, setIsLoading] = useState(false);
 	const { t } = useTranslation();
 	const rootElementClassName = clsx('database-menu__selector', className);
 	const selectedDatabaseValue = [selectedDatabase];
 
-	const { reFetch: reFetchDatabases } = useGetDatabases({
+	const { reFetch: reFetchDatabases, isLoading: isGetDatabasesLoading } = useGetDatabases({
 		onSuccess: (response) => {
 			setDatabases(response.data.databases);
-		},
-		onError: () => {},
-		onFinally: () => {
-			setIsLoading(false);
 		},
 		executeImmediately: true
 	});
@@ -45,7 +40,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		executeImmediately: true
 	});
 
-	const { reFetch } = usePostDatabaseCurrent({
+	const { reFetch, isLoading: isPostDatabaseCurrentLoading } = usePostDatabaseCurrent({
 		name: '',
 		onSuccess: () => {
 			// TODO check if other properties should be reset in search store,
@@ -87,7 +82,6 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 	// Typescript quickfix until https://github.com/db-ux-design-system/core-web/issues/4285 is fixed
 	const fetchDatabases = (event: unknown) => {
 		if (isObject(event) && 'newState' in event && event.newState === 'open') {
-			setIsLoading(true);
 			reFetchDatabases();
 		}
 	};
@@ -117,7 +111,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 			dropdownWidth="auto"
 			showSearch
 			placeholder={t('database_selector_placeholder')}
-			showLoading={isLoading}
+			showLoading={isPostDatabaseCurrentLoading || isGetDatabasesLoading}
 			loadingText={t('database_selector_loading')}
 			noResultsText={t('database_selector_nothing_found')}
 			showClearSelection={false}

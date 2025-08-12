@@ -241,7 +241,14 @@ class CypherDatabase(GraphDatabase):
         return mapper.neonode2grapheditor(result.single()["n"], semantic_id=nid)
 
     def update_node_by_id(self, nid, node_data, existing_node=None):
-        """Update node with partial data."""
+        """Update node with ID `nid` according to `node_data`.
+        `node_data` is a dict containing partial information
+        of a node.
+
+        If `existing_node` is given, update it. Otherwise fetch the
+        node corresponding to `nid`.
+
+        Return updated node."""
         if parse_unknown_id(nid):
             return None
 
@@ -256,7 +263,7 @@ class CypherDatabase(GraphDatabase):
 
         raw_db_id = parse_db_id(existing_node["id"])
         if not raw_db_id:
-            raw_db_id = existing_node["id"]
+            raw_db_id = parse_db_id(existing_node["dbId"])
 
         label_update = ""
         if "labels" in node_data:
@@ -279,9 +286,9 @@ class CypherDatabase(GraphDatabase):
         if properties:
             result = self._run(
                 f"""MATCH (n) WHERE {g.cypher_id}(n)={cast_id('$nid')}
-                                     SET n=$properties
-                                     {label_update}
-                                     RETURN n""",
+                    SET n=$properties
+                    {label_update}
+                    RETURN n""",
                 nid=raw_db_id,
                 properties=properties,
             )
@@ -289,15 +296,14 @@ class CypherDatabase(GraphDatabase):
         else:
             result = self._run(
                 f"""MATCH (n) WHERE {g.cypher_id}(n)={cast_id('$nid')}
-                                  {label_update}
-                                  RETURN n""",
+                    {label_update}
+                    RETURN n""",
                 nid=raw_db_id,
             )
 
         if not result:
             current_app.logger.debug("No matching relations.")
             return None
-
         return mapper.neonode2grapheditor(result.single()["n"], semantic_id=nid)
 
     def delete_nodes_by_ids(self, ids):
@@ -663,7 +669,14 @@ class CypherDatabase(GraphDatabase):
     def update_relation_by_id(
         self, rid, relation_data, existing_relation=None
     ):
-        """Replace a relation by its id from the GraphEditor relation_data."""
+        """Update relation with id `rid` according to `relation_data`.
+        `relation_data` is a dict containing partial information
+        of a relation.
+
+        If `existing_relation` is given, update it. Otherwise fetch the
+        node corresponding to nid.
+
+        Return the updated relation."""
         raw_db_id = parse_db_id(rid)
         if raw_db_id is None:
             return None

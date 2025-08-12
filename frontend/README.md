@@ -12,6 +12,7 @@ This is the GUI for the GraphEditor project. It supports users to work with diff
     -   [Built with](#built-with)
     -   [Requirements](#requirements)
     -   [Development](#development)
+      -   [HTTP Requests](#http-requests)
       -   [Global State Management](#global-state-management)
       -   [Theming](#theming)
       -   [Icon Fonts](#icon-fonts)
@@ -168,6 +169,41 @@ In order to start local frontend development, we need to do a couple of things.
 
 If you successfully followed this short tutorial, you should see our homepage in your browser.
 
+
+### HTTP Requests
+
+To interface with our backend system, we have established two primary methodologies. The first method utilizes API abstraction objects, <br>
+which reside in the `frontend/src/utils/api` directory. These objects encapsulate backend communication logic and are designed to <br>
+streamline integration within the frontend architecture.
+
+The alternative strategy involves deploying custom React hooks, accessible within `frontend/src/utils/hooks`. These hooks are tailored <br>
+specifically for React components, offering a seamless way to manage asynchronous data flows in a declarative manner.
+
+Scenarios for employing custom hooks:
+
+- __Loading State Management__: If the requirement is to monitor the loading state of an HTTP request distinctly, custom hooks provide <br>
+ built-in state management
+- __Automatic Execution on Component Mount__: To initiate HTTP requests automatically upon component initialization without manually <br>
+ injecting additional useEffect hooks into the component logic, custom hooks offer an elegant solution
+
+Scenarios for utilizing API objects:
+
+- __Complex Logic Execution__: When your implementation involves comprehensive logic with multiple sequential API calls interspersed <br>
+ with variable manipulations and function executions, API objects provide structural robustness
+- __Technical Constraints__: React hooks are subject to specific invocation constraints, being callable only within other hooks or <br>
+ functional components. API objects circumvent these restrictions, allowing greater flexibility in execution design
+- __Asynchronous Operations__: For scenarios requiring intricate asynchronous operations using async/await syntax, API objects offer <br>
+ a superior handling mechanism
+
+General Guidance: While API objects are generally the recommended approach due to their flexibility and support for complex operations, <br>
+custom API hooks remain a viable option for specific use cases, especially when component-centric concerns are predominant.
+
+Important Considerations: Direct utilization of API functions from frontend/src/utils/fetch is discouraged for several reasons:
+- __Code Clarity__: To maintain a clean and uncluttered codebase, avoiding direct fetch operations can minimize extraneous details
+- __Unified Communication__: By adhering to the established API objects and custom hooks, we leverage extension patterns that ensure consistent <br>
+ communication protocols with the backend
+- __Contextual Consistency__: Uniformly applied methodologies across different contexts enhance code maintainability and readability
+
 ### Global State Management
 
 For managing global state withing the application, we use [Zustand](https://github.com/pmndrs/zustand).
@@ -313,3 +349,4 @@ Team GraphEditor. Responsible frontend developers:
 4. Switch nodes and relations to classes
 5. The `useTranslation` renders twice on first component re-render, investigate
 6. Consider increasing Error.stackTraceLimit to infinity (default is 10).
+7. Change API functions keys to more meaningful names (e.g. instead of "postNode" use something like "createCode")

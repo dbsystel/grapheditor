@@ -60,8 +60,7 @@ export const ItemFinder = <T extends Node>({
 				setShowList(false);
 			}
 
-			// set selected option title as input value if user cleared the input
-			// and clicked outside
+			// set selected option title as input value if user cleared the input and clicked outside
 			if (!internalInputValue.trim() && internalSelectedOptions.length && !isMultiselect) {
 				setInternalInputValue(internalSelectedOptions[0].title);
 			}
@@ -77,8 +76,7 @@ export const ItemFinder = <T extends Node>({
 
 	// observe user input value change
 	useEffect(() => {
-		// if user provided non-undefined value, use that value, otherwise fallback
-		// to internal value
+		// if user provided non-undefined value, use that value, otherwise fallback to internal value
 		setInternalInputValue(inputValue === undefined ? internalInputValue : inputValue);
 	}, [inputValue]);
 

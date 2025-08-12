@@ -586,6 +586,7 @@ def test_bulk_fetch_nodes():
 def test_bulk_patch_nodes():
     alice_id = fetch_sample_node_id(client, text="alice")
     bob_id = fetch_sample_node_id(client, text="bob")
+    new_likes_desc = "Someone takes a liking in someone"
     response = client.patch(
         BASE_URL + "/api/v1/nodes/bulk_patch",
         headers=HEADERS,
@@ -617,10 +618,28 @@ def test_bulk_patch_nodes():
                         },
                     },
                 },
+                {
+                    "id": "MetaRelation::likes__dummy_",
+                    "properties": {
+                        "MetaProperty::description__tech_": {
+                            "edit": True,
+                            "type": "string",
+                            "value": new_likes_desc
+                        },
+                        "MetaProperty::name__tech_": {
+                            "edit": True,
+                            "type": "string",
+                            "value": "likes__dummy_"
+                        }
+                    }
+                }
             ]
         },
     )
     assert response.status_code == 200
+    updated_nodes = response.json['nodes']
+    assert alice_id in updated_nodes
+    assert bob_id in updated_nodes
 
     bob = fetch_node_by_id(client, bob_id)
     assert bob["properties"]["MetaProperty::lastname"]["value"] == "Sideshow"
@@ -628,6 +647,9 @@ def test_bulk_patch_nodes():
 
     alice = fetch_node_by_id(client, alice_id)
     assert "MetaLabel::Human" in alice["labels"]
+
+    likes = fetch_node_by_id(client, "MetaRelation::likes__dummy_")
+    assert likes['properties']['MetaProperty::description__tech_']['value'] == new_likes_desc
 
 
 def test_bulk_delete_nodes():
@@ -705,6 +727,9 @@ def test_bulk_patch_relations():
         },
     )
     assert response.status_code == 200
+    updated_relations = response.json['relations']
+    assert likes_rel in updated_relations
+    assert is_neighbour_rel in updated_relations
 
     response = client.get(
         BASE_URL + f"/api/v1/relations/{likes_rel}",
@@ -1796,7 +1821,7 @@ def test_metaproperties_for_metarelations():
         properties={},
     )
 
-    # dummy::likes has one MetaProperty, tech::source none
+    # likes__dummy_ has one MetaProperty, source__tech_ none
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
         headers=HEADERS,

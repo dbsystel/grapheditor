@@ -72,7 +72,7 @@ describe('Components - ItemProperties', () => {
 		expect(cells.length).toBe(propertiesKeys.length * 3);
 
 		for (let i = 0, l = propertiesKeys.length; i < l; i++) {
-			expect(cells[i * 3].textContent).toBe(idFormatter.parseId(propertiesKeys[i]));
+			expect(cells[i * 3].textContent).toBe(idFormatter.parseIdToName(propertiesKeys[i]));
 			expect(cells[i * 3 + 1].querySelector('textarea')?.textContent).toBe(
 				node.properties[propertiesKeys[i]].value
 			);

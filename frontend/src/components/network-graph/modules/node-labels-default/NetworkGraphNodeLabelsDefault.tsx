@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder';
 import { Node } from 'src/models/node';
 import { useGraphStore } from 'src/stores/graph';
-import { postNodesLabelsDefault } from 'src/utils/fetch/postNodesLabelsDefault';
+import { nodesApi } from 'src/utils/api/nodes';
 import { useGetNodesDefaultLabelsNodes } from 'src/utils/hooks/useGetNodesDefaultLabelsNodes';
 
 export const NetworkGraphNodeLabelsDefault = () => {
@@ -23,9 +23,11 @@ export const NetworkGraphNodeLabelsDefault = () => {
 		isItemSelected: boolean,
 		selectedItems: Array<Node>
 	) => {
-		postNodesLabelsDefault({ labelIds: selectedItems.map((label) => label.id) }).then(() => {
-			reFetch();
-		});
+		nodesApi
+			.postNodesLabelsDefault({ labelIds: selectedItems.map((label) => label.id) })
+			.then(() => {
+				reFetch();
+			});
 	};
 
 	const defaultNodeLabelsLabel = t('graph_default_node_labels_label');

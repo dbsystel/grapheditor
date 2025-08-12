@@ -3,7 +3,7 @@ import { SigmaEventPayload } from 'sigma/types';
 import { StateManager } from 'src/components/network-graph/state-manager';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
-import { postNode } from 'src/utils/fetch/postNode';
+import { nodesApi } from 'src/utils/api/nodes';
 
 export const NetworkGraphQuickNode = () => {
 	const {
@@ -27,10 +27,11 @@ export const NetworkGraphQuickNode = () => {
 
 		const nodeCoordinates = sigma.viewportToGraph(event.event);
 
-		postNode({
-			labels: defaultNodeLabels ? defaultNodeLabels.map((label) => label.id) : [],
-			properties: {}
-		})
+		nodesApi
+			.postNode({
+				labels: defaultNodeLabels ? defaultNodeLabels.map((label) => label.id) : [],
+				properties: {}
+			})
 			.then((response) => {
 				const updatedNode = {
 					...response.data,

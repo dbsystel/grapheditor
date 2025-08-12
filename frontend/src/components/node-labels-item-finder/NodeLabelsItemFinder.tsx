@@ -7,12 +7,11 @@ import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { Node } from 'src/models/node';
 import { useItemsStore } from 'src/stores/items';
-import { useNotificationsStore } from 'src/stores/notifications';
+import { nodesApi } from 'src/utils/api/nodes';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
 import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { generateNode, nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
 import { useGetNodesLabelsNodes } from 'src/utils/hooks/useGetNodesLabelsNodes';
-import { usePatchNode } from 'src/utils/hooks/usePatchNode';
 import { idFormatter } from 'src/utils/idFormatter';
 import {
 	NodeLabelsItemFinderProps,
@@ -30,7 +29,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	// all labels (used for filtering options for the ItemFinder component)
 	const allLabels = useRef<Array<Node>>([]);
 	const [editLabels, setEditLabels] = useState(false);
-	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const setNode = useItemsStore((store) => store.setNode);
 	const isDefaultMode = props.mode === 'default';
 	const isEditMode = props.mode === 'edit';
@@ -60,22 +58,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 
 			allLabels.current = data;
 			setLabelOptions(data);
-		}
-	});
-
-	const { reFetch } = usePatchNode({
-		executeImmediately: false,
-		nodeId: props.mode === 'edit' ? props.node.id : '',
-		onSuccess: (response) => {
-			setEditLabels(false);
-			setIsAddButtonClicked(false);
-
-			setNode(response.data);
-
-			addNotification({
-				title: t('notifications_success_node_labels_update'),
-				type: 'successful'
-			});
 		}
 	});
 
@@ -139,7 +121,9 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 
 		const newLabel = optionMatch
 			? optionMatch
-			: generateNode(idFormatter.formatObjectId(GraphEditorTypeSimplified.META_LABEL, searchTerm));
+			: generateNode(
+					idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_LABEL, searchTerm)
+				);
 
 		if (!optionMatch) {
 			allLabels.current.push(newLabel);
@@ -156,7 +140,17 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 
 	const onSave = () => {
 		if (isEditMode) {
-			reFetch({ nodeId: props.node.id, labels: (value || []).map((label) => label.id) });
+			const patchObject = {
+				id: props.node.id,
+				labels: (value || []).map((label) => label.id)
+			};
+
+			nodesApi.patchNodesAndUpdateApplication([patchObject], {
+				onSuccess: () => {
+					setEditLabels(false);
+					setIsAddButtonClicked(false);
+				}
+			});
 
 			setEditLabels(false);
 			setIsAddButtonClicked(false);

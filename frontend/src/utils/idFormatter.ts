@@ -1,5 +1,4 @@
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { getFirstRegExpGroup } from 'src/utils/helpers/general';
 
 interface IdFormatterParameters {
 	separator: string;
@@ -38,27 +37,23 @@ class IdFormatter {
 	 * E.g. parseIdToName("MetaProperty::name__dummy_") will return "name".
 	 */
 	parseIdToName(id: string) {
-		const nameMatch = getFirstRegExpGroup(/::(.*)/gim, id);
+		const splitBySeparator = id.split(this.separator);
+		const stringAfterSeparator = splitBySeparator.at(1);
 
-		return nameMatch || id;
-	}
+		// if ID string doesn't contain a separator
+		if (splitBySeparator.length === 1) {
+			return id;
+		}
 
-	/**
-	 * Method to take a string and return a name.
-	 * E.g. parseIdToName("MetaProperty__dummy_") will return "MetaProperty".
-	 */
-	parseStringToName(string: string) {
-		const nameMatch = getFirstRegExpGroup(/(.*(?=__))/gim, string);
-
-		return nameMatch || string;
+		return stringAfterSeparator?.split('__').at(0) || id;
 	}
 
 	/**
 	 * Method to take an Meta object type, a name and optionally a namespace, and glue everything
 	 * together following a specific format.
-	 * E.g. formatObjectId("MetaProperty", "name", "tech") will return "MetaProperty::name__tech_".
+	 * E.g. formatSemanticId("MetaProperty", "name", "tech") will return "MetaProperty::name__tech_".
 	 */
-	formatObjectId(
+	formatSemanticId(
 		type: (typeof GraphEditorTypeSimplified)[keyof typeof GraphEditorTypeSimplified],
 		name: string,
 		namespace?: string
@@ -69,8 +64,17 @@ class IdFormatter {
 	formatNamespace(namespace: string) {
 		return '__' + namespace + '_';
 	}
+
+	isValidSemanticId(id: string) {
+		const splitBySeparator = id.split(this.separator);
+
+		// no need to check for namespace, it is optional
+		return splitBySeparator.length === 2;
+	}
 }
 
 export const idFormatter = new IdFormatter({
 	separator: '::'
 });
+
+(window as any).idFormatter = idFormatter;

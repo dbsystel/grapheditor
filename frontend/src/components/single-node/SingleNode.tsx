@@ -21,15 +21,11 @@ import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/Nod
 import { Item, ItemPropertyWithKey } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
 import { useItemsStore } from 'src/stores/items';
+import { metaForMetaApi } from 'src/utils/api/metaForMeta';
+import { nodesApi } from 'src/utils/api/nodes';
 import { GraphEditorType } from 'src/utils/constants';
-import { postMetaForMeta } from 'src/utils/fetch/postMetaForMeta';
 import { getItemDBId, getItemMissingPropertiesForMeta } from 'src/utils/helpers/items';
-import {
-	areNodesSameById,
-	deleteNodesAndUpdateApplication,
-	isNodePerspective,
-	isPseudoNode
-} from 'src/utils/helpers/nodes';
+import { areNodesSameById, isNodePerspective, isPseudoNode } from 'src/utils/helpers/nodes';
 import { CopyToClipboard } from '../copy-to-clipboard/CopyToClipboard';
 import { SingleNodeProps } from './SingleNode.interfaces';
 /**
@@ -60,10 +56,11 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 	const getMetaForMeta = () => {
 		setIsLabelsMetaLoading(true);
 
-		postMetaForMeta({
-			ids: node.labels,
-			resultType: GraphEditorType.META_PROPERTY
-		})
+		metaForMetaApi
+			.postMetaForMeta({
+				ids: node.labels,
+				resultType: GraphEditorType.META_PROPERTY
+			})
 			.then((data) => {
 				const nodeMissingProperties = getItemMissingPropertiesForMeta(
 					node,
@@ -147,7 +144,7 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 					options={[
 						{
 							title: t('single-node-delete-item-button'),
-							onClick: () => deleteNodesAndUpdateApplication([node.id]),
+							onClick: () => nodesApi.deleteNodesAndUpdateApplication([node.id]),
 							icon: 'bin'
 						}
 					]}

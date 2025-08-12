@@ -319,3 +319,50 @@ export const getMouseViewportCoordinates = (event: SigmaEventPayload | SigmaNode
 		};
 	}
 };
+
+export const onNodesUpdate = (nodes: Array<Node>) => {
+	const sigma = useGraphStore.getState().sigma;
+
+	nodes.forEach((node) => {
+		if (sigma.getGraph().hasNode(node.id)) {
+			const nodeGraphData: Partial<ReturnType<typeof getNodeGraphData>> =
+				getNodeGraphData(node);
+
+			// node position is determined by the graph layout or due to user interaction (e.g. node drag)
+			delete nodeGraphData.x;
+			delete nodeGraphData.y;
+
+			sigma.getGraph().mergeNodeAttributes(node.id, {
+				...nodeGraphData,
+				data: node
+			});
+		}
+	});
+};
+
+export const onNodesRemove = (nodes: Array<Node>) => {
+	nodes.forEach((node) => {
+		useGraphStore.getState().removeNode(node.id);
+	});
+};
+
+export const onRelationsUpdate = (relations: Array<Relation>) => {
+	const sigma = useGraphStore.getState().sigma;
+
+	relations.forEach((relation) => {
+		if (sigma.getGraph().hasEdge(relation.id)) {
+			const relationGraphData = getRelationGraphData(relation);
+
+			sigma.getGraph().mergeEdgeAttributes(relation.id, {
+				...relationGraphData,
+				data: relation
+			});
+		}
+	});
+};
+
+export const onRelationsRemove = (relations: Array<Relation>) => {
+	relations.forEach((relation) => {
+		useGraphStore.getState().removeRelation(relation.id);
+	});
+};

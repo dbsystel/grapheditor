@@ -17,7 +17,11 @@
 		"jsx": "react-jsx",
 		"noFallthroughCasesInSwitch": true,
 		"types": ["vite/client", "vitest/globals", "vite-plugin-svgr/client", "@vitest/browser/providers/playwright"],
-		"baseUrl": "."
+		"baseUrl": ".",
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strictBindCallApply": true,
+		"strictPropertyInitialization": true
 	},
 	"include": ["src"],
 	"references": [

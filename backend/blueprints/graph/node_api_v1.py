@@ -92,25 +92,29 @@ class NodesBulkPatch(MethodView):
     @blp.arguments(
         node_model.NodeBulkPatchSchema, as_kwargs=True, location="json"
     )
+    @blp.response(200, node_model.NodeBulkFetchResponseSchema)
     @require_tab_id()
     def patch(self, patches):
         """
         Update multiple nodes at once.
 
         Each patch must contain the corresponding ID.
-        Return a dictionary containing the number of nodes patched.
+        Return a map of the given node IDs to the new node objects.
         """
+        id_map = current_app.graph_db.ids_to_raw_db_ids([p["id"] for p in patches])
+        result = {}
         for patch in patches:
             if "id" not in patch:
                 abort_with_json(400, f"missing ID in patch: {id}")
-            nid = patch["id"]
-            neo_node = current_app.graph_db.get_node_by_id(nid, True)
-            if not neo_node:
-                abort_with_json(400, f"Can't patch an unexisting node: {nid}")
-            current_app.graph_db.update_node_by_id(nid, patch)
-        num_patched = len(patches)
+            orig_id = patch["id"]
+            raw_db_id = id_map[orig_id]
+            if not raw_db_id:
+                abort_with_json(400, f"Can't patch an unexisting node: {orig_id}")
+            new_node = current_app.graph_db.update_node_by_id(f"id::{raw_db_id}", patch)
+            new_node["id"] = orig_id
+            result[orig_id] = new_node
         return dict(
-            num_patched=num_patched, message=f"Patched {num_patched} nodes"
+            nodes=result
         )
 
 

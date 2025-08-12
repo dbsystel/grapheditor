@@ -7,8 +7,8 @@ import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSettingsStore } from 'src/stores/settings';
-import { postNodeConnections } from 'src/utils/fetch/postNodeConnections';
-import { postRelationsByNodeIds } from 'src/utils/fetch/postRelationsByNodeIds';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 
 export const expandNodeAction = (nodeId: NodeId) => {
 	const node = useItemsStore.getState().getStoreNode(nodeId);
@@ -24,7 +24,7 @@ export const expandNodeAction = (nodeId: NodeId) => {
 		return;
 	}
 
-	postNodeConnections({ nodeId: nodeId }).then(async (response) => {
+	nodesApi.postNodeConnections({ nodeId: nodeId }).then(async (response) => {
 		const sigma = useGraphStore.getState().sigma;
 		const nodeDisplayData = sigma.getNodeDisplayData(nodeId);
 
@@ -82,7 +82,7 @@ export const expandNodeAction = (nodeId: NodeId) => {
 		}
 
 		if (useSettingsStore.getState().isAutoconnectEnabled) {
-			const autoconnectRelationsResponse = await postRelationsByNodeIds({
+			const autoconnectRelationsResponse = await relationsApi.postRelationsByNodeIds({
 				additionalNodeIds: nodes.map((node) => node.id)
 			});
 
@@ -125,10 +125,8 @@ export const expandNodeAction = (nodeId: NodeId) => {
 			}
 		});
 
-		relations.forEach((relation) => {
-			useGraphStore.getState().addRelation(relation);
-			useItemsStore.getState().setRelation(relation, true);
-		});
+		useGraphStore.getState().addRelations(relations);
+		useItemsStore.getState().setRelations(relations, true);
 
 		if (relations.length) {
 			useGraphStore.getState().indexParallelRelations();

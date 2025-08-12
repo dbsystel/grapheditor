@@ -1,11 +1,13 @@
+[[_TOC_]]
+
 # Intro
 
 This repo contains the GraphEditor. It is an editor for labeled property graph databases (as
-provided by e.g. neo4j or memgraph).
+provided by neo4j or memgraph).
 
 ## Status and features
 
-The software is in its early stages - it works (for us), but lot's of features are not yet
+The software is in its early stages - it works (for us), but lots of features are not yet
 implemented. Also expect lots of bugs :-)
 
 Exiting main features are:
@@ -48,9 +50,9 @@ The editor consists of two parts:
 # Authors
 
 The graph editor is produced and published by DB Systel GmbH, a 100% subsidary of Deutsche Bahn.
-See [CONTRIBUTORS.md](CONTRIBUTORS.md)
+See [CONTRIBUTORS](CONTRIBUTORS.md)
 
-Maintainers are listed in [MAINTAINERS.md](MAINTAINERS.md)
+Maintainers are listed in [MAINTAINERS](MAINTAINERS.md)
 
 # LICENSE
 
@@ -66,7 +68,7 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero
 General Public License for more details.
 
-See [AGPL.txt](AGPL.txt) for the full license.
+See [LICENSE.txt](LICENSE.txt) for the full license.
 
 # Contributions, updates and contact
 
@@ -124,7 +126,7 @@ services:
     user: "1000:1000"
 ```
 
-## .exe
+## Exe
 
 An executable can be build using pyinstaller.
 

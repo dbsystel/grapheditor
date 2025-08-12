@@ -1,18 +1,18 @@
-import { useContext, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
 	fitGraphToViewport,
-	getNodeGraphData,
-	getRelationGraphData,
 	hideGraphContainer,
+	onNodesRemove,
+	onNodesUpdate,
+	onRelationsRemove,
+	onRelationsUpdate,
 	showGraphContainer
 } from 'src/components/network-graph/helpers';
 import { assignForceLayout } from 'src/components/network-graph/layouts/force';
 import { assignForceAtlas2Layout } from 'src/components/network-graph/layouts/forceAtlas2';
 import { assignNoverlapLayout } from 'src/components/network-graph/layouts/noverlap';
 import { assignRandomLayout } from 'src/components/network-graph/layouts/random';
-import { Node } from 'src/models/node';
-import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -26,6 +26,7 @@ import {
 	GRAPH_LAYOUT_NOVERLAP,
 	GRAPH_LAYOUT_RANDOM
 } from 'src/utils/constants';
+import { isNonPseudoNode } from 'src/utils/helpers/nodes';
 
 // TODO check all modules, plugins and other functionalities tied to graph for unnecessary re-renderings
 export const LoadGraph = () => {
@@ -36,13 +37,16 @@ export const LoadGraph = () => {
 		indexParallelRelations,
 		addNode,
 		addRelation,
-		nodeIdsToRender,
-		relationIdsToRender,
 		sigma
 	} = useGraphStore((store) => store);
-	const { getStoreNode, getStoreRelation, addEventListener, removeEventListener } = useItemsStore(
-		(store) => store
-	);
+	const {
+		getStoreNode,
+		getStoreRelation,
+		addEventListener,
+		removeEventListener,
+		nodes,
+		relations
+	} = useItemsStore((store) => store);
 	const { algorithm } = useSearchStore((store) => store);
 	const theme = useSettingsStore((store) => store.theme);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
@@ -69,12 +73,16 @@ export const LoadGraph = () => {
 
 	// observe node and relation changes
 	useEffect(() => {
-		addEventListener('onNodeUpdate', onNodeUpdate);
-		addEventListener('onRelationUpdate', onRelationUpdate);
+		addEventListener('onNodesUpdate', onNodesUpdate);
+		addEventListener('onNodesRemove', onNodesRemove);
+		addEventListener('onRelationsUpdate', onRelationsUpdate);
+		addEventListener('onRelationsRemove', onRelationsRemove);
 
 		return () => {
-			removeEventListener('onNodeUpdate', onNodeUpdate);
-			removeEventListener('onRelationUpdate', onRelationUpdate);
+			removeEventListener('onNodesUpdate', onNodesUpdate);
+			removeEventListener('onNodesRemove', onNodesRemove);
+			removeEventListener('onRelationsUpdate', onRelationsUpdate);
+			removeEventListener('onRelationsRemove', onRelationsRemove);
 		};
 	}, [sigma]);
 
@@ -85,7 +93,7 @@ export const LoadGraph = () => {
 		sigma.clear();
 		sigma.getGraph().clear();
 
-		if (!nodeIdsToRender.length) {
+		if (!nodes.size) {
 			addNotification({
 				title: t('notifications_info_graph_no_nodes'),
 				type: 'informational'
@@ -95,17 +103,17 @@ export const LoadGraph = () => {
 		}
 
 		// add nodes
-		nodeIdsToRender.forEach((nodeId) => {
-			const storeNode = getStoreNode(nodeId);
+		nodes.forEach((node) => {
+			const storeNode = getStoreNode(node.id);
 
-			if (storeNode) {
+			if (isNonPseudoNode(storeNode)) {
 				addNode(storeNode);
 			}
 		});
 
 		// add relations
-		relationIdsToRender.forEach((relationId) => {
-			const storeRelation = getStoreRelation(relationId);
+		relations.forEach((relation) => {
+			const storeRelation = getStoreRelation(relation.id);
 
 			if (storeRelation) {
 				const sourceNode = getStoreNode(storeRelation.source_id);
@@ -147,38 +155,11 @@ export const LoadGraph = () => {
 		} else {
 			fitGraph();
 		}
-	}, [algorithm, nodeIdsToRender, relationIdsToRender]);
+	}, [algorithm]);
 
 	useEffect(() => {
 		sigma.setSetting('labelColor', { color: labelColor() });
 	}, [theme]);
-
-	const onNodeUpdate = (node: Node) => {
-		if (sigma.getGraph().hasNode(node.id)) {
-			const nodeGraphData: Partial<ReturnType<typeof getNodeGraphData>> =
-				getNodeGraphData(node);
-
-			// node position is determined by the graph layout or due to user interaction (e.g. node drag)
-			delete nodeGraphData.x;
-			delete nodeGraphData.y;
-
-			sigma.getGraph().mergeNodeAttributes(node.id, {
-				...nodeGraphData,
-				data: node
-			});
-		}
-	};
-
-	const onRelationUpdate = (relation: Relation) => {
-		if (sigma.getGraph().hasEdge(relation.id)) {
-			const relationGraphData = getRelationGraphData(relation);
-
-			sigma.getGraph().mergeEdgeAttributes(relation.id, {
-				...relationGraphData,
-				data: relation
-			});
-		}
-	};
 
 	const fitGraph = () => {
 		const { cameraStateChanged } = fitGraphToViewport(sigma, sigma.getGraph().nodes());

@@ -10,6 +10,7 @@ import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemsDrawerProvider } from 'src/components/items-drawer/context/ItemsDrawerContext';
 import { SingleNode } from 'src/components/single-node/SingleNode';
 import { SingleRelation } from 'src/components/single-relation/SingleRelation';
+import { Item } from 'src/models/item';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { DrawerStoreEntry, useDrawerStore } from 'src/stores/drawer';
@@ -23,11 +24,19 @@ import { DrawerHeadProps, ItemsDrawerProps } from './ItemsDrawer.interfaces';
  * A basic breadcrumbs component is added to enable visual track of added items.
  */
 export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
-	const { entries, activeEntryIndex, getActiveEntry, setActiveEntryIndex, reset } =
-		useDrawerStore((store) => store);
+	const {
+		entries,
+		activeEntryIndex,
+		getActiveEntry,
+		setActiveEntryIndex,
+		reset,
+		removeEntryByItemId
+	} = useDrawerStore((store) => store);
 	const getStoreItem = useItemsStore((store) => store.getStoreItem);
 	const getStoreNode = useItemsStore((store) => store.getStoreNode);
 	const getStoreRelation = useItemsStore((store) => store.getStoreRelation);
+	const addEventListener = useItemsStore((store) => store.addEventListener);
+	const removeEventListener = useItemsStore((store) => store.removeEventListener);
 	useItemsStore((store) => store.nodes);
 	useItemsStore((store) => store.relations);
 	const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
@@ -37,6 +46,22 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 	const rootElementClassName = clsx('items-drawer', className, {
 		'items-drawer--collapsed': isCollapsed
 	});
+
+	useEffect(() => {
+		const onItemsRemove = (items: Array<Item>) => {
+			items.forEach((item) => {
+				removeEntryByItemId(item.id);
+			});
+		};
+
+		addEventListener('onNodesRemove', onItemsRemove);
+		addEventListener('onRelationsRemove', onItemsRemove);
+
+		return () => {
+			removeEventListener('onNodesRemove', onItemsRemove);
+			removeEventListener('onRelationsRemove', onItemsRemove);
+		};
+	}, []);
 
 	const onClose = () => {
 		reset();

@@ -6,17 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder/RelationTypeItemFinder';
 import { Node } from 'src/models/node';
-import { useDrawerStore } from 'src/stores/drawer';
-import { useGraphStore } from 'src/stores/graph';
-import { useItemsStore } from 'src/stores/items';
+import { relationsApi } from 'src/utils/api/relations';
 import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { useGetNode } from 'src/utils/hooks/useGetNode';
-import { usePatchRelation } from 'src/utils/hooks/usePatchRelation';
 import { RelationTypeChangerProps } from './RelationTypeChanger.interfaces';
 
 export const RelationTypeChanger = ({
 	relation,
-	onRelationTypeChange,
 	showTooltipOnHover = true,
 	id,
 	className,
@@ -24,15 +20,6 @@ export const RelationTypeChanger = ({
 }: RelationTypeChangerProps) => {
 	const { t } = useTranslation();
 	const [isEditing, setIsEditing] = useState(false);
-	const {
-		highlightRelation,
-		isRelationHighlighted,
-		removeRelation: removeGraphRelation,
-		addRelation: addGraphRelation
-	} = useGraphStore((store) => store);
-	const setRelation = useItemsStore((store) => store.setRelation);
-	const removeRelation = useItemsStore((store) => store.removeRelation);
-	const { getActiveEntry, setEntry: setDrawerItem } = useDrawerStore((store) => store);
 	const [relationTypeNode, setRelationTypeNode] = useState<Node | null>(null);
 	const [selectedType, setSelectedType] = useState<Node | null>(null);
 	const [originalType, setOriginalType] = useState<Node | null>(null);
@@ -48,47 +35,6 @@ export const RelationTypeChanger = ({
 			setRelationTypeNode(response.data);
 		}
 	});
-
-	const { reFetch: patchRelationType } = usePatchRelation(
-		{
-			executeImmediately: false,
-			relationId: relation.id,
-			onSuccess: async (response) => {
-				const relationHighlighted = isRelationHighlighted(relation.id);
-
-				// remove relation from graph
-				removeGraphRelation(relation.id);
-				// // remove relation from items store
-				removeRelation(relation.id, true);
-				// add relation to graph
-				addGraphRelation(response.data);
-				// add relation to items store
-				setRelation(response.data, true);
-				// highlight new relation if previous was highlighted in graph
-				if (relationHighlighted) {
-					useGraphStore.getState().sigma.once('afterRender', () => {
-						highlightRelation(response.data.id);
-					});
-				}
-				// component in drawer, update drawer data which will re-render
-				// this component
-				const drawerItem = getActiveEntry();
-
-				if (drawerItem && drawerItem.itemId === relation.id) {
-					setDrawerItem({
-						...drawerItem,
-						itemId: response.data.id
-					});
-				}
-
-				// component not in drawer, update data locally
-				if (!drawerItem && onRelationTypeChange) {
-					onRelationTypeChange(response.data);
-				}
-			}
-		},
-		[relation.id]
-	);
 
 	const onRefChange = useCallback((element: HTMLDivElement | null) => {
 		setRef(element);
@@ -120,10 +66,12 @@ export const RelationTypeChanger = ({
 
 	const handleSave = () => {
 		if (selectedType) {
-			patchRelationType({
-				relationId: relation.id,
+			const patchObject = {
+				id: relation.id,
 				type: selectedType.id
-			});
+			};
+
+			relationsApi.patchRelationsAndUpdateApplication([patchObject]);
 			setRelationTypeNode(selectedType); // Update the main state
 		}
 		setHasPendingChange(false);
@@ -162,11 +110,11 @@ export const RelationTypeChanger = ({
 				<div className="relation-type-changer__tag-edit">
 					<DBTag onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
 						{relationTypeNode.title}
-					</DBTag>
 
-					{renderTooltip && (
-						<ItemOverviewTooltip item={relationTypeNode} tooltipRef={ref} />
-					)}
+						{renderTooltip && (
+							<ItemOverviewTooltip item={relationTypeNode} tooltipRef={ref} />
+						)}
+					</DBTag>
 
 					<DBButton
 						icon="pen"

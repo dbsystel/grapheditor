@@ -4,6 +4,7 @@ import { ChangeEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import {
+	deleteProperty,
 	parsePropertyValue,
 	showNotificationForPropertyTypeAndValueMismatch
 } from 'src/components/item-properties/helpers';
@@ -15,10 +16,11 @@ import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
 import { Item, ItemPropertyWithKey } from 'src/models/item';
 import { useItemsStore } from 'src/stores/items';
-import { useNotificationsStore } from 'src/stores/notifications';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { ITEM_PROPERTY_TYPES } from 'src/utils/constants';
-import { patch } from 'src/utils/fetch/patch';
-import { getItemEndpoint } from 'src/utils/helpers/items';
+import { isNode } from 'src/utils/helpers/nodes';
+import { isRelation } from 'src/utils/helpers/relations';
 import {
 	ItemPropertiesTableEntryWithTopFlag,
 	ItemPropertiesTableProps
@@ -30,11 +32,8 @@ export const ItemPropertiesTable = ({
 	id,
 	className,
 	testId,
-	onPropertyEdit,
 	onPropertyRowMouseEnter,
-	onPropertyRowMouseLeave,
-	onPropertyDelete,
-	onPropertyTypeChange
+	onPropertyRowMouseLeave
 }: ItemPropertiesTableProps) => {
 	const rootElementClassName = clsx('item-properties-table', className);
 	const flatArrayProperties: Array<ItemPropertiesTableEntryWithTopFlag> = [];
@@ -74,9 +73,6 @@ export const ItemPropertiesTable = ({
 						<ItemPropertiesTableRow
 							key={entry[2].id}
 							entry={entry}
-							onPropertyEdit={onPropertyEdit}
-							onPropertyDelete={onPropertyDelete}
-							onPropertyTypeChange={onPropertyTypeChange}
 							onMouseEnter={() => {
 								localOnPropertyRowMouseInteraction('enter', entry);
 							}}
@@ -93,22 +89,15 @@ export const ItemPropertiesTable = ({
 
 const ItemPropertiesTableRow = ({
 	entry: [item, property, propertyNode, isTopEntry],
-	onPropertyEdit,
-	onPropertyDelete,
-	onPropertyTypeChange,
 	onMouseEnter,
 	onMouseLeave
 }: {
 	entry: ItemPropertiesTableEntryWithTopFlag;
-	onPropertyEdit: ItemPropertiesTableProps['onPropertyEdit'];
-	onPropertyDelete: ItemPropertiesTableProps['onPropertyDelete'];
-	onPropertyTypeChange: ItemPropertiesTableProps['onPropertyTypeChange'];
 	onMouseEnter: () => void;
 	onMouseLeave: () => void;
 }) => {
 	const { t } = useTranslation();
 	const getNodeAsync = useItemsStore((store) => store.getNodeAsync);
-	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const [isLoading, setIsLoading] = useState(false);
 	// the input field is a text field, meaning we will be working with strings
 	const propertyValueRef = useRef(property.value.toString());
@@ -130,36 +119,26 @@ const ItemPropertiesTableRow = ({
 
 			setIsLoading(true);
 
-			const propertiesClone = window.structuredClone(item.properties);
+			const itemClone = window.structuredClone(item);
 
-			propertiesClone[itemProperty.key] = {
+			itemClone.properties[itemProperty.key] = {
 				value: parsedValue,
 				type: itemProperty.type,
 				edit: true // this key will probably be removed in the future
 			};
 
-			const patchResponse = await patch<Item>(getItemEndpoint(item), {
-				properties: propertiesClone
-			});
-			const updatedPropertyNode = await getNodeAsync(itemProperty.key, true);
+			await getNodeAsync(itemProperty.key, true);
 
-			if (onPropertyEdit) {
-				onPropertyEdit(
-					patchResponse.data,
-					{
-						...patchResponse.data.properties[itemProperty.key],
-						key: itemProperty.key
-					},
-					updatedPropertyNode
-				);
+			const patchObject = {
+				id: item.id,
+				properties: itemClone.properties
+			};
+
+			if (isNode(item)) {
+				nodesApi.patchNodesAndUpdateApplication([patchObject]);
+			} else if (isRelation(item)) {
+				relationsApi.patchRelationsAndUpdateApplication([patchObject]);
 			}
-
-			addNotification({
-				title: t('notifications_success_property_mode', {
-					mode: t('notifications_suffix_edit')
-				}),
-				type: 'successful'
-			});
 
 			setIsLoading(false);
 		}
@@ -205,7 +184,7 @@ const ItemPropertiesTableRow = ({
 						},
 						{
 							title: t('item-properties-table-delete-property'),
-							onClick: () => onPropertyDelete(item, property),
+							onClick: () => deleteProperty(item, property.key),
 							icon: 'bin'
 						},
 						{
@@ -213,7 +192,6 @@ const ItemPropertiesTableRow = ({
 							options: ITEM_PROPERTY_TYPES.map((type) => {
 								return {
 									title: type,
-									onClick: () => onPropertyTypeChange(item, property, type),
 									icon: property.type === type ? 'check' : '',
 									isDisabled: true
 								};

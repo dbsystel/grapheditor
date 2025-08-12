@@ -25,10 +25,6 @@ type GraphStore = {
 	sigma: GraphEditorSigma;
 	// TODO maybe use a more abstract name?
 	setSigma: (sigma: GraphEditorSigma) => void;
-	nodeIdsToRender: Array<NodeId>;
-	setNodeIdsToRender: (nodeIds: Array<NodeId>) => void;
-	relationIdsToRender: Array<RelationId>;
-	setRelationIdsToRender: (relationIds: Array<RelationId>) => void;
 	perspectiveId: string | null;
 	perspectiveName: string | null;
 	clearPerspective: () => void;
@@ -64,6 +60,17 @@ type GraphStore = {
 					attributes: GraphEditorSigmaRelationAttributes;
 			  }
 	) => void;
+	addRelations: (
+		relations: Array<
+			| Relation
+			| {
+					id: RelationId;
+					source_id: NodeId;
+					target_id: NodeId;
+					attributes: GraphEditorSigmaRelationAttributes;
+			  }
+		>
+	) => void;
 	removeRelation: (relationId: RelationId) => void;
 	zoomFactor: number;
 	setZoomFactor: (zoomFactor: number) => void;
@@ -80,8 +87,6 @@ type GraphStore = {
 type InitialState = Omit<
 	GraphStore,
 	| 'setSigma'
-	| 'setNodeIdsToRender'
-	| 'setRelationIdsToRender'
 	| 'clearPerspective'
 	| 'setIsLoading'
 	| 'setPerspectiveId'
@@ -102,6 +107,7 @@ type InitialState = Omit<
 	| 'addNode'
 	| 'removeNode'
 	| 'addRelation'
+	| 'addRelations'
 	| 'removeRelation'
 	| 'setZoomFactor'
 	| 'resetButExclude'
@@ -141,9 +147,7 @@ const getInitialState: () => InitialState = () => {
 		zoomFactorMax: 3,
 		zoomFactorIncrementBy: 0.1,
 		zoomFactor: GRAPH_DEFAULT_ZOOMING_RATIO,
-		nodeSizeFactor: 1,
-		nodeIdsToRender: [],
-		relationIdsToRender: []
+		nodeSizeFactor: 1
 	};
 };
 
@@ -163,12 +167,6 @@ const getInitialState: () => InitialState = () => {
 export const useGraphStore = create<GraphStore>((set, get) => {
 	return {
 		...getInitialState(),
-		setNodeIdsToRender: (nodeIds) => {
-			set({ nodeIdsToRender: nodeIds });
-		},
-		setRelationIdsToRender: (relationIds) => {
-			set({ relationIdsToRender: relationIds });
-		},
 		setIsLoading: (isLoading: boolean) => set({ isLoading: isLoading }),
 		clearPerspective: () => set({ perspectiveId: null, perspectiveName: null }),
 		setPerspectiveId: (perspectiveId) => {
@@ -371,6 +369,11 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 						relation.attributes
 					);
 			}
+		},
+		addRelations: (relations) => {
+			relations.forEach((relation) => {
+				get().addRelation(relation);
+			});
 		},
 		removeRelation: (relationId) => {
 			if (get().sigma.getGraph().hasEdge(relationId)) {

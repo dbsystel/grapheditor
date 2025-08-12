@@ -1,7 +1,7 @@
 import { StyleProperties } from 'src/models/general';
 import { ItemProperties, ItemTypeNode } from 'src/models/item';
 import { Relation } from 'src/models/relation';
-import { Overwrite } from 'src/types/general';
+import { Overwrite, RequireAtLeastOne } from 'src/types/general';
 
 export type Node = {
 	_grapheditor_type: ItemTypeNode;
@@ -58,6 +58,18 @@ export type NonPseudoNode = Overwrite<
 		dbId: string;
 	}
 >;
+
+// pick fields which we can patch
+export type PatchNodePick = Pick<
+	Node,
+	'labels' | 'description' | 'longDescription' | 'properties' | 'title'
+>;
+// require at least one key from the PatchNodePick type
+export type PatchNodePartial = RequireAtLeastOne<PatchNodePick>;
+// make the node ID key required
+// note: TS might throw an error saying the property X is required in this type, but it means one of
+// PatchNodePick type keys is required, not exactly the one TS says
+export type PatchNode = { id: NodeId } & PatchNodePartial;
 
 export type NodeId = string;
 export type NodeLabel = string;

@@ -1,16 +1,24 @@
 import { ConnectionObject } from 'src/components/connections/Connections.interfaces';
 import i18n from 'src/i18n';
 import { ItemPropertyType } from 'src/models/item';
-import { MetaNode, Node, NodeConnection, NodeId, NonPseudoNode, PseudoNode } from 'src/models/node';
+import {
+	MetaNode,
+	Node,
+	NodeConnection,
+	NonPseudoNode,
+	PatchNode,
+	PseudoNode
+} from 'src/models/node';
+import { NodeId } from 'src/models/node';
 import { Perspective } from 'src/models/perspective';
 import { Relation, RelationId } from 'src/models/relation';
-import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
 import { GRAPH_LAYOUT_PERSPECTIVE, GraphEditorTypeSimplified } from 'src/utils/constants';
 import { deleteNodes, DeleteNodesResponse } from 'src/utils/fetch/deleteNodes';
+import { patchNodes } from 'src/utils/fetch/patchNodes';
 import { isObject } from 'src/utils/helpers/general';
 import { buildSearchResult } from 'src/utils/helpers/search';
 import { idFormatter } from 'src/utils/idFormatter';
@@ -33,6 +41,14 @@ export const isNonPseudoNode = (data: unknown): data is NonPseudoNode => {
 
 export const isMetaNode = (data: unknown): data is MetaNode => {
 	if (isNode(data) && 'semanticId' in data && data.semanticId !== null) {
+		return true;
+	}
+
+	return false;
+};
+
+export const isArrayOfNodes = (data: unknown): data is Array<Node> => {
+	if (Array.isArray(data) && data.every((element) => isNode(element))) {
 		return true;
 	}
 
@@ -62,7 +78,7 @@ export const isNodePerspective = (node: Node) => {
 
 export const getNodeMetaPropertyType = (node: Node): ItemPropertyType | undefined => {
 	return node.properties[
-		idFormatter.formatObjectId(GraphEditorTypeSimplified.META_PROPERTY, 'type', 'tech')
+		idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_PROPERTY, 'type', 'tech')
 	]?.type;
 };
 
@@ -108,7 +124,7 @@ export const generateNode = (id: string, data?: Omit<Partial<Node>, 'id'>): Node
 		longDescription: data?.longDescription || 'Description',
 		labels: data?.labels || [],
 		properties: data?.properties || {},
-		title: data?.title || idFormatter.parseId(id),
+		title: data?.title || idFormatter.parseIdToName(id),
 		style: data?.style || {}
 	};
 };
@@ -225,65 +241,96 @@ export const sortNodeConnections = (
 	};
 };
 
-export const deleteNodesAndUpdateApplication = async (
+export async function deleteNodesAndUpdateApplication(
 	nodeIds: Array<NodeId>,
-	onDelete?: (deleteNodesResponse: DeleteNodesResponse) => void
-) => {
+	options?: {
+		onSuccess?: (deleteNodesResponse: DeleteNodesResponse) => void;
+	}
+) {
 	const notificationsStore = useNotificationsStore.getState();
-	const graphStore = useGraphStore.getState();
-	const drawerStore = useDrawerStore.getState();
 	const itemsStore = useItemsStore.getState();
 
 	const addNotification = notificationsStore.addNotification;
-	const removeGraphNode = graphStore.removeNode;
-	const removeGraphRelation = graphStore.removeRelation;
-	const removeEntryByItemId = drawerStore.removeEntryByItemId;
-	const removeItemsStoreNode = itemsStore.removeNode;
-	const removeItemsStoreRelation = itemsStore.removeRelation;
-	const refreshNodesAndRelations = itemsStore.refreshNodesAndRelations;
 
-	const graph = graphStore.sigma.getGraph();
 	const isOnlyOneNodeToDelete = nodeIds.length === 1;
 	const confirmMessage = isOnlyOneNodeToDelete ? 'confirm_delete_node' : 'confirm_delete_nodes';
-	const successMessage = isOnlyOneNodeToDelete
+	const successTitle = isOnlyOneNodeToDelete
 		? 'notifications_success_node_delete'
 		: 'notifications_success_nodes_delete_title';
 
-	if (window.confirm(i18n.t(confirmMessage))) {
+	if (window.confirm(i18n.t(confirmMessage, { id: nodeIds.at(0) }))) {
 		// on server we only need to remove nodes, their relations will be implicitly removed
 		const nodesDeletionResponse = await deleteNodes({ nodeIds: nodeIds });
 		const isDeletionSuccessful = nodesDeletionResponse.data.num_deleted === nodeIds.length;
 
 		nodeIds.forEach((nodeId) => {
-			graph.forEachEdge(nodeId, (relationId) => {
-				removeEntryByItemId(relationId);
-				removeItemsStoreRelation(relationId, true);
-				removeGraphRelation(relationId);
-			});
-
-			removeEntryByItemId(nodeId);
-			removeItemsStoreNode(nodeId, true);
-			removeGraphNode(nodeId);
+			itemsStore.removeNode(nodeId, true);
 		});
 
 		// re-render components subscribed to the items store nodes and relations changes
-		refreshNodesAndRelations();
-
-		if (onDelete) {
-			onDelete(nodesDeletionResponse.data);
-		}
+		itemsStore.refreshNodesAndRelations();
 
 		// TODO check if data.num_deleted === 0
 		if (isDeletionSuccessful) {
+			if (options?.onSuccess) {
+				options.onSuccess(nodesDeletionResponse.data);
+			}
+
 			addNotification({
-				title: i18n.t(successMessage),
+				title: i18n.t(successTitle),
 				type: 'successful'
 			});
 		} else {
 			addNotification({
-				title: i18n.t('notifications_warning_nodes_delete'),
+				title: i18n.t('notifications_warning_nodes_delete_title'),
+				description: i18n.t('notifications_warning_nodes_delete_description'),
 				type: 'warning'
 			});
 		}
 	}
-};
+}
+
+export async function patchNodesAndUpdateApplication(
+	nodes: Array<PatchNode>,
+	options?: {
+		onSuccess?: (nodes: Array<Node>) => void;
+	}
+) {
+	const notificationsStore = useNotificationsStore.getState();
+	const itemsStore = useItemsStore.getState();
+
+	const addNotification = notificationsStore.addNotification;
+
+	const nodesPatchResponse = await patchNodes(nodes);
+	const serverNodes = Object.values(nodesPatchResponse.data.nodes);
+	const isPatchSuccessful = Object.keys(nodesPatchResponse.data.nodes).length === nodes.length;
+	const successTitle =
+		nodes.length === 1
+			? 'notifications_success_node_update'
+			: 'notifications_success_nodes_update';
+
+	serverNodes.forEach((node) => {
+		itemsStore.setNode(node, true);
+	});
+
+	itemsStore.refreshNodes();
+
+	if (isPatchSuccessful) {
+		if (options?.onSuccess) {
+			options.onSuccess(serverNodes);
+		}
+
+		addNotification({
+			title: i18n.t(successTitle),
+			type: 'successful'
+		});
+	} else {
+		addNotification({
+			title: i18n.t('notifications_warning_nodes_update_title'),
+			description: i18n.t('notifications_warning_nodes_update_description'),
+			type: 'warning'
+		});
+	}
+
+	return nodesPatchResponse.data.nodes;
+}

@@ -1,4 +1,4 @@
-import { Item, ItemPropertyType, ItemPropertyWithKey } from 'src/models/item';
+import { Item, ItemPropertyWithKey } from 'src/models/item';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { GlobalComponentProps } from 'src/types/components';
@@ -15,13 +15,6 @@ export type ItemPropertiesTableProps = GlobalComponentProps & {
 		item: Item,
 		propertyWithKey: ItemPropertyWithKey,
 		propertyNode: Node
-	) => void;
-	onPropertyEdit?: (updatedItem: Item, property: ItemPropertyWithKey, propertyNode: Node) => void;
-	onPropertyDelete: (item: Node | Relation, property: ItemPropertyWithKey) => void;
-	onPropertyTypeChange: (
-		item: Node | Relation,
-		property: ItemPropertyWithKey,
-		propertyType: ItemPropertyType
 	) => void;
 };
 

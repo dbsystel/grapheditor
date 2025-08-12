@@ -13,6 +13,7 @@ import { Tooltip } from 'src/components/tooltip/Tooltip';
 import { getItemDBId } from 'src/utils/helpers/items';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
+import { RenderContent } from 'src/utils/helpers/search';
 import { ItemOverviewTooltipProps } from './ItemOverviewTooltip.interfaces';
 
 /**
@@ -37,7 +38,6 @@ export const ItemOverviewTooltip = ({
 			<Tooltip
 				className="item-info__item-overview-tooltip--tooltip"
 				tooltipTargetRef={tooltipRef}
-				id={item.id}
 				placement="top"
 				showArrow={true}
 				animation={false}
@@ -120,7 +120,11 @@ export const ItemOverviewTooltip = ({
 											<TableCell>
 												<ItemOverviewButton nodeId={property} />
 											</TableCell>
-											<TableCell>{item.properties[property].value}</TableCell>
+											<TableCell>
+												<RenderContent
+													content={item.properties[property].value}
+												/>
+											</TableCell>
 											<TableCell>{item.properties[property].type}</TableCell>
 										</TableRow>
 									);

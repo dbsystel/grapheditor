@@ -11,9 +11,9 @@ import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
-import { postNodeConnections } from 'src/utils/fetch/postNodeConnections';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { processNodeConnections, sortNodeConnections } from 'src/utils/helpers/nodes';
-import { deleteRelationAndUpdateApplication } from 'src/utils/helpers/relations';
 import { ConnectionObject, ConnectionsBoxProps, ConnectionsProps } from './Connections.interfaces';
 import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelation';
 
@@ -30,7 +30,7 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 
 	useEffect(() => {
 		(async () => {
-			const response = await postNodeConnections({ nodeId: node.id });
+			const response = await nodesApi.postNodeConnections({ nodeId: node.id });
 			const connectionsArray = processNodeConnections(node, response.data.relations);
 
 			setConnectionBoxData(connectionsArray);
@@ -38,16 +38,18 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 	}, [node, renderKey]);
 
 	const onDelete = (relation: Relation) => {
-		deleteRelationAndUpdateApplication(relation.id, () => {
-			setConnectionBoxData((prevState) => {
-				return prevState.filter((connection) => {
-					if (!connection.relation) {
-						return true;
-					}
+		relationsApi.deleteRelationsAndUpdateApplication([relation.id], {
+			onSuccess: () => {
+				setConnectionBoxData((prevState) => {
+					return prevState.filter((connection) => {
+						if (!connection.relation) {
+							return true;
+						}
 
-					return connection.relation.id !== relation.id;
+						return connection.relation.id !== relation.id;
+					});
 				});
-			});
+			}
 		});
 	};
 

@@ -185,8 +185,6 @@ export const NetworkGraphSelectionTool = () => {
 			}
 		}
 
-		// console.log('graph', graph);
-
 		for (const relation of graph.edgeEntries()) {
 			const { sourceAttributes, targetAttributes } = relation;
 			const sourceCoordinates = {
@@ -198,9 +196,6 @@ export const NetworkGraphSelectionTool = () => {
 				y: targetAttributes.y
 			};
 
-			// console.log('sourceCoordinates', sourceCoordinates);
-			// console.log('targetCoordinates', targetCoordinates);
-
 			const angleFromStartToEnd = calculateAngle(sourceCoordinates, targetCoordinates);
 			const angleFromEndToStart = calculateAngle(targetCoordinates, sourceCoordinates);
 			const sourceHypotenuse = calculateHypotenuse(
@@ -211,8 +206,7 @@ export const NetworkGraphSelectionTool = () => {
 				targetAttributes.size,
 				angleFromEndToStart
 			);
-			// console.log('sourceHypotenuse', sourceHypotenuse);
-			// console.log('targetHypotenuse', targetHypotenuse);
+
 			const newStartCoordinates = movePoint(
 				sourceCoordinates,
 				sourceHypotenuse,
@@ -223,54 +217,6 @@ export const NetworkGraphSelectionTool = () => {
 				targetHypotenuse,
 				angleFromEndToStart
 			);
-			// console.log('newStartCoordinates', newStartCoordinates);
-			// console.log('newEndCoordinates', newEndCoordinates);
-			//
-			// console.log(
-			// 	'start inside',
-			// 	isPointInsideRectangle(
-			// 		newStartCoordinates,
-			// 		topLeftGraphCoordinates,
-			// 		bottomRightGraphCoordinates
-			// 	)
-			// );
-			// console.log(
-			// 	'end inside',
-			// 	isPointInsideRectangle(
-			// 		newEndCoordinates,
-			// 		topLeftGraphCoordinates,
-			// 		bottomRightGraphCoordinates
-			// 	)
-			// );
-
-			// setTimeout(() => {
-			// 	const id1 = window.crypto.randomUUID();
-			// 	const id2 = window.crypto.randomUUID();
-			//
-			// 	sigma.getGraph().addNode(id1, {
-			// 		//...sourceAttributes,
-			// 		data: sourceAttributes.data,
-			// 		x: newStartCoordinates.x,
-			// 		y: newStartCoordinates.y,
-			// 		size: 1,
-			// 		color: '#000000'
-			// 	});
-			// 	sigma.getGraph().addNode(id2, {
-			// 		//...targetAttributes,
-			// 		data: targetAttributes.data,
-			// 		x: newEndCoordinates.x,
-			// 		y: newEndCoordinates.y,
-			// 		size: 1,
-			// 		color: '#000000'
-			// 	});
-			// 	const id3 = sigma.getGraph().addEdge(id1, id2, relation.attributes);
-			//
-			// 	setTimeout(() => {
-			// 		sigma.getGraph().dropNode(id1);
-			// 		sigma.getGraph().dropNode(id2);
-			// 		//sigma.getGraph().dropEdge(id3);
-			// 	}, 3000);
-			// }, 100);
 
 			if (
 				isPointInsideRectangle(
@@ -286,8 +232,6 @@ export const NetworkGraphSelectionTool = () => {
 			) {
 				highlightRelation(relation.edge);
 			}
-
-			// console.log('');
 		}
 	};
 

@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { postLogout } from 'src/utils/fetch/postLogout';
+import { usersApi } from 'src/utils/api/users';
 import { LogoutProps } from './Logout.interfaces';
 
 export const Logout = ({ withLabel, id, className, testId }: LogoutProps) => {
@@ -13,7 +13,7 @@ export const Logout = ({ withLabel, id, className, testId }: LogoutProps) => {
 	const rootElementClassName = clsx('logout', className);
 
 	const onDisconnect = () => {
-		postLogout().then(() => {
+		usersApi.postLogout().then(() => {
 			disconnect();
 
 			addNotification({

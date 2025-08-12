@@ -32,12 +32,7 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 
 	useEffect(() => {
 		return () => {
-			resetButExclude([
-				'nodeIdsToRender',
-				'relationIdsToRender',
-				'perspectiveId',
-				'perspectiveName'
-			]);
+			resetButExclude(['perspectiveId', 'perspectiveName']);
 		};
 	}, []);
 

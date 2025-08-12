@@ -160,12 +160,14 @@ export const getSearchResultTableContent = (result: CypherQuerySearchResult) => 
 				});
 			}
 			// node or relation missing
-			else if (item === '') {
+			else if (item === '' || item === null) {
+				const cellContent = item === '' ? '""' : 'null';
+
 				keysToRender[resultRowIndex].forEach(() => {
-					content.push(NOT_AVAILABLE_SIGN);
+					content.push(cellContent);
 				});
 				propertyKeysToRender[resultRowIndex].forEach(() => {
-					content.push(NOT_AVAILABLE_SIGN);
+					content.push(cellContent);
 				});
 			} else {
 				content.push(<RenderContent content={item} />);

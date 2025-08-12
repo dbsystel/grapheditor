@@ -3,84 +3,39 @@ import {
 	ItemPropertiesTableEntry
 } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
 import i18n from 'src/i18n';
-import { Item, ItemPropertyKey, ItemPropertyType, ItemPropertyWithKey } from 'src/models/item';
+import { Item, ItemPropertyKey, ItemPropertyType } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
-import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { patch } from 'src/utils/fetch/patch';
-import { getItemEndpoint, getItemMissingPropertiesForMeta } from 'src/utils/helpers/items';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
+import { getItemMissingPropertiesForMeta } from 'src/utils/helpers/items';
 import { isMetaNode, isNode } from 'src/utils/helpers/nodes';
+import { isRelation } from 'src/utils/helpers/relations';
 
-export const deleteProperty = (
-	item: Node | Relation,
-	property: ItemPropertyWithKey,
-	callback: (item: Item) => void
-) => {
-	const propertyClone = window.structuredClone(item);
+export const deleteProperty = (item: Node | Relation, propertyKey: string) => {
+	const itemClone = window.structuredClone(item);
 
 	if (
 		window.confirm(
-			`Delete property ${property.key} for ${isNode(item) ? 'node' : 'relation'} with ID ${
+			`Delete property ${propertyKey} for ${isNode(item) ? 'node' : 'relation'} with ID ${
 				item.id
 			} ?`
 		)
 	) {
-		const addNotification = useNotificationsStore.getState().addNotification;
-		const t = i18n.t;
+		delete itemClone.properties[propertyKey];
 
-		delete propertyClone.properties[property.key];
+		const patchObject = {
+			id: itemClone.id,
+			properties: itemClone.properties
+		};
 
-		patch<typeof item>(getItemEndpoint(item), {
-			properties: propertyClone.properties
-		}).then((response) => {
-			if (callback) {
-				callback(response.data);
-			}
-
-			addNotification({
-				title: t('notifications_success_property_mode', {
-					mode: t('notifications_prefix_delete')
-				}),
-				type: 'successful'
-			});
-		});
+		if (isNode(item)) {
+			nodesApi.patchNodesAndUpdateApplication([patchObject]);
+		} else if (isRelation(item)) {
+			relationsApi.patchRelationsAndUpdateApplication([patchObject]);
+		}
 	}
-};
-
-export const changePropertyType = async (
-	item: Node | Relation,
-	property: ItemPropertyWithKey,
-	propertyType: ItemPropertyType,
-	callback: (updatedItem: Item, property: ItemPropertyWithKey, propertyNode: Node) => void
-) => {
-	const propertiesClone = window.structuredClone(item.properties);
-	const addNotification = useNotificationsStore.getState().addNotification;
-	const t = i18n.t;
-
-	propertiesClone[property.key].type = propertyType;
-	const getNodeAsync = useItemsStore.getState().getNodeAsync;
-
-	const patchResponse = await patch<Item>(getItemEndpoint(item), {
-		properties: propertiesClone
-	});
-	const updatedPropertyNode = await getNodeAsync(property.key, true);
-
-	callback(
-		patchResponse.data,
-		{
-			...patchResponse.data.properties[property.key],
-			key: property.key
-		},
-		updatedPropertyNode
-	);
-
-	addNotification({
-		title: t('notifications_success_property_mode', {
-			mode: t('notifications_suffix_edit')
-		}),
-		type: 'successful'
-	});
 };
 
 export const processItemPropertiesEntries = ({

@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { LayoutModuleType, useSearchStore } from 'src/stores/search';
+import { nodesApi } from 'src/utils/api/nodes';
 import {
 	GLOBAL_SEARCH_ALGORITHM_KEY,
 	GLOBAL_SEARCH_PRESENTATION_KEY,
@@ -21,7 +22,6 @@ import {
 	GRAPH_PRESENTATION_RESULT_TABLE,
 	GRAPH_STYLE_DEFAULT_VALUE
 } from 'src/utils/constants';
-import { getPerspective } from 'src/utils/fetch/getPerspective';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { useGetStyleCurrent } from 'src/utils/hooks/useGetStyleCurrent';
 import { useGetStyles } from 'src/utils/hooks/useGetStyles';
@@ -69,9 +69,9 @@ export const HeaderGraphOptions = ({ id, className, testId }: HeaderGraphOptions
 			});
 
 			if (perspectiveId) {
-				getPerspective({ perspectiveId: perspectiveId }).then((response) =>
-					processPerspective(response.data)
-				);
+				nodesApi
+					.getPerspective({ perspectiveId: perspectiveId })
+					.then((response) => processPerspective(response.data));
 			} else if (searchStore.executeSearch) {
 				searchStore.executeSearch();
 			}

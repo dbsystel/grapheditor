@@ -7,7 +7,7 @@ import { Form } from 'src/components/form/Form';
 import { FormRow } from 'src/components/form-row/FormRow';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { postLogin } from 'src/utils/fetch/postLogin';
+import { usersApi } from 'src/utils/api/users';
 import { LoginFormData, LoginFormProps } from './LoginForm.interfaces';
 
 export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
@@ -18,17 +18,19 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 	const rootElementClassName = clsx('login-form', className);
 
 	const onSubmit: SubmitHandler<LoginFormData> = ({ host, username, password }) => {
-		postLogin({
-			host: host,
-			username: username,
-			password: password
-		}).then(() => {
-			addNotification({
-				title: t('notifications_success_login'),
-				type: 'successful'
+		usersApi
+			.postLogin({
+				host: host,
+				username: username,
+				password: password
+			})
+			.then(() => {
+				addNotification({
+					title: t('notifications_success_login'),
+					type: 'successful'
+				});
+				connect(host, username);
 			});
-			connect(host, username);
-		});
 	};
 
 	return (

@@ -5,5 +5,5 @@ export type CypherQuerySearchResult = Array<Array<CypherQuerySearchResultItem>>;
 
 export type CypherQuerySearchResultItem = [
 	string,
-	number | string | Node | Relation | Array<Node | Relation>
+	number | string | null | Node | Relation | Array<Node | Relation>
 ];

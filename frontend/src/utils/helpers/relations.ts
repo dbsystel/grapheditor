@@ -1,14 +1,16 @@
 import { AxiosResponse } from 'axios';
 import i18n from 'src/i18n';
 import { StyleProperties } from 'src/models/general';
-import { Relation, RelationId } from 'src/models/relation';
+import { PatchRelation, Relation } from 'src/models/relation';
+import { RelationId } from 'src/models/relation';
 import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { deleteRelation, DeleteRelationResponse } from 'src/utils/fetch/deleteRelation';
+import { DeleteRelationResponse } from 'src/utils/fetch/deleteRelation';
 import { deleteRelations } from 'src/utils/fetch/deleteRelations';
+import { patchRelations } from 'src/utils/fetch/patchRelations';
 import { isObject } from 'src/utils/helpers/general';
 import { idFormatter } from 'src/utils/idFormatter';
 
@@ -18,6 +20,14 @@ export const isRelation = (data: unknown): data is Relation => {
 	} else {
 		return false;
 	}
+};
+
+export const isArrayOfRelations = (data: unknown): data is Array<Relation> => {
+	if (Array.isArray(data) && data.every((element) => isRelation(element))) {
+		return true;
+	}
+
+	return false;
 };
 
 export const generateRelation = (
@@ -34,99 +44,147 @@ export const generateRelation = (
 		// backend also sends English longDescription only
 		longDescription: 'Description',
 		properties: {},
-		title: idFormatter.parseId(id),
+		title: idFormatter.parseIdToName(id),
 		style: style || {},
 		source_id: sourceId,
 		target_id: targetId,
-		type: idFormatter.formatObjectId(GraphEditorTypeSimplified.META_RELATION, 'connects', 'unknown')
+		type: idFormatter.formatSemanticId(
+			GraphEditorTypeSimplified.META_RELATION,
+			'connects',
+			'unknown'
+		)
 	};
 };
 
-export const deleteRelationAndUpdateApplication = (
-	relationId: RelationId,
-	onDelete?: (response: AxiosResponse<DeleteRelationResponse>) => void
-) => {
-	const notificationsStore = useNotificationsStore.getState();
-	const graphStore = useGraphStore.getState();
-	const drawerStore = useDrawerStore.getState();
-	const itemsStore = useItemsStore.getState();
-
-	const addNotification = notificationsStore.addNotification;
-	const removeGraphRelation = graphStore.removeRelation;
-	const removeEntryByItemId = drawerStore.removeEntryByItemId;
-	const removeItemsStoreRelation = itemsStore.removeRelation;
-
-	if (window.confirm(i18n.t('confirm_delete_relation', { id: relationId }))) {
-		deleteRelation({ relationId: relationId }).then((response) => {
-			const isDeletionSuccessful = response.data.num_deleted > 0;
-
-			if (isDeletionSuccessful) {
-				removeEntryByItemId(relationId);
-				removeGraphRelation(relationId);
-				removeItemsStoreRelation(relationId);
-			}
-
-			if (onDelete) {
-				onDelete(response);
-			}
-
-			if (isDeletionSuccessful) {
-				addNotification({
-					title: i18n.t('notifications_success_relation_delete'),
-					type: 'successful'
-				});
-			} else {
-				addNotification({
-					title: i18n.t('notifications_failure_relation_delete'),
-					type: 'critical'
-				});
-			}
-		});
-	}
-};
-
-export const deleteRelationsAndUpdateApplication = (
+export async function deleteRelationsAndUpdateApplication(
 	relationIds: Array<RelationId>,
-	onDelete?: (response: AxiosResponse<DeleteRelationResponse>) => void
-) => {
+	options?: {
+		onSuccess?: (response: AxiosResponse<DeleteRelationResponse>) => void;
+	}
+) {
 	const notificationsStore = useNotificationsStore.getState();
-	const graphStore = useGraphStore.getState();
-	const drawerStore = useDrawerStore.getState();
 	const itemsStore = useItemsStore.getState();
 
 	const addNotification = notificationsStore.addNotification;
-	const removeGraphRelation = graphStore.removeRelation;
-	const removeEntryByItemId = drawerStore.removeEntryByItemId;
-	const removeItemsStoreRelation = itemsStore.removeRelation;
-	const refreshRelations = itemsStore.refreshRelations;
 
-	if (window.confirm(i18n.t('confirm_delete_relations'))) {
-		deleteRelations({ relationIds: relationIds }).then((response) => {
-			const isDeletionSuccessful = response.data.num_deleted > 0;
+	const isOnlyOneRelationToDelete = relationIds.length === 1;
+	const confirmMessage = isOnlyOneRelationToDelete
+		? 'confirm_delete_relation'
+		: 'confirm_delete_relations';
+	const successTitle = isOnlyOneRelationToDelete
+		? 'notifications_success_relation_delete'
+		: 'notifications_success_relations_delete';
 
-			relationIds.forEach((relationId) => {
-				removeEntryByItemId(relationId);
-				removeGraphRelation(relationId);
-				removeItemsStoreRelation(relationId, true);
-			});
+	if (window.confirm(i18n.t(confirmMessage, { id: relationIds.at(0) }))) {
+		const relationsDeletionResponse = await deleteRelations({ relationIds: relationIds });
 
-			if (onDelete) {
-				onDelete(response);
+		const isDeletionSuccessful = relationsDeletionResponse.data.num_deleted > 0;
+
+		relationIds.forEach((relationId) => {
+			itemsStore.removeRelation(relationId, true);
+		});
+
+		itemsStore.refreshRelations();
+
+		if (isDeletionSuccessful) {
+			if (options?.onSuccess) {
+				options.onSuccess(relationsDeletionResponse);
 			}
-
-			refreshRelations();
 
 			addNotification({
-				title: i18n.t(
-					isDeletionSuccessful
-						? 'notifications_success_relations_delete'
-						: 'notifications_warning_relations_delete_title'
-				),
-				type: isDeletionSuccessful ? 'successful' : 'warning',
-				description: isDeletionSuccessful
-					? i18n.t('notifications_warning_relations_delete_description')
-					: response.data.message
+				title: i18n.t(successTitle),
+				type: 'successful'
 			});
+		} else {
+			addNotification({
+				title: i18n.t('notifications_warning_relations_delete_title'),
+				type: 'warning',
+				description: i18n.t('notifications_warning_relations_delete_description')
+			});
+		}
+	}
+}
+
+export async function patchRelationsAndUpdateApplication(
+	relations: Array<PatchRelation>,
+	options?: {
+		onSuccess?: (relations: Array<Relation>) => void;
+	}
+) {
+	const notificationsStore = useNotificationsStore.getState();
+	const itemsStore = useItemsStore.getState();
+	const graphStore = useGraphStore.getState();
+	const drawerStore = useDrawerStore.getState();
+
+	const addNotification = notificationsStore.addNotification;
+
+	const localRelationsMap = relations.reduce<Record<RelationId, PatchRelation>>(
+		(previousValue, currentValue) => {
+			previousValue[currentValue.id] = currentValue;
+
+			return previousValue;
+		},
+		{}
+	);
+	const relationsPatchResponse = await patchRelations(relations);
+	const responseRelationsMap = relationsPatchResponse.data.relations;
+	const isPatchSuccessful = Object.keys(responseRelationsMap).length === relations.length;
+	const successTitle =
+		relations.length === 1
+			? 'notifications_success_relation_update'
+			: 'notifications_success_relations_update';
+
+	itemsStore.setRelations(Object.values(responseRelationsMap), true);
+
+	for (const oldRelationKey in responseRelationsMap) {
+		const serverRelation = responseRelationsMap[oldRelationKey];
+		const localRelation = localRelationsMap[oldRelationKey];
+
+		// check if, due to relation update, a new relation was created (e.g. relation type change)
+		if (serverRelation.id !== oldRelationKey) {
+			const relationHighlighted = graphStore.isRelationHighlighted(localRelation.id);
+			const drawerItem = drawerStore.getActiveEntry();
+
+			// if necessary, update drawer data which will re-render this component
+			if (drawerItem && drawerItem.itemId === oldRelationKey) {
+				drawerStore.setEntry({
+					...drawerItem,
+					itemId: serverRelation.id
+				});
+			}
+
+			itemsStore.removeRelation(localRelation.id, true);
+			graphStore.addRelation(serverRelation);
+
+			// highlight new relation if previous was highlighted in graph
+			if (relationHighlighted) {
+				useGraphStore.getState().sigma.once('afterRender', () => {
+					graphStore.highlightRelation(serverRelation.id);
+				});
+			}
+		}
+	}
+
+	graphStore.indexParallelRelations();
+	graphStore.adaptRelationsTypeAndCurvature();
+	itemsStore.refreshRelations();
+
+	if (isPatchSuccessful) {
+		if (options?.onSuccess) {
+			options.onSuccess(Object.values(responseRelationsMap));
+		}
+
+		addNotification({
+			title: i18n.t(successTitle),
+			type: 'successful'
+		});
+	} else {
+		addNotification({
+			title: i18n.t('notifications_warning_relations_update_title'),
+			description: i18n.t('notifications_warning_relations_update_description'),
+			type: 'warning'
 		});
 	}
-};
+
+	return relationsPatchResponse.data.relations;
+}

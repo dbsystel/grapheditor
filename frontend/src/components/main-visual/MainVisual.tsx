@@ -11,12 +11,12 @@ import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useSearchStore } from 'src/stores/search';
 import { useSettingsStore } from 'src/stores/settings';
+import { relationsApi } from 'src/utils/api/relations';
 import {
 	GRAPH_PRESENTATION_GRAPH,
 	GRAPH_PRESENTATION_OBJECT_TABLE,
 	GRAPH_PRESENTATION_RESULT_TABLE
 } from 'src/utils/constants';
-import { postRelationsByNodeIds } from 'src/utils/fetch/postRelationsByNodeIds';
 import { MainVisualProps } from './MainVisual.interfaces';
 
 const NetworkGraph = lazy(() =>
@@ -44,8 +44,6 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 	const setRelations = useItemsStore((store) => store.setRelations);
 	const clearRelations = useItemsStore((store) => store.clearRelations);
 	const perspectiveId = useGraphStore((store) => store.perspectiveId);
-	const setNodeIdsToRender = useGraphStore((store) => store.setNodeIdsToRender);
-	const setRelationIdsToRender = useGraphStore((store) => store.setRelationIdsToRender);
 	const rootElementClassName = clsx('main-visual', className);
 	const dataLoadedAtLeastOnce = useRef(isLoading);
 
@@ -63,7 +61,7 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 				const { nodesMap, relationsMap } = processResultCell(result);
 
 				if (nodesMap.size && useSettingsStore.getState().isAutoconnectEnabled) {
-					const response = await postRelationsByNodeIds({
+					const response = await relationsApi.postRelationsByNodeIds({
 						additionalNodeIds: Array.from(nodesMap.keys())
 					});
 
@@ -80,8 +78,6 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 				clearRelations(true);
 				setNodes(Array.from(nodesMap.values()));
 				setRelations(Array.from(relationsMap.values()));
-				setNodeIdsToRender(Array.from(nodesMap.keys()));
-				setRelationIdsToRender(Array.from(relationsMap.keys()));
 				setIsResultProcessed(true);
 			}
 		})();
@@ -114,13 +110,13 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
 			{presentation === GRAPH_PRESENTATION_RESULT_TABLE && (
-				<DBSection className="main-visual__tables" spacing="none">
+				<DBSection spacing="none">
 					<GlobalSearchResultsTable />
 				</DBSection>
 			)}
 
 			{presentation === GRAPH_PRESENTATION_OBJECT_TABLE && (
-				<DBSection className="main-visual__tables" spacing="none">
+				<DBSection spacing="none">
 					<GlobalSearchResultsObjectTable />
 				</DBSection>
 			)}

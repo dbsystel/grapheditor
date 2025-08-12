@@ -28,7 +28,10 @@ export const generateTestNode = (
 		properties: propertyIds.reduce<Record<string, ItemProperty>>(
 			(previousValue, currentValue) => {
 				previousValue[
-					idFormatter.formatObjectId(GraphEditorTypeSimplified.META_PROPERTY, currentValue)
+					idFormatter.formatSemanticId(
+						GraphEditorTypeSimplified.META_PROPERTY,
+						currentValue
+					)
 				] = generateTestProperty(currentValue);
 
 				return previousValue;

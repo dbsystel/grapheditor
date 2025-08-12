@@ -1,7 +1,7 @@
 import './ItemPropertiesAddNewProperty.scss';
 import { DBButton, DBInput, DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ChangeEvent, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
@@ -11,14 +11,13 @@ import {
 	showNotificationForPropertyTypeAndValueMismatch
 } from 'src/components/item-properties/helpers';
 import { FormItemProperty } from 'src/models/general';
-import { Item } from 'src/models/item';
 import { Node } from 'src/models/node';
 import { useItemsStore } from 'src/stores/items';
-import { useNotificationsStore } from 'src/stores/notifications';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
 import { ALLOWED_ITEM_PROPERTY_TYPE_OPTIONS, GraphEditorTypeSimplified } from 'src/utils/constants';
-import { patch } from 'src/utils/fetch/patch';
-import { getItemEndpoint } from 'src/utils/helpers/items';
-import { nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
+import { isNode, nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
+import { isRelation } from 'src/utils/helpers/relations';
 import { useGetNodesPropertiesNodes } from 'src/utils/hooks/useGetNodesPropertiesNodes';
 import { idFormatter } from 'src/utils/idFormatter';
 import { ItemPropertiesAddNewPropertyProps } from './ItemPropertiesAddNewProperty.interfaces';
@@ -47,14 +46,15 @@ export const ItemPropertiesAddNewProperty = ({
 	const [allProperties, setAllProperties] = useState<Array<Node>>([]);
 	const [propertyOptions, setPropertyOptions] = useState<Array<Node>>([]);
 	const [selectedProperty, setSelectedProperty] = useState<Node | null>(null);
-	const searchTermRef = useRef('');
-	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const getNodeAsync = useItemsStore((store) => store.getNodeAsync);
-	const userSelectedExistingOption = useRef(false);
 	const rootElementClassName = clsx('item-properties-tabs__add-new-property', className);
 
-	const { isLoading: isNodesPropertiesLoading } = useGetNodesPropertiesNodes({
-		executeImmediately: true,
+	useEffect(() => {
+		reFetch();
+	}, [item]);
+
+	const { reFetch, isLoading: isNodesPropertiesLoading } = useGetNodesPropertiesNodes({
+		executeImmediately: false,
 		onSuccess: (properties) => {
 			setAllProperties(properties);
 			setPropertyOptions(properties);
@@ -82,7 +82,6 @@ export const ItemPropertiesAddNewProperty = ({
 
 		if (propertyValidationOk && !isLoading) {
 			const { key, value, type } = getValues();
-			const itemProperties = item.properties;
 			const parsedValue = parsePropertyValue(type, value);
 
 			if (parsedValue === null) {
@@ -92,51 +91,41 @@ export const ItemPropertiesAddNewProperty = ({
 
 			setIsLoading(true);
 
-			itemProperties[key] = {
+			const semanticId = idFormatter.isValidSemanticId(key)
+				? key
+				: idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_PROPERTY, key);
+			const itemClone = window.structuredClone(item);
+
+			itemClone.properties[semanticId] = {
 				value: parsedValue,
 				type: type,
 				edit: true
 			};
 
-			const updatedItemResponse = await patch<Item>(getItemEndpoint(item), {
-				properties: itemProperties
-			});
-
-			// TODO improve TS to support Node and PseudoNode types
-			const newPropertyPseudoNode = await getNodeAsync(
-				idFormatter.formatObjectId(GraphEditorTypeSimplified.META_PROPERTY, key),
-				true
-			);
-
-			if (!userSelectedExistingOption.current) {
-				setAllProperties([...allProperties, newPropertyPseudoNode]);
-				setPropertyOptions([...propertyOptions, newPropertyPseudoNode]);
-				setSelectedProperty(newPropertyPseudoNode);
-			}
+			await getNodeAsync(semanticId, true);
 
 			if (onPropertyCreate) {
-				onPropertyCreate(
-					updatedItemResponse.data,
-					{
-						key: key,
-						value: value,
-						type: type,
-						edit: true
-					},
-					newPropertyPseudoNode
-				);
+				onPropertyCreate({
+					key: semanticId,
+					...itemClone.properties[semanticId]
+				});
 			}
 
-			setSelectedProperty(null);
+			const patchObject = {
+				id: itemClone.id,
+				properties: itemClone.properties
+			};
+
+			if (isNode(item)) {
+				await nodesApi.patchNodesAndUpdateApplication([patchObject]);
+			} else if (isRelation(item)) {
+				await relationsApi.patchRelationsAndUpdateApplication([patchObject]);
+			}
+
+			resetField('key');
 			resetField('value');
 
-			addNotification({
-				title: t('notifications_success_property_mode', {
-					mode: t('notifications_prefix_create')
-				}),
-				type: 'successful'
-			});
-
+			setSelectedProperty(null);
 			setIsLoading(false);
 		}
 	};
@@ -152,7 +141,6 @@ export const ItemPropertiesAddNewProperty = ({
 		});
 
 		setValue('key', searchTerm);
-		userSelectedExistingOption.current = false;
 
 		setPropertyOptions(matchingProperties);
 		triggerKeyFieldValidation();
@@ -174,7 +162,6 @@ export const ItemPropertiesAddNewProperty = ({
 	 */
 	const onKeyChange = (property: Node) => {
 		setValue('key', property.id);
-		userSelectedExistingOption.current = true;
 
 		setSelectedProperty(property);
 		triggerKeyFieldValidation();
@@ -193,6 +180,14 @@ export const ItemPropertiesAddNewProperty = ({
 
 	const propertyValuePlaceholder = getPropertyValuePlaceholder(watch('type') ?? 'string');
 	const propertyValueLabel = `${t('form_property_value')} (${propertyValuePlaceholder})`;
+	/**
+	 * Toggle between controlled and un-controlled input.
+	 * This is needed in order to reset the input if the user never selected an option from dropdown
+	 * ("selectedProperty" stays null), but instead just wrote something in the input field).
+	 * As soon as the user starts typing something in or selects an option, the value of this variable
+	 * will be "undefined" leaving the control of the input field value to the ItemFinder component.
+	 * */
+	const inputValue = !watch('key') && !selectedProperty ? '' : undefined;
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -204,9 +199,9 @@ export const ItemPropertiesAddNewProperty = ({
 					return (
 						<ItemFinder
 							value={selectedProperty}
+							inputValue={inputValue}
 							label={t('form_property_key')}
 							options={propertyOptions}
-							defaultInputValue={searchTermRef.current}
 							onInput={onKeySearch}
 							searchTimeoutMilliseconds={0}
 							onChange={onKeyChange}

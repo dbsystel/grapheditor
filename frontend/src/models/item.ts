@@ -4,7 +4,7 @@ import { Relation } from 'src/models/relation';
 export type Item = Node | Relation;
 
 export type ItemProperty = {
-	value: string | boolean | number;
+	value: string | Array<string> | boolean | number;
 	edit: boolean;
 	type: ItemPropertyType;
 };

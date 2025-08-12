@@ -18,7 +18,7 @@ export const NetworkGraphPerspectiveSave = ({
 	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const { perspectiveId, perspectiveName, sigma } = useGraphStore((store) => store);
 	const setNodePosition = useItemsStore((store) => store.setNodePosition);
-	const { reFetch } = usePutPerspective({
+	const { reFetch, isLoading } = usePutPerspective({
 		perspectiveId: perspectiveId || '',
 		perspectiveName: perspectiveName || '',
 		nodePositions: {},
@@ -81,6 +81,7 @@ export const NetworkGraphPerspectiveSave = ({
 				id={id}
 				className={rootElementClassName}
 				data-testid={testId}
+				disabled={isLoading}
 			>
 				{t('perspective_save')}
 			</DBButton>

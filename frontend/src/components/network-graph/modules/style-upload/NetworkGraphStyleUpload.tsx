@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
-import { getPerspective } from 'src/utils/fetch/getPerspective';
+import { nodesApi } from 'src/utils/api/nodes';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { usePostStyleUpload } from 'src/utils/hooks/usePostStyleUpload';
 import { NetworkGraphStyleUploadProps } from './NetworkGraphStyleUpload.interfaces';
@@ -36,29 +36,23 @@ export const NetworkGraphStyleUpload = ({
 				type: 'successful'
 			});
 
-			const uploadButtonElement = uploadButtonRef.current;
 			const uploadedFileName = uploadButtonRef.current?.files?.[0]?.name || '';
+
+			searchStore.setNewlyUploadedStyle(uploadedFileName);
+
+			if (perspectiveId) {
+				nodesApi
+					.getPerspective({ perspectiveId: perspectiveId })
+					.then((response) => processPerspective(response.data));
+			}
+		},
+		onFinally: () => {
+			const uploadButtonElement = uploadButtonRef.current;
 
 			if (uploadButtonElement) {
 				uploadButtonElement.value = '';
 			}
 
-			searchStore.setNewlyUploadedStyle(uploadedFileName);
-
-			if (perspectiveId) {
-				getPerspective({ perspectiveId: perspectiveId }).then((response) =>
-					processPerspective(response.data)
-				);
-			}
-		},
-		onError: (error) => {
-			addNotification({
-				title: t('notifications_failure_grass_file_upload'),
-				description: error.message,
-				type: 'critical'
-			});
-		},
-		onFinally: () => {
 			setIsLoading(false);
 		}
 	});

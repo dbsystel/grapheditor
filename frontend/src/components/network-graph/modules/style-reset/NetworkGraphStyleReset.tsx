@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
-import { getPerspective } from 'src/utils/fetch/getPerspective';
+import { nodesApi } from 'src/utils/api/nodes';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { useGetStyleReset } from 'src/utils/hooks/useGetStyleReset';
 import { NetworkGraphStyleResetProps } from './NetworkGraphStyleReset.interfaces';
@@ -34,9 +34,9 @@ export const NetworkGraphStyleReset = ({
 			searchStore.setResetStyles(true);
 
 			if (perspectiveId) {
-				getPerspective({ perspectiveId: perspectiveId }).then((response) =>
-					processPerspective(response.data)
-				);
+				nodesApi
+					.getPerspective({ perspectiveId: perspectiveId })
+					.then((response) => processPerspective(response.data));
 			}
 		},
 		onError: (error) => {
