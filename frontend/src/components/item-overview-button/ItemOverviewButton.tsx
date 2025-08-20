@@ -44,7 +44,6 @@ export const ItemOverviewButton = ({ nodeId, id, className, testId }: ItemOvervi
 		window.clearTimeout(timeoutRef.current);
 
 		const storeNode = getStoreNode(nodeId);
-
 		if (!storeNode) {
 			setRenderLoadingTooltip(true);
 

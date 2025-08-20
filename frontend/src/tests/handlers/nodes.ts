@@ -1,22 +1,16 @@
-import { http, HttpHandler, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { Node, NodeConnection, NodeConnections, NodeId } from 'src/models/node';
-import {
-	generateTestNode,
-	getTestNodesLabels,
-	getTestNodesProperties,
-	testNodes
-} from 'src/tests/data/nodes';
+import { TEST_HOST } from 'src/tests/constants';
+import { getTestNodesLabels, getTestNodesProperties, testNodes } from 'src/tests/data/nodes';
 import { testRelations } from 'src/tests/data/relations';
 import { endpoints } from 'src/utils/endpoints';
-import { isObject, isString } from 'src/utils/helpers/general';
+import { isObject } from 'src/utils/helpers/general';
 
 const nodeMap = new Map<string, Node>();
 
 testNodes.forEach((node) => {
 	nodeMap.set(node.id, node);
 });
-
-const host = 'http://localhost:4999/api';
 
 export const resolveNodeConnections = (nodeId: string): NodeConnections => {
 	const connections: Array<NodeConnection> = [];
@@ -51,18 +45,18 @@ export const resolveNodeConnections = (nodeId: string): NodeConnections => {
 };
 
 export const successfulNodeHandlers = [
-	http.get(host + endpoints.getNodesPath(), () => {
+	http.get(TEST_HOST + endpoints.getNodesPath(), () => {
 		// Note that you DON'T have to stringify the JSON!
 		return HttpResponse.json(testNodes);
 	}),
 
-	http.get(host + endpoints.getNodesPropertiesPath(), () => {
+	http.get(TEST_HOST + endpoints.getNodesPropertiesPath(), () => {
 		return HttpResponse.json({ properties: getTestNodesProperties() });
 	}),
 
 	...testNodes.map((node) => {
 		return http.post(
-			host +
+			TEST_HOST +
 				endpoints.getNodeConnectionsPath({
 					nodeId: node.id
 				}),
@@ -75,7 +69,7 @@ export const successfulNodeHandlers = [
 
 	...testNodes.map((node) => {
 		return http.get(
-			host +
+			TEST_HOST +
 				endpoints.getNodePath({
 					nodeId: node.id
 				}),
@@ -87,8 +81,8 @@ export const successfulNodeHandlers = [
 	}),
 
 	http.post<{ ids: Array<NodeId> }, { ids: Array<NodeId> }>(
-		host + endpoints.getNodesBulkFetchPath(),
-		async ({ request, params }) => {
+		TEST_HOST + endpoints.getNodesBulkFetchPath(),
+		async ({ request }) => {
 			const requestBody: { ids: Array<NodeId> } = await request.clone().json();
 			const serverNodes: Array<Node> = [];
 
@@ -104,7 +98,7 @@ export const successfulNodeHandlers = [
 
 	...testNodes.map((node) => {
 		return http.patch(
-			host +
+			TEST_HOST +
 				endpoints.getNodePath({
 					nodeId: node.id
 				}),
@@ -120,7 +114,7 @@ export const successfulNodeHandlers = [
 
 	...testNodes.map((node) => {
 		return http.delete(
-			host +
+			TEST_HOST +
 				endpoints.getNodePath({
 					nodeId: node.id
 				}),
@@ -134,9 +128,20 @@ export const successfulNodeHandlers = [
 		);
 	}),
 
-	http.get(host + endpoints.getNodesLabelsPath(), () => {
+	http.get(TEST_HOST + endpoints.getNodesLabelsPath(), () => {
 		return HttpResponse.json({
 			labels: getTestNodesLabels()
+		});
+	}),
+
+	http.delete(TEST_HOST + endpoints.getNodesBulkDeletePath(), async ({ request }) => {
+		const body = await request.clone().json();
+		const idsToDelete =
+			isObject(body) && 'ids' in body && Array.isArray(body.ids) ? body.ids : [];
+
+		return HttpResponse.json({
+			message: `Deleted ${idsToDelete.length} nodes`,
+			num_deleted: idsToDelete.length
 		});
 	})
 ];

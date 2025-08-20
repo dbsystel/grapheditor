@@ -1,20 +1,24 @@
 import 'src/assets/scss/main.scss';
-import '../i18n';
 import { cleanup } from 'vitest-browser-react';
-import { server } from './server';
+import '../i18n';
+import { resetPerspectiveCounters } from './handlers/perspectives';
+import { worker } from './worker';
 
 // TODO consider adding "vi.useFakeTimers({ shouldAdvanceTime: true });" to
 //  "beforeEach/All" and "vi.useRealTimers();" to "afterEach/All"
 
+// TODO this is executed on each test file, fix it to run only once before all tests and once after
+//  all tests (https://vitest.dev/config/#globalsetup doesn't work properly due to different context)
 beforeAll(async () => {
-	await server.start({ quiet: true });
+	await worker.start({ quiet: true });
 });
 
 afterEach(() => {
 	cleanup();
-	server.resetHandlers();
+	worker.resetHandlers();
+	resetPerspectiveCounters();
 });
 
 afterAll(() => {
-	server.stop();
+	worker.stop();
 });

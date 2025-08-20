@@ -35,4 +35,9 @@
 			}
 		}
 	}
+
+	&__content {
+		display: flex;
+		gap: var(--db-spacing-fixed-xs);
+	}
 }

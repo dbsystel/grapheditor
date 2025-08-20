@@ -141,3 +141,4 @@ export const ITEM_OVERVIEW_TIMEOUT_MILLISECONDS = 700;
 export const NOT_AVAILABLE_SIGN = 'N/A';
 
 export const APP_LANGUAGES = Object.freeze<['en', 'de']>(['en', 'de']);
+export const APP_STORAGE_KEY_PREFIX = '_app_';

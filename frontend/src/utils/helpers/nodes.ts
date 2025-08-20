@@ -17,7 +17,7 @@ import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
 import { GRAPH_LAYOUT_PERSPECTIVE, GraphEditorTypeSimplified } from 'src/utils/constants';
-import { deleteNodes, DeleteNodesResponse } from 'src/utils/fetch/deleteNodes';
+import { deleteNodes } from 'src/utils/fetch/deleteNodes';
 import { patchNodes } from 'src/utils/fetch/patchNodes';
 import { isObject } from 'src/utils/helpers/general';
 import { buildSearchResult } from 'src/utils/helpers/search';
@@ -241,12 +241,7 @@ export const sortNodeConnections = (
 	};
 };
 
-export async function deleteNodesAndUpdateApplication(
-	nodeIds: Array<NodeId>,
-	options?: {
-		onSuccess?: (deleteNodesResponse: DeleteNodesResponse) => void;
-	}
-) {
+export async function deleteNodesAndUpdateApplication(nodeIds: Array<NodeId>) {
 	const notificationsStore = useNotificationsStore.getState();
 	const itemsStore = useItemsStore.getState();
 
@@ -272,10 +267,6 @@ export async function deleteNodesAndUpdateApplication(
 
 		// TODO check if data.num_deleted === 0
 		if (isDeletionSuccessful) {
-			if (options?.onSuccess) {
-				options.onSuccess(nodesDeletionResponse.data);
-			}
-
 			addNotification({
 				title: i18n.t(successTitle),
 				type: 'successful'
@@ -287,15 +278,14 @@ export async function deleteNodesAndUpdateApplication(
 				type: 'warning'
 			});
 		}
+
+		return nodesDeletionResponse.data;
+	} else {
+		throw new Error('User confirmation failed.');
 	}
 }
 
-export async function patchNodesAndUpdateApplication(
-	nodes: Array<PatchNode>,
-	options?: {
-		onSuccess?: (nodes: Array<Node>) => void;
-	}
-) {
+export async function patchNodesAndUpdateApplication(nodes: Array<PatchNode>) {
 	const notificationsStore = useNotificationsStore.getState();
 	const itemsStore = useItemsStore.getState();
 
@@ -316,10 +306,6 @@ export async function patchNodesAndUpdateApplication(
 	itemsStore.refreshNodes();
 
 	if (isPatchSuccessful) {
-		if (options?.onSuccess) {
-			options.onSuccess(serverNodes);
-		}
-
 		addNotification({
 			title: i18n.t(successTitle),
 			type: 'successful'

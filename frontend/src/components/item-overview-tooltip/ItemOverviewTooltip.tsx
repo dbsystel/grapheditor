@@ -2,6 +2,7 @@ import './ItemOverviewTooltip.scss';
 import clsx from 'clsx';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import Markdown from 'react-markdown';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { ItemOverviewButton } from 'src/components/item-overview-button/ItemOverviewButton';
 import { Table } from 'src/components/table/Table';
@@ -15,6 +16,7 @@ import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { RenderContent } from 'src/utils/helpers/search';
 import { ItemOverviewTooltipProps } from './ItemOverviewTooltip.interfaces';
+import { isString } from 'src/utils/helpers/general';
 
 /**
  * This component renders the content of each item, coming from ItemInfo or ItemOverviewButton component.
@@ -52,7 +54,7 @@ export const ItemOverviewTooltip = ({
 							: t('title_relation_single_view')}
 					</h4>
 					<div className="item-info__item-overview-tooltip-description">
-						<p>{item.description}</p>
+						<Markdown>{item.description}</Markdown>
 					</div>
 					<h6 className="item-info__item-overview-tooltip_p">
 						{t('single_view_title')}:{' '}
@@ -115,6 +117,9 @@ export const ItemOverviewTooltip = ({
 							</TableHead>
 							<TableBody>
 								{Object.keys(item.properties).map((property, index) => {
+									const content = item.properties[property].value;
+									const isContentString = isString(content);
+
 									return (
 										<TableRow key={index}>
 											<TableCell>
@@ -122,7 +127,8 @@ export const ItemOverviewTooltip = ({
 											</TableCell>
 											<TableCell>
 												<RenderContent
-													content={item.properties[property].value}
+													content={content}
+													applyMarkdown={isContentString}
 												/>
 											</TableCell>
 											<TableCell>{item.properties[property].type}</TableCell>

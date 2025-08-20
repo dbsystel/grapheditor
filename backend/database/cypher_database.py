@@ -868,11 +868,14 @@ class CypherDatabase(GraphDatabase):
         """Create a perspective from a dictionary of node ID's and the
         corresponding positions.
         """
+
         create_query = f"""CREATE (p: Perspective__tech_)
-                           SET p.name__tech_ = $name
+                           SET p.name__tech_ = $name,
+                               p.description__tech_ = $description
                            RETURN {g.cypher_id}(p) as id"""
-        pname = perspective_data["name"] if "name" in perspective_data else ""
-        result = self._run(create_query, name=pname)
+        name = perspective_data.get("name", "")
+        description = perspective_data.get("description", "")
+        result = self._run(create_query, name=name, description=description)
 
         pid = result.single()["id"]
         if not pid:
@@ -894,10 +897,13 @@ class CypherDatabase(GraphDatabase):
         nodes = {}
         relations = {}
         perspective_name = None
+        perspective_desc = None
 
         for row in query_result:
             if not perspective_name:
                 perspective_name = row["p"]["name__tech_"]
+            if not perspective_desc:
+                perspective_desc = row["p"]["description__tech_"]
             pos = row["pos"]
             node = mapper.neonode2grapheditor(row["b"])
             node["style"]["x"] = pos["x__tech_"]
@@ -909,6 +915,7 @@ class CypherDatabase(GraphDatabase):
 
         return {
             "name": perspective_name,
+            "description": perspective_desc,
             "nodes": nodes,
             "relations": relations,
         }

@@ -29,8 +29,8 @@ type GraphStore = {
 	perspectiveName: string | null;
 	clearPerspective: () => void;
 	setIsLoading: (isLoading: boolean) => void;
-	setPerspectiveId: (perspectiveId: string) => void;
-	setPerspectiveName: (name: string) => void;
+	setPerspectiveId: (perspectiveId: string | null) => void;
+	setPerspectiveName: (name: string | null) => void;
 	defaultRelationType: Node | null;
 	setDefaultRelationType: (relationType: Node | null) => void;
 	defaultNodeLabels: Array<Node> | null;

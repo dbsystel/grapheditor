@@ -20,12 +20,9 @@
 		}
 	}
 
-	.db-divider {
-		height: 24px;
-	}
-
-	&__divider-control-line {
+	&__divider {
 		margin: 0 var(--db-spacing-fixed-lg) !important;
+		height: 24px;
 	}
 
 	&__search-button {
@@ -34,5 +31,6 @@
 
 	&__search-line {
 		padding-inline: var(--db-spacing-fixed-md);
+		height: 32px; // quickfix to prevent element jumps (https://github.com/db-ux-design-system/core-web/issues/4725)
 	}
 }

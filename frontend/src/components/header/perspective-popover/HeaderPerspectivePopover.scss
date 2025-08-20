@@ -1,0 +1,10 @@
+.header {
+	&__perspective-card {
+		border: none;
+
+		> .db-button {
+			justify-content: start;
+			font-weight: 400;
+		}
+	}
+}

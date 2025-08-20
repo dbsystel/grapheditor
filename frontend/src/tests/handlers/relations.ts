@@ -1,16 +1,15 @@
 import { http, HttpResponse } from 'msw';
+import { TEST_HOST } from 'src/tests/constants';
 import { testRelations } from 'src/tests/data/relations';
 import { endpoints } from 'src/utils/endpoints';
 
-const host = 'http://localhost:4999/api';
-
 export const successfulRelationsHandlers = [
-	http.get(host + endpoints.getRelationsPath(), () => {
+	http.get(TEST_HOST + endpoints.getRelationsPath(), () => {
 		// Note that you DON'T have to stringify the JSON!
 		return HttpResponse.json(testRelations);
 	}),
 
-	http.get(host + endpoints.getRelationsTypesPath(), () => {
+	http.get(TEST_HOST + endpoints.getRelationsTypesPath(), () => {
 		const types = [
 			...new Set(
 				testRelations.map((relation) => {
@@ -27,7 +26,7 @@ export const successfulRelationsHandlers = [
 
 	...testRelations.map((relation) => {
 		return http.get(
-			host +
+			TEST_HOST +
 				endpoints.getRelationPath({
 					relationId: relation.id
 				}),
@@ -40,7 +39,7 @@ export const successfulRelationsHandlers = [
 
 	...testRelations.map((relation) => {
 		return http.delete(
-			host +
+			TEST_HOST +
 				endpoints.getRelationPath({
 					relationId: relation.id
 				}),

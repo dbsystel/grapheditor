@@ -248,7 +248,11 @@ def neoproperties2grapheditor(obj, semantic_id=None):
             key,
             metalabel=GraphEditorLabel.MetaProperty
         )
-        properties[prop_id] = dict(edit=True, type=prop_type, value=value)
+        py_val = value
+        if type(value).__name__ in ['DateTime', 'Date', 'Time']:
+            # convert to a python value so that jsonify can work with it.
+            py_val = value.to_native()
+        properties[prop_id] = dict(edit=True, type=prop_type, value=py_val)
 
     new_properties = dict(
         sorted(

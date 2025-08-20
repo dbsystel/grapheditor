@@ -1,11 +1,12 @@
 import './Header.scss';
 import { DBButton, DBDivider, DBSection, DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ChangeEvent, useEffect, useRef } from 'react';
+import { ChangeEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatabaseMenu } from 'src/components/database-menu/DatabaseMenu';
 import { GlobalSearch } from 'src/components/global-search/GlobalSearch';
 import { GlobalSearchRef } from 'src/components/global-search/GlobalSearch.interfaces';
+import { HeaderPerspectivePopover } from 'src/components/header/perspective-popover/HeaderPerspectivePopover';
 import { HeaderFullscreen } from 'src/components/header-fullscreen/HeaderFullscreen';
 import { HeaderGraphOptions } from 'src/components/header-graph-options/HeaderGraphOptions';
 import { HeaderSettings } from 'src/components/header-settings/HeaderSettings';
@@ -21,7 +22,6 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 	const rootElementClassName = clsx('header', 'db-bg-color-lvl-1', className);
 	const searchType = useSearchStore((store) => store.type);
 	const theme = useSettingsStore((store) => store.theme);
-	const setTheme = useSettingsStore((store) => store.setTheme);
 	const language = useSettingsStore((store) => store.language);
 	const setLanguage = useSettingsStore((store) => store.setLanguage);
 	const { t, i18n } = useTranslation();
@@ -31,16 +31,11 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 	const isFullTextOrCypherQuery = searchType === 'full-text' || searchType === 'cypher-query';
 	const isPerspective = searchType === 'perspectives';
 
-	useEffect(() => {
-		setApplicationTheme(theme);
-	}, [theme]);
-
 	const onLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
 		const languageValue = event.target.value;
 
-		i18n.changeLanguage(languageValue);
-
 		if (isAppSupportedLanguage(languageValue)) {
+			i18n.changeLanguage(languageValue);
 			setLanguage(languageValue);
 		}
 	};
@@ -48,10 +43,7 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 	const toggleTheme = () => {
 		const newTheme = theme === 'light' ? 'dark' : 'light';
 
-		// assign the color scheme to the body element in order to cover elements injected
-		// to the body element via React.portal (or similar).
-		document.body.dataset.mode = newTheme;
-		setTheme(newTheme);
+		setApplicationTheme(newTheme);
 	};
 
 	const triggerSearch = () => {
@@ -65,32 +57,31 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 			<div className="header__control-line">
 				<div>
 					<ToggleGroup />
+					<DBDivider variant="vertical" emphasis="weak" className="header__divider" />
 					{isFullTextOrCypherQuery && (
-						<>
-							<DBDivider
-								variant="vertical"
-								emphasis="weak"
-								className="header__divider-control-line"
-							/>
-							<DBButton
-								variant="ghost"
-								icon="play"
-								className="header__search-button"
-								onClick={triggerSearch}
-							>
-								Start
-							</DBButton>
-						</>
+						<DBButton
+							variant="ghost"
+							icon="play"
+							className="header__search-button"
+							onClick={triggerSearch}
+						>
+							Start
+						</DBButton>
 					)}
+
+					{isPerspective && <HeaderPerspectivePopover />}
 
 					<HeaderGraphOptions />
 				</div>
 				<div className="header__data-base-controls">
 					<DatabaseMenu />
 
-					<DBDivider variant="vertical" emphasis="weak" />
+					<DBDivider variant="vertical" emphasis="weak" className="header__divider" />
+
 					<HeaderSettings />
+
 					<HeaderFullscreen />
+
 					<DBButton
 						icon={theme === 'light' ? 'sun' : 'moon'}
 						onClick={toggleTheme}
@@ -98,6 +89,7 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 						className="db-density-functional"
 						type="button"
 						noText
+						data-testid="header_theme_toggle_button"
 					/>
 					<DBSelect
 						className="header__select"

@@ -1,4 +1,4 @@
-import { APP_LANGUAGES } from 'src/utils/constants';
+import { APP_LANGUAGES, APP_STORAGE_KEY_PREFIX } from 'src/utils/constants';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -63,7 +63,7 @@ export const useSettingsStore = create<SettingsStore>()(
 			};
 		},
 		{
-			name: '_app_settings', // name of the item in the storage (must be unique)
+			name: APP_STORAGE_KEY_PREFIX + 'settings', // name of the item in the storage (must be unique)
 			storage: createJSONStorage(() => window.localStorage) // (optional) by default, 'localStorage' is used
 		}
 	)

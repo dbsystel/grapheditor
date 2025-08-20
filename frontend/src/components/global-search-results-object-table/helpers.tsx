@@ -9,6 +9,7 @@ import { NOT_AVAILABLE_SIGN } from 'src/utils/constants';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { RenderContent } from 'src/utils/helpers/search';
+import { isString } from 'src/utils/helpers/general';
 
 export const getSearchResultTableContent = (result: CypherQuerySearchResult) => {
 	const keys: Array<Exclude<keyof Node, 'properties'> | Exclude<keyof Relation, 'properties'>> = [
@@ -138,15 +139,22 @@ export const getSearchResultTableContent = (result: CypherQuerySearchResult) => 
 							}
 						} else {
 							if (storeItem) {
+								const storeItemKeyContent =
+									storeItem[key as keyof typeof storeItem];
+								const isStoreItemKeyContentString = isString(storeItemKeyContent);
+
 								content.push(
 									<RenderContent
-										content={storeItem[key as keyof typeof storeItem]}
+										content={storeItemKeyContent}
+										applyMarkdown={isStoreItemKeyContentString}
 									/>
 								);
 							} else {
 								content.push(NOT_AVAILABLE_SIGN);
 							}
 						}
+					} else {
+						content.push(NOT_AVAILABLE_SIGN);
 					}
 				});
 
@@ -170,7 +178,9 @@ export const getSearchResultTableContent = (result: CypherQuerySearchResult) => 
 					content.push(cellContent);
 				});
 			} else {
-				content.push(<RenderContent content={item} />);
+				const isContentString = isString(item);
+
+				content.push(<RenderContent content={item} applyMarkdown={isContentString} />);
 			}
 		});
 

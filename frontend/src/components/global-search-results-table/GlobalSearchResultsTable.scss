@@ -14,4 +14,14 @@
 			position: relative;
 		}
 	}
+
+	p {
+		display: inline-block;
+		vertical-align: middle;
+
+		&:first-child,
+		&:last-child {
+			margin: 0;
+		}
+	}
 }

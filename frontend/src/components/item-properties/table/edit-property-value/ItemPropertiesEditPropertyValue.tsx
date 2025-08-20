@@ -39,25 +39,23 @@ export const ItemPropertiesEditPropertyValue = ({
 	const propertyValuePlaceholder = getPropertyValuePlaceholder(property.type);
 
 	return (
-		<>
-			<div className="item-properties-table__edit-property-value">
-				<DBTextarea
-					ref={textareaRef}
-					label=""
-					value={value}
-					onChange={onInputChange}
-					validMessage=""
-					invalidMessage=""
-					rows={1}
-					placeholder={propertyValuePlaceholder}
-				/>
+		<div className="item-properties-table__edit-property-value">
+			<DBTextarea
+				ref={textareaRef}
+				label=""
+				value={value}
+				onChange={onInputChange}
+				validMessage=""
+				invalidMessage=""
+				rows={1}
+				placeholder={propertyValuePlaceholder}
+			/>
 
-				<DBTooltip width="fixed" showArrow={false}>
-					{t('edit_property_value_tooltip')}: {property.type}
-					<br />
-					{propertyValuePlaceholder}
-				</DBTooltip>
-			</div>
-		</>
+			<DBTooltip width="fixed" showArrow={false}>
+				{t('edit_property_value_tooltip')}: {property.type}
+				<br />
+				{propertyValuePlaceholder}
+			</DBTooltip>
+		</div>
 	);
 };

@@ -29,7 +29,7 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 
 		useEffect(() => {
 			localRefreshHeight();
-		}, []);
+		}, [value]);
 
 		const onRootElementRefChange = useCallback((element: HTMLDivElement | null) => {
 			if (element) {

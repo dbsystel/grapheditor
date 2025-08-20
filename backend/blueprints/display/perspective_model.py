@@ -24,6 +24,11 @@ class PerspectivePostSchema(Schema):
         },
         required=False,
     )
+
+    description = fields.Str(
+        metadata={"description": "A text describing this perspective"},
+        required=False,
+    )
     node_positions = fields.Dict(
         keys=fields.Str, values=fields.Nested(Position)
     )
@@ -36,6 +41,7 @@ class PerspectivePutSchema(PerspectivePostSchema):
 
 class PerspectiveSchema(Schema):
     id = fields.Str()
+    description = fields.Str(required=False)
     name = fields.Str(required=False)
     nodes = fields.Dict(
         keys=fields.Str, values=fields.Nested(node_model.NodeSchema)

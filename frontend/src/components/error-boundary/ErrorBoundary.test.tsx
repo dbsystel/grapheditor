@@ -57,15 +57,20 @@ describe('Components - ErrorBoundary', () => {
 
 		triggerError = false;
 
-		/* 
-			This is a quickfix until this ticket is resolved: 
+		/*
+			This is a quickfix until this ticket is resolved:
 			https://github.com/db-ux-design-system/core-web/issues/4400
+		/*
+			This is ein Quickfix bis https://github.com/db-ux-design-system/core-web/issues/4400 gelöst ist
 		*/
 		await userEvent.hover(screen.getByRole('button'));
 
 		setTimeout(async () => {
 			await userEvent.click(screen.getByRole('button'));
-			expect(screen.getByText(errorComponentChildText)).toBeVisible();
-		}, 10);
+			await userEvent.click(screen.getByRole('button'));
+			await vi.waitFor(() => {
+				expect(screen.getByText(errorComponentChildText)).toBeVisible();
+			}, 10);
+		});
 	});
 });

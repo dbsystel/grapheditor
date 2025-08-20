@@ -25,6 +25,7 @@ const root = createRoot(
 window.addEventListener('error', onWindowError);
 window.addEventListener('unhandledrejection', onWindowUnhandledRejection);
 
+// TODO discuss enabling the strict mode
 root.render(
 	// <StrictMode>
 	<App />

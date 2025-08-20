@@ -3,10 +3,8 @@ import { DBButton, DBIcon, DBSection, DBTooltip } from '@db-ux/react-core-compon
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
-import { useSearchStore } from 'src/stores/search';
+import { SearchStoreType, useSearchStore } from 'src/stores/search';
 import {
-	GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE,
-	GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE,
 	GLOBAL_SEARCH_PARAMETER_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
@@ -18,18 +16,25 @@ import { ToggleGroupProps } from './ToggleGroup.interfaces';
 
 export const ToggleGroup = ({ id, className, testId }: ToggleGroupProps) => {
 	const { t } = useTranslation();
-	const { type, setType, setSearchValue, getUrlSearchParameter, setAlgorithm } = useSearchStore(
-		(store) => store
-	);
+	const {
+		type,
+		setType,
+		setSearchValue,
+		getUrlSearchParameter,
+		setAlgorithm,
+		getDefaultSearchValue
+	} = useSearchStore((store) => store);
 	const rootElementClassName = clsx('toggle-group', className);
 
-	const onTypeChange = (newType: string) => {
+	const onTypeChange = (newType: SearchStoreType) => {
 		setType(newType);
 
 		/*
 			Here we check the urlParams (query & type) to see if they were set.
 			If they weren't set we use default values.
 		*/
+		// TODO check if we can use store values instead of reading the URL (and if it makes sense
+		//  to read the URL at all)
 		const urlType = getUrlSearchParameter(GLOBAL_SEARCH_TYPE_KEY);
 		const urlQuery = getUrlSearchParameter(GLOBAL_SEARCH_PARAMETER_KEY);
 
@@ -37,7 +42,7 @@ export const ToggleGroup = ({ id, className, testId }: ToggleGroupProps) => {
 			if (urlType === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT && urlQuery) {
 				setSearchValue(urlQuery);
 			} else {
-				setSearchValue(GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE);
+				setSearchValue(getDefaultSearchValue(newType));
 			}
 		} else if (newType === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
 			// CR_ML_1
@@ -48,12 +53,12 @@ export const ToggleGroup = ({ id, className, testId }: ToggleGroupProps) => {
 			if (urlType === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY && urlQuery) {
 				setSearchValue(urlQuery);
 			} else {
-				setSearchValue(GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE);
+				setSearchValue(getDefaultSearchValue(newType));
 			}
 		}
 	};
 
-	const searchTypeOptions = [
+	const searchTypeOptions: Array<{ value: SearchStoreType; label: string; icon: string }> = [
 		{
 			value: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 			label: t('global_search_cypher_query'),

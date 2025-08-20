@@ -1,4 +1,3 @@
-import { AxiosResponse } from 'axios';
 import i18n from 'src/i18n';
 import { StyleProperties } from 'src/models/general';
 import { PatchRelation, Relation } from 'src/models/relation';
@@ -8,7 +7,6 @@ import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { DeleteRelationResponse } from 'src/utils/fetch/deleteRelation';
 import { deleteRelations } from 'src/utils/fetch/deleteRelations';
 import { patchRelations } from 'src/utils/fetch/patchRelations';
 import { isObject } from 'src/utils/helpers/general';
@@ -56,12 +54,7 @@ export const generateRelation = (
 	};
 };
 
-export async function deleteRelationsAndUpdateApplication(
-	relationIds: Array<RelationId>,
-	options?: {
-		onSuccess?: (response: AxiosResponse<DeleteRelationResponse>) => void;
-	}
-) {
+export async function deleteRelationsAndUpdateApplication(relationIds: Array<RelationId>) {
 	const notificationsStore = useNotificationsStore.getState();
 	const itemsStore = useItemsStore.getState();
 
@@ -87,10 +80,6 @@ export async function deleteRelationsAndUpdateApplication(
 		itemsStore.refreshRelations();
 
 		if (isDeletionSuccessful) {
-			if (options?.onSuccess) {
-				options.onSuccess(relationsDeletionResponse);
-			}
-
 			addNotification({
 				title: i18n.t(successTitle),
 				type: 'successful'
@@ -102,15 +91,14 @@ export async function deleteRelationsAndUpdateApplication(
 				description: i18n.t('notifications_warning_relations_delete_description')
 			});
 		}
+
+		return relationsDeletionResponse.data;
+	} else {
+		throw new Error('User confirmation failed.');
 	}
 }
 
-export async function patchRelationsAndUpdateApplication(
-	relations: Array<PatchRelation>,
-	options?: {
-		onSuccess?: (relations: Array<Relation>) => void;
-	}
-) {
+export async function patchRelationsAndUpdateApplication(relations: Array<PatchRelation>) {
 	const notificationsStore = useNotificationsStore.getState();
 	const itemsStore = useItemsStore.getState();
 	const graphStore = useGraphStore.getState();
@@ -170,10 +158,6 @@ export async function patchRelationsAndUpdateApplication(
 	itemsStore.refreshRelations();
 
 	if (isPatchSuccessful) {
-		if (options?.onSuccess) {
-			options.onSuccess(Object.values(responseRelationsMap));
-		}
-
 		addNotification({
 			title: i18n.t(successTitle),
 			type: 'successful'

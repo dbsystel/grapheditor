@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NodeId } from 'src/models/node';
+import { useGraphStore } from 'src/stores/graph';
 import { isObject } from 'src/utils/helpers/general';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { useGetNodesPerspectivesNodes } from 'src/utils/hooks/useGetNodesPerspectivesNodes';
@@ -14,9 +15,10 @@ import { PerspectiveFinderProps } from './PerspectiveFinder.interfaces';
 export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderProps) => {
 	const { t } = useTranslation();
 	const rootElementClassName = clsx('action-menu__perspective-finder', className);
-	const [perspectives, setPerspectives] = useState<Array<NodeId>>([]);
 	const [perspectiveOptions, setPerspectiveOptions] = useState<Array<CustomSelectOptionType>>([]);
-	const [userSelectedPerspectiveId, setUserSelectedPerspectiveId] = useState<string>('');
+	const perspectiveId = useGraphStore((store) => store.perspectiveId);
+	const setPerspectiveId = useGraphStore((store) => store.setPerspectiveId);
+	const values = [perspectiveId || ''];
 
 	const { isLoading: isPerspectiveLoading, reFetch: fetchPerspectiveNodes } =
 		useGetNodesPerspectivesNodes({
@@ -24,8 +26,14 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 			onSuccess: (data) => {
 				setPerspectiveOptions(
 					data.map((node) => {
+						let label = node.title;
+
+						if (node.description) {
+							label += ' (' + node.description + ')';
+						}
+
 						return {
-							label: node.title,
+							label: label,
 							value: node.id
 						};
 					})
@@ -35,16 +43,15 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 
 	useGetPerspective(
 		{
-			executeImmediately: !!userSelectedPerspectiveId,
-			perspectiveId: userSelectedPerspectiveId,
+			executeImmediately: !!perspectiveId,
+			perspectiveId: perspectiveId || '',
 			onSuccess: (response) => processPerspective(response.data)
 		},
-		[userSelectedPerspectiveId]
+		[perspectiveId]
 	);
 
 	const onPerspectiveChange = (selectedPerspectives: Array<NodeId>) => {
-		setPerspectives(selectedPerspectives);
-		setUserSelectedPerspectiveId(selectedPerspectives[0]);
+		setPerspectiveId(selectedPerspectives[0]);
 	};
 
 	const onDropdownToggle = (event: unknown) => {
@@ -57,18 +64,20 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 		<div className={rootElementClassName} id={id} data-testid={testId}>
 			<DBCustomSelect
 				options={perspectiveOptions}
-				values={perspectives}
-				label={t('action_menu_perspective_finder_label')}
+				values={values}
+				showLabel={false}
+				placeholder={t('perspective_finder_placeholder')}
 				showSearch={true}
+				searchPlaceholder={t('perspective_finder_search_placeholder')}
+				loadingText={t('perspective_finder_loading')}
+				noResultsText={t('perspective_finder_nothing_found')}
 				showIcon={false}
-				noResultsText=""
 				onDropdownToggle={onDropdownToggle}
 				showLoading={isPerspectiveLoading}
-				loadingText="Loading..."
 				showClearSelection={false}
-				variant="floating"
 				onOptionSelected={onPerspectiveChange}
 				dropdownWidth="full"
+				label=""
 			/>
 		</div>
 	);

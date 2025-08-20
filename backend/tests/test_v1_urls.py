@@ -215,6 +215,21 @@ def test_get_node_with_semantic_id():
     assert node["_grapheditor_type"] == "node"
 
 
+def test_get_node_with_datetime():
+    "Test if datetime is serialized correctly."
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": (
+                "create (n {name: 'Homer', birth: datetime('1956-05-12T20:00:00.142')}) return n"
+            )
+        }
+    )
+    assert response.status_code == 200
+    assert dict(response.json['result'][0])['n']['properties']['MetaProperty::birth']['value'] == 'Sat, 12 May 1956 20:00:00 GMT'
+
+
 def test_put_node():
     nid = fetch_sample_node_id(client, text="alice")
     response = client.put(

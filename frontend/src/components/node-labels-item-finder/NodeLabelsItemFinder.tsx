@@ -138,19 +138,14 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		setNewlyAddedTags((prev) => [...prev, newLabel.id]);
 	};
 
-	const onSave = () => {
+	const onSave = async () => {
 		if (isEditMode) {
 			const patchObject = {
 				id: props.node.id,
 				labels: (value || []).map((label) => label.id)
 			};
 
-			nodesApi.patchNodesAndUpdateApplication([patchObject], {
-				onSuccess: () => {
-					setEditLabels(false);
-					setIsAddButtonClicked(false);
-				}
-			});
+			await nodesApi.patchNodesAndUpdateApplication([patchObject]);
 
 			setEditLabels(false);
 			setIsAddButtonClicked(false);

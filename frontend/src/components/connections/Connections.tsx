@@ -38,18 +38,16 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 	}, [node, renderKey]);
 
 	const onDelete = (relation: Relation) => {
-		relationsApi.deleteRelationsAndUpdateApplication([relation.id], {
-			onSuccess: () => {
-				setConnectionBoxData((prevState) => {
-					return prevState.filter((connection) => {
-						if (!connection.relation) {
-							return true;
-						}
+		relationsApi.deleteRelationsAndUpdateApplication([relation.id]).then(() => {
+			setConnectionBoxData((prevState) => {
+				return prevState.filter((connection) => {
+					if (!connection.relation) {
+						return true;
+					}
 
-						return connection.relation.id !== relation.id;
-					});
+					return connection.relation.id !== relation.id;
 				});
-			}
+			});
 		});
 	};
 

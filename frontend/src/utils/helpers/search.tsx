@@ -5,12 +5,23 @@ import { Relation } from 'src/models/relation';
 import { useItemsStore } from 'src/stores/items';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
 import { NOT_AVAILABLE_SIGN } from 'src/utils/constants';
-import { isObject, isPrimitive } from 'src/utils/helpers/general';
+import { isObject, isPrimitive, isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { idFormatter } from 'src/utils/idFormatter';
+import Markdown from 'react-markdown';
 
-export const RenderContent = ({ content }: { content: unknown }): ReactNode => {
+type RenderContentProps = {
+	content: unknown;
+	applyMarkdown?: boolean;
+};
+
+/**
+ * This component should render output as markdown only if the initial input (the "content" prop) is
+ * of type "string". By the "initial input" we mean the input originally given to the component, before
+ * recursive calls.
+ */
+export const RenderContent = ({ content, applyMarkdown }: RenderContentProps): ReactNode => {
 	const getStoreItem = useItemsStore((store) => store.getStoreItem);
 	let contentToRender: ReactNode = null;
 
@@ -44,7 +55,8 @@ export const RenderContent = ({ content }: { content: unknown }): ReactNode => {
 			for (const [key, value] of Object.entries(content)) {
 				objectContent.push(
 					<span key={key}>
-						{key}:<RenderContent key={key} content={value} />
+						{key}:
+						<RenderContent key={key} content={value} />
 					</span>
 				);
 			}
@@ -76,6 +88,10 @@ export const RenderContent = ({ content }: { content: unknown }): ReactNode => {
 				{JSON.stringify(content, null, 2)}
 			</pre>
 		);
+	}
+
+	if (applyMarkdown && isString(contentToRender)) {
+		return <Markdown>{contentToRender}</Markdown>;
 	}
 
 	return contentToRender;

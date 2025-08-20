@@ -53,9 +53,11 @@ def create_perspective(client):
     bob = fetch_sample_node_id(client, text="Bob")
     alice = fetch_sample_node_id(client, text="Alice")
     likes = fetch_sample_relation_id(client, text="likes")
+    description = "Displaying Bob and Alice"
 
     json = {
         "name": "Sample_Perspective",
+        "description": description,
         "node_positions": {bob: {"x": 30, "y": 50}, alice: {"x": 90, "y": 59}},
         "relation_ids": [likes],
     }
@@ -72,6 +74,7 @@ def create_perspective(client):
         BASE_URL + f"/api/v1/nodes/{pid}",
         headers=HEADERS,
     )
+
     return pid
 
 

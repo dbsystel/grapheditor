@@ -11,6 +11,7 @@ import {
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Markdown from 'react-markdown';
 import { Connections } from 'src/components/connections/Connections';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemProperties } from 'src/components/item-properties/ItemProperties';
@@ -168,7 +169,7 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 
 			<DBAccordion behavior="multiple" initOpenIndex={[0, 1, 2, 3]}>
 				<DBAccordionItem headline={t('single_view_description')}>
-					{node.description}
+					<Markdown>{node.description}</Markdown>
 				</DBAccordionItem>
 
 				<DBAccordionItem headline={t('single_node_labels_title')}>

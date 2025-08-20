@@ -22,6 +22,7 @@ export const usePostPerspective = ({
 	onFinally,
 	executeImmediately = false,
 	name,
+	description,
 	nodePositions,
 	relationIds
 }: UsePostPerspectiveParameters) => {
@@ -35,11 +36,13 @@ export const usePostPerspective = ({
 				typeof parameters === 'undefined'
 					? {
 							name: name,
+							description: description,
 							nodePositions: nodePositions,
 							relationIds: relationIds
 						}
 					: {
 							name: parameters.name,
+							description: parameters.description,
 							nodePositions: parameters.nodePositions,
 							relationIds: parameters.relationIds
 						};

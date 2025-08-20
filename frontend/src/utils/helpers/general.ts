@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import { AppLanguage, AppTheme } from 'src/stores/settings';
+import { AppLanguage, AppTheme, useSettingsStore } from 'src/stores/settings';
 import { APP_LANGUAGES } from 'src/utils/constants';
 
 export const adjustElementHeight = (element: HTMLElement) => {
@@ -124,6 +124,8 @@ export const setApplicationTheme = (theme: AppTheme) => {
 	// assign the color scheme to the body element in order to cover elements injected
 	// to the body element via React.portal (or similar).
 	document.body.dataset.mode = theme;
+
+	useSettingsStore.getState().setTheme(theme);
 };
 
 // return current date and time as the following format: 4-7-2025-17-58-27

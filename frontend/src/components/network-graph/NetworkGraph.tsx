@@ -2,8 +2,6 @@ import './NetworkGraph.scss';
 import clsx from 'clsx';
 import { LoadGraph } from 'src/components/network-graph/LoadGraph';
 import { NetworkGraphNodeLabelsDefault } from 'src/components/network-graph/modules/node-labels-default/NetworkGraphNodeLabelsDefault';
-import { NetworkGraphPerspectiveSave } from 'src/components/network-graph/modules/perspective-save/NetworkGraphPerspectiveSave';
-import { NetworkGraphPerspectiveSaveAs } from 'src/components/network-graph/modules/perspective-save-as/NetworkGraphPerspectiveSaveAs';
 import { NetworkGraphRelationTypeDefault } from 'src/components/network-graph/modules/relation-type-default/NetworkGraphRelationTypeDefault';
 import { NetworkGraphSearch } from 'src/components/network-graph/modules/search/NetworkGraphSearch';
 import { NetworkGraphStyleReset } from 'src/components/network-graph/modules/style-reset/NetworkGraphStyleReset';
@@ -66,8 +64,6 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 				<div className="network-graph__options">
 					<NetworkGraphStyleUpload onSuccess={onStyleSuccess} />
 					<NetworkGraphStyleReset onSuccess={onStyleSuccess} />
-					<NetworkGraphPerspectiveSave />
-					<NetworkGraphPerspectiveSaveAs />
 					<NetworkGraphNodeLabelsDefault />
 					<NetworkGraphRelationTypeDefault />
 					<NetworkGraphZoomFactor />

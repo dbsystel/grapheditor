@@ -25,4 +25,14 @@
 		max-height: 5em;
 		overflow: auto;
 	}
+
+	p {
+		display: inline-block;
+		vertical-align: middle;
+
+		&:first-child,
+		&:last-child {
+			margin: 0;
+		}
+	}
 }
