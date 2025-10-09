@@ -65,7 +65,7 @@ An executable can be build using pyinstaller.
 Build the frontend using `npm run build`, and copy the contents of the dist folder to the gui 
 folder in the backend. Then, within the backend folder run:
 
-`pyinstaller --onefile --add-data 'index.html:.' --add-data 'static:static' --add-data 'gui:gui' --add-data 'C:\\Users\\JoergBaach\\venv312\\Lib\\site-packages\\flask_smorest\\spec:flask_smorest' -i gui/favicon.ico -n InFlow_GUI_0_2_alpha_1 main.py
+`pyinstaller --onefile --add-data 'index.html:.' --add-data 'static:static' --add-data 'gui:gui' --add-data '<Full path to ...\\site-packages\\flask_smorest\\spec:flask_smorest>' -i gui/favicon.ico -n GraphEditor_0_2_alpha_1 main.py
 `
 
 When executing the .exe, the urls to access are displayed in the console window.

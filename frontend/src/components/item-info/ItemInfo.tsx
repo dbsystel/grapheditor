@@ -84,10 +84,6 @@ export const ItemInfo = ({
 		}
 	};
 
-	if (!item) {
-		return;
-	}
-
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
 			<DBButton

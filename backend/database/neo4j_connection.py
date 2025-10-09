@@ -22,7 +22,7 @@ db_versions = dict()
 class Neo4jConnection:
     """Proxy for Neo4j connection supporting transaction-based operations."""
 
-    def __init__(self, *, host, username, password, database="neo4j"):
+    def __init__(self, *, host, username, password, database=None):
         self.host = host
         self.username = username
         self.ft_support = False
@@ -121,22 +121,18 @@ class Neo4jConnection:
                     r = repr(v)
                 out = out.replace(f"${k}", r)
             print(out)
-        result: neo4j.Result | None = None
         try:
-            result = self.tx.run(query, **params)
+            return self.tx.run(query, **params)
         except neo4j.exceptions.ClientError as e:
             if e.code == "Neo.ClientError.Database.DatabaseNotFound":
                 current_app.logger.error(
                     f"Error using database {self.database}. "
-                    "Falling back to default database (neo4j)."
                 )
                 if "login" in session and g.tab_id in session["login"]:
-                    session["login"][g.tab_id]["selected_database"] = "neo4j"
-                    self.database = "neo4j"
-                    result = self.tx.run(query, **params)
-            else:
+                    session["login"][g.tab_id]["selected_database"] = None
+                    self.database = None
                 raise
-        return result
+            raise
 
     def commit(self):
         """
@@ -206,15 +202,29 @@ class Neo4jConnection:
 
     def get_database(self, name):
         """Return database info."""
-        result = self.admin_tx.run(f"SHOW DATABASE {name}").single()
-        name = None
-        status = None
-        if result:
-            name = result.get("name", "")
-            status = result.get("currentStatus", "")
 
-        if name and status:
-            return {"name": name, "status": status}
+        status = None
+        if name:
+            result = self.admin_tx.run(f"SHOW DATABASE {name}").single()
+            if result:
+                self.database = result.get("name", None)
+                status = result.get("currentStatus", "")
+        else:
+            self.database = self.admin_tx.run(
+                "CALL db.info() YIELD name"
+            ).single().get("name", None)
+            # fetching database name and currentStatus in a single operation
+            # is not possible. Issuing a separate "SHOW DATABASE" call is
+            # also a problem, since the neo4j driver complains one cannot
+            # execute an administrative query in the same transaction as a
+            # read operation.
+            # In our understanding we can assume the status of the current
+            # database returned by db.info() is "online" anyway, otherwise
+            # that call would fail. So we set it directly.
+            status = "online"
+
+        if self.database and status:
+            return {"name": self.database, "status": status}
         return None
 
     def is_database_available(self, name):
@@ -292,17 +302,17 @@ def fetch_connection_by_id(tab_id):
     g.login_data = login_data
     cur_db = get_current_datatabase_name()
     conn = fetch_connection(login_data, cur_db)
-    conn.database = login_data.get("selected_database", "neo4j")
+    conn.database = login_data.get("selected_database", None)
     return conn
 
 
 def get_current_datatabase_name():
     try:
         return session["login_data"][g.tab_id].get(
-            "selected_database", "neo4j"
+            "selected_database", None
         )
     except KeyError:
-        return "neo4j"
+        return None
 
 
 def set_current_database_name(name):
@@ -311,7 +321,7 @@ def set_current_database_name(name):
 
     login_data = session["login_data"][g.tab_id]
     login_data["selected_database"] = name
-    g.conn.database = login_data.get(name, "neo4j")
+    g.conn.database = login_data.get(name, None)
 
 
 def cypher_id_getter():

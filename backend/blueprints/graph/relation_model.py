@@ -109,7 +109,7 @@ class RelationBulkPatchSchema(Schema):
 
 class NodeRelationsQuerySchema(Schema):
     direction = fields.Str(
-        metadata={"description": 'Either "outgoing", "ingoing" or "both"'},
+        metadata={"description": 'Either "outgoing", "incoming" or "both"'},
         load_default="both",
     )
     relation_type = fields.Str()

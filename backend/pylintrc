@@ -6,6 +6,7 @@ disable=
     missing-class-docstring,
     missing-module-docstring,
     missing-function-docstring,
+    too-many-locals,
     use-dict-literal,
     unnecessary-pass
 

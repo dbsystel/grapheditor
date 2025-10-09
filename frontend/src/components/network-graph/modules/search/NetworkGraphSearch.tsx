@@ -1,9 +1,11 @@
 import './NetworkGraphSearch.scss';
 import { DBInput } from '@db-ux/react-core-components';
-import { Attributes } from 'graphology-types';
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Markdown from 'react-markdown';
+import { GraphEditorSigmaNodeAttributes } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { useGraphStore } from 'src/stores/graph';
+import { nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
 
 /**
@@ -44,11 +46,13 @@ export const NetworkGraphSearch = () => {
 		const search = event.target.value.toLowerCase();
 		const newOptions: Array<{ id: string; label: string }> = [];
 
-		sigma.getGraph().forEachNode((nodeId: string, attributes: Attributes): void => {
-			if (attributes.label && attributes.label.toLowerCase().includes(search)) {
-				newOptions.push({ id: nodeId, label: attributes.label });
-			}
-		});
+		sigma
+			.getGraph()
+			.forEachNode((nodeId: string, attributes: GraphEditorSigmaNodeAttributes): void => {
+				if (nodeContainsSearchTerm(attributes.data, search)) {
+					newOptions.push({ id: nodeId, label: attributes.data.title });
+				}
+			});
 
 		setOptions(newOptions);
 		setInputValue(event.target.value);
@@ -82,6 +86,7 @@ export const NetworkGraphSearch = () => {
 				validMessage=""
 				invalidMessage=""
 				label=""
+				showLabel={false}
 			/>
 			{options.length > 0 && isOptionsListVisible && (
 				<ul className="network-graph__search-list">
@@ -92,7 +97,7 @@ export const NetworkGraphSearch = () => {
 								key={option.id}
 								onClick={() => onOptionClick(option.id)}
 							>
-								{option.label}
+								<Markdown>{option.label}</Markdown>
 							</li>
 						);
 					})}

@@ -23,17 +23,6 @@
 			padding-right: 30px;
 			font-family: monospace;
 		}
-
-		.db-textarea {
-			textarea {
-				background-color: var(--db-neutral-bg-basic-level-3-default);
-
-				// override semi-transparent background-color on hover
-				&:hover {
-					background-color: var(--db-neutral-bg-basic-level-3-default);
-				}
-			}
-		}
 	}
 
 	&__content {

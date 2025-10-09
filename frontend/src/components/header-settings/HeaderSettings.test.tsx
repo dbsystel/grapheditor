@@ -18,13 +18,13 @@ describe('Components - HeaderSettings', () => {
 
 		await userEvent.click(button);
 
-		const dropdownMenu = screen.getByRole('article').element();
-		const dropdownOptions = dropdownMenu.children[0].children;
+		const settingsArticle = screen.getByRole('article').element();
+		const settings = settingsArticle.children[0].children;
 
-		expect(dropdownMenu).toBeInTheDocument();
-		expect(dropdownOptions?.length).toBe(3);
-		expect(dropdownOptions[0].querySelector('input[type="checkbox"]')).toBeInTheDocument();
-		expect(dropdownOptions[0]?.querySelector('label')?.childNodes[1].textContent).toBe(
+		expect(settingsArticle).toBeInTheDocument();
+		expect(settings?.length).toBe(6);
+		expect(settings[0].querySelector('input[type="checkbox"]')).toBeInTheDocument();
+		expect(settings[0]?.querySelector('label')?.childNodes[1].textContent).toBe(
 			i18n.t('autoconnect_label')
 		);
 	});

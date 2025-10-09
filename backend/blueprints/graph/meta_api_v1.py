@@ -59,7 +59,7 @@ class MetaForMeta(MethodView):
         """
 
         nodes_to_neighbors_map = current_app.graph_db.get_nodes_neighbors(
-            id_map, "prop__tech_", "incoming"
+            id_map, ["prop__tech_"], "incoming"
         )
 
         result = {}
@@ -75,7 +75,7 @@ class MetaForMeta(MethodView):
         """
         result = {}
         nodes_to_neighbors_map = current_app.graph_db.get_nodes_neighbors(
-            id_map, "prop__tech_", "outgoing"
+            id_map, ["prop__tech_"], "outgoing"
         )
         for nid, neighbors in nodes_to_neighbors_map.items():
             result[nid] = neighbors.values()

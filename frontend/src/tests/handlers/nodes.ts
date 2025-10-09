@@ -31,7 +31,7 @@ export const resolveNodeConnections = (nodeId: string): NodeConnections => {
 
 			if (sourceNode) {
 				connections.push({
-					direction: 'ingoing',
+					direction: 'incoming',
 					neighbor: sourceNode,
 					relation: relation
 				});

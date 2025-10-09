@@ -1,0 +1,42 @@
+@mixin hide-editing-buttons {
+	.edit-save-buttons__buttons {
+		display: none;
+	}
+}
+
+@mixin show-editing-buttons {
+	.edit-save-buttons__buttons {
+		display: block;
+	}
+}
+
+// note: allow only one section to be editable at the time
+.edit-save-block {
+	&--edit-mode {
+		outline: var(--db-border-width-2xs) solid #1d4a6a;
+		outline-offset: -2px;
+		border-radius: var(--db-border-radius-sm);
+
+		&::after {
+			border-color: transparent !important;
+		}
+
+		~ .edit-save-block {
+			details[open] {
+				@include hide-editing-buttons;
+			}
+		}
+	}
+
+	&:has(~ .edit-save-block--edit-mode) {
+		details[open] {
+			@include hide-editing-buttons;
+		}
+	}
+
+	@include hide-editing-buttons;
+
+	details[open] {
+		@include show-editing-buttons;
+	}
+}

@@ -1,24 +1,22 @@
 import './ItemPropertiesEditPropertyValue.scss';
-import { DBTextarea, DBTooltip } from '@db-ux/react-core-components';
+import { DBTextarea } from '@db-ux/react-core-components';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { getPropertyValuePlaceholder } from 'src/components/item-properties/helpers';
 import { adjustElementHeight } from 'src/utils/helpers/general';
 import { ItemPropertiesEditPropertyValueProps } from './ItemPropertiesEditPropertyValue.interfaces';
 
 export const ItemPropertiesEditPropertyValue = ({
-	item,
 	property,
-	onChange
+	onChange,
+	isEditMode
 }: ItemPropertiesEditPropertyValueProps) => {
-	const { t } = useTranslation();
 	const [value, setValue] = useState(property.value);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	useEffect(() => {
 		setValue(property.value);
 		adjustTextareaHeight();
-	}, [item]);
+	}, [property]);
 
 	const adjustTextareaHeight = () => {
 		const textarea = textareaRef.current;
@@ -49,13 +47,8 @@ export const ItemPropertiesEditPropertyValue = ({
 				invalidMessage=""
 				rows={1}
 				placeholder={propertyValuePlaceholder}
+				readOnly={!isEditMode}
 			/>
-
-			<DBTooltip width="fixed" showArrow={false}>
-				{t('edit_property_value_tooltip')}: {property.type}
-				<br />
-				{propertyValuePlaceholder}
-			</DBTooltip>
 		</div>
 	);
 };

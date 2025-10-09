@@ -1,0 +1,32 @@
+.unsaved-changes-modal {
+	background-color: color(
+			from var(--db-adaptive-on-bg-basic-emphasis-100-default) srgb r g b /
+			var(--db-opacity-lg)
+	);
+
+	&__buttons {
+		display: flex;
+		justify-content: right;
+		gap: var(--db-spacing-fixed-md);
+	}
+
+	.modal__content {
+		width: 500px;
+	}
+
+	.modal__inner-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--db-spacing-fixed-lg);
+	}
+
+	h3 {
+		font-weight: 300;
+		margin: 0;
+	}
+
+	p {
+		display: flex;
+		gap: var(--db-spacing-fixed-xs);
+	}
+}

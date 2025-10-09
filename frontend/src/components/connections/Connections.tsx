@@ -136,7 +136,7 @@ const ConnectionsBox = ({
 				const targetNode = dataItem.target;
 
 				return (
-					<TableRow key={index} className="connections__hoverable-row">
+					<TableRow key={index} className="table-row--hoverable-row">
 						<TableCell className="connections__cell connections__icon-only">
 							<div className="connections__node-icon">
 								<DBButton variant="ghost" size="small" noText>

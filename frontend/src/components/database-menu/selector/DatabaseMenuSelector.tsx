@@ -45,7 +45,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		onSuccess: () => {
 			// TODO check if other properties should be reset in search store,
 			// and if a "reset" method like in stores below would be useful
-			useSearchStore.getState().setResult([]);
+			useSearchStore.getState().setResult([], '');
 			useClipboardStore.getState().reset();
 			useContextMenuStore.getState().reset();
 			useDrawerStore.getState().reset();

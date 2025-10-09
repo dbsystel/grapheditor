@@ -1,11 +1,8 @@
 import './NetworkGraph.scss';
 import clsx from 'clsx';
+import { useCallback, useRef } from 'react';
 import { LoadGraph } from 'src/components/network-graph/LoadGraph';
-import { NetworkGraphNodeLabelsDefault } from 'src/components/network-graph/modules/node-labels-default/NetworkGraphNodeLabelsDefault';
-import { NetworkGraphRelationTypeDefault } from 'src/components/network-graph/modules/relation-type-default/NetworkGraphRelationTypeDefault';
 import { NetworkGraphSearch } from 'src/components/network-graph/modules/search/NetworkGraphSearch';
-import { NetworkGraphStyleReset } from 'src/components/network-graph/modules/style-reset/NetworkGraphStyleReset';
-import { NetworkGraphStyleUpload } from 'src/components/network-graph/modules/style-upload/NetworkGraphStyleUpload';
 import { NetworkGraphZoomFactor } from 'src/components/network-graph/modules/zoom-factor/NetworkGraphZoomFactor';
 import { NetworkGraphContainer } from 'src/components/network-graph/NetworkGraphContainer';
 import { NetworkGraphAutoConnectNode } from 'src/components/network-graph/plugins/auto-connect-node/NetworkGraphAutoConnectNode';
@@ -22,7 +19,6 @@ import { NetworkGraphRelationClick } from 'src/components/network-graph/plugins/
 import { NetworkGraphScale } from 'src/components/network-graph/plugins/scale/NetworkGraphScale';
 import { NetworkGraphSelectionTool } from 'src/components/network-graph/plugins/selection-tool/NetworkGraphSelectionTool';
 import { useGraphStore } from 'src/stores/graph';
-import { useSearchStore } from 'src/stores/search';
 import { NetworkGraphProps } from './NetworkGraph.interfaces';
 
 /**
@@ -46,29 +42,47 @@ import { NetworkGraphProps } from './NetworkGraph.interfaces';
  * https://codepen.io/cranes/pen/GvobwB.
  */
 export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
-	const { isLoading } = useGraphStore((state) => state);
+	const isLoading = useGraphStore((store) => store.isLoading);
 	const rootElementClassName = clsx(
 		'network-graph',
 		isLoading && 'network-graph--is-loading',
 		className
 	);
+	const rootElementSize = useRef({ width: -1 });
+	const observerRef = useRef(
+		new ResizeObserver(function (mutations) {
+			const observerSize = mutations.at(0)?.contentBoxSize.at(0);
 
-	const onStyleSuccess = () => {
-		useSearchStore.getState().executeSearch();
-	};
+			if (observerSize) {
+				// initial render
+				if (rootElementSize.current.width === -1) {
+					rootElementSize.current.width = observerSize.inlineSize;
+				}
+				// refresh graph only if its width has changed (ignore height changes)
+				else if (rootElementSize.current.width !== observerSize.inlineSize) {
+					rootElementSize.current.width = observerSize.inlineSize;
+
+					if (useGraphStore.getState().isGraphRendered) {
+						useGraphStore.getState().sigma.refresh();
+					}
+				}
+			}
+		})
+	);
+	const onRefChange = useCallback((element: HTMLDivElement | null) => {
+		if (element) {
+			observerRef.current.observe(element);
+		} else {
+			observerRef.current.disconnect();
+		}
+	}, []);
 
 	return (
-		<div id={id} className={rootElementClassName} data-testid={testId}>
+		<div id={id} className={rootElementClassName} data-testid={testId} ref={onRefChange}>
+			<div className="network-graph__top-widget">
+				<NetworkGraphSearch />
+			</div>
 			<NetworkGraphContainer>
-				{/* Modules */}
-				<div className="network-graph__options">
-					<NetworkGraphStyleUpload onSuccess={onStyleSuccess} />
-					<NetworkGraphStyleReset onSuccess={onStyleSuccess} />
-					<NetworkGraphNodeLabelsDefault />
-					<NetworkGraphRelationTypeDefault />
-					<NetworkGraphZoomFactor />
-				</div>
-
 				{/* Plugins */}
 				<NetworkGraphAutoConnectNode />
 				<NetworkGraphSelectionTool />
@@ -83,8 +97,6 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 				<NetworkGraphNodeHtmlLabel />
 				<NetworkGraphCanvasContextMenu />
 				<NetworkGraphRelationContextMenu />
-
-				<NetworkGraphSearch />
 
 				<LoadGraph />
 			</NetworkGraphContainer>

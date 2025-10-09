@@ -11,7 +11,7 @@ node {
 
     labelstring = f"{labelstring}<br/><br/><br/>{p.name or p.name__tech_ or p.name__dummy_}"
     labelstring = labelstring + f"<br><br>({o.id.split(':')[-1]})"
-    labelstring = re.sub(r'(__.+?_)',r'<sub style="opacity: 0.6">\1</sub>',labelstring)
+    labelstring = re.sub(r'(__\w+_)',r'<sub style="opacity: 0.6">\1</sub>',labelstring)
     labelstring
   """;
 }

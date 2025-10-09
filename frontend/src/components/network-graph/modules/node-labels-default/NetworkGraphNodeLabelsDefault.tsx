@@ -46,6 +46,7 @@ export const NetworkGraphNodeLabelsDefault = () => {
 			mode="default"
 			variant="above"
 			onChange={onDefaultNodeLabelsChange}
+			isSelectAllDisabled={true}
 		/>
 	);
 };

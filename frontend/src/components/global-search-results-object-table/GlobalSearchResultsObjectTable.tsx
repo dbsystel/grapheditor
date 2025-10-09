@@ -25,11 +25,11 @@ export const GlobalSearchResultsObjectTable = ({
 	useItemsStore((store) => store.relations);
 	const rootElementClassName = clsx('global-search-results-object-table', className);
 
-	if (!result) {
+	if (!result.data) {
 		return;
 	}
 
-	const tableContent = getSearchResultTableContent(result);
+	const tableContent = getSearchResultTableContent(result.data);
 
 	const style = {
 		gridTemplateColumns: `repeat(${tableContent.headCells.length},  minmax(min-content, 300px))`

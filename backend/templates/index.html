@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>GraphEditor API Server</title>
+    <style>
+        * {
+            font-family: "Helvetica Neue", sans-serif;
+
+        }
+        body {
+            margin-left: 5em;
+            margin-top: 5em;
+        }
+
+    </style>
+</head>
+<body>
+<img src="/static/favicon.png" style="float: left; margin-right: 3em">
+<h1>Welcome to the GraphEditor API Server</h1>
+
+You can find documentation in different formats:
+
+<ul>
+    <li><a href="{{url_for('api-docs.openapi_swagger_ui')}}">Swagger UI</a></li>
+    <li><a href="{{url_for('api-docs.openapi_redoc')}}">Redoc</a></li>
+    <li><a href="{{url_for('api-docs.openapi_rapidoc')}}">Rapidoc</a></li>
+</ul>
+
+
+</body>
+</html>

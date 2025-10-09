@@ -1,3 +1,6 @@
-FROM grapheditor-apache-base
+ARG DOCKER_REGISTRY
+FROM ${DOCKER_REGISTRY}httpd:2.4-bookworm
+
+EXPOSE 3000
 
 CMD apachectl -D FOREGROUND

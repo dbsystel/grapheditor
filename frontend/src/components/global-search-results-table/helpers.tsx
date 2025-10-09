@@ -2,10 +2,10 @@ import { CopyToClipboard } from 'src/components/copy-to-clipboard/CopyToClipboar
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { useItemsStore } from 'src/stores/items';
 import { CypherQuerySearchResultItem } from 'src/types/cypherQuerySearchResult';
+import { isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { RenderContent } from 'src/utils/helpers/search';
-import { isString } from 'src/utils/helpers/general';
 
 export const RenderSearchResultCellElement = ({
 	result

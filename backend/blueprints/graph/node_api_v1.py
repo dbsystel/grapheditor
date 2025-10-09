@@ -15,9 +15,7 @@ blp = Blueprint(
 
 @blp.route("")
 class Nodes(MethodView):
-    @blp.arguments(
-        node_model.NodePostSchema, example=node_model.node_post_example
-    )
+    @blp.arguments(node_model.NodePostSchema, example=node_model.node_post_example)
     @blp.response(200, node_model.NodeSchema, example=node_model.node_example)
     @require_tab_id()
     def post(self, node_data):
@@ -212,9 +210,9 @@ class NodeRelations(MethodView):
         """
 
         rel_map = current_app.graph_db.get_node_relations(nid, filters=filters)
-        if filters["direction"] not in ["both", "outgoing", "ingoing"]:
+        if filters["direction"] not in ["both", "outgoing", "incoming"]:
             abort_with_json(
-                400, "direction must be either 'both', 'outgoing' or 'ingoing'"
+                400, "direction must be either 'both', 'outgoing' or 'incoming'"
             )
 
         # nid doesn't exist. Different than if rel_map is {}, what is a valid

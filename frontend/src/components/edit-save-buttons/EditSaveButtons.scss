@@ -1,0 +1,19 @@
+.edit-save-buttons {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	width: 100%;
+
+	p {
+		margin: 0;
+	}
+
+	&__edit-buttons {
+		display: flex;
+		gap: 8px;
+	}
+
+	&__save-button {
+		border: 0;
+	}
+}

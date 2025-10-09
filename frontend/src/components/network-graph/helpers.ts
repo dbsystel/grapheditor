@@ -17,7 +17,8 @@ import {
 	GRAPH_DEFAULT_NODE_COLOR,
 	GRAPH_DEFAULT_NODE_LABEL_COLOR,
 	GRAPH_DEFAULT_NODE_SCALE_FACTOR,
-	GRAPH_DEFAULT_NODE_SIZE
+	GRAPH_DEFAULT_NODE_SIZE,
+	GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM
 } from 'src/utils/constants';
 
 // disabling and enabling camera didn't work ¯\_(ツ)_/¯
@@ -106,8 +107,9 @@ export const getRelationGraphData = (relation: Relation) => {
 export const fitGraphToViewport = (sigma: GraphEditorSigma, nodeIds: Array<string>) => {
 	const camera = sigma.getCamera();
 	const newCameraState = getCameraStateToFitViewportToNodes(sigma, nodeIds);
-
 	const cameraStateChanged = !camera.hasState(newCameraState);
+
+	newCameraState.ratio = Math.max(newCameraState.ratio, GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM);
 
 	camera.setState(newCameraState);
 

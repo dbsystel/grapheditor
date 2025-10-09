@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# This script is used to build docker images in the right order (base images
-# first) and with the right version info.
+# This script is used to build docker images after generation version info.
 
 set -e -x
 
@@ -18,7 +17,6 @@ $GEN_BUILD_INFO_SCRIPT
 
 cd $SCRIPT_DIR
 echo Building development docker images.
-docker-compose build frontend-base
 docker-compose build apache frontend backend neo4j-enterprise
 cd $CUR_DIR
 

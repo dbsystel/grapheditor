@@ -49,7 +49,10 @@ The editor consists of two parts:
 
 # Authors
 
-The graph editor is produced and published by DB Systel GmbH, a 100% subsidary of Deutsche Bahn.
+The graph editor is produced and published by DB Systel GmbH, a 100% subsidary of Deutsche Bahn. 
+The whole of team InfraGraphAnalytics (IGA) has been working hard to make the grapheditor possible.
+We also had outside inspiration, thanks a lot for this!
+
 See [CONTRIBUTORS](CONTRIBUTORS.md)
 
 Maintainers are listed in [MAINTAINERS](MAINTAINERS.md)

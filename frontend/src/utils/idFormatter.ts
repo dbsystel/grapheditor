@@ -25,27 +25,23 @@ class IdFormatter {
 	}
 
 	/**
-	 * Method to take an ID, and split it with the "separator" property.
-	 * E.g. parseId("MetaLabel__tech_::test") will return "test".
-	 */
-	parseId(id: string) {
-		return id.split(this.separator)[1] || id;
-	}
-
-	/**
 	 * Method to take a string ID and return a name.
 	 * E.g. parseIdToName("MetaProperty::name__dummy_") will return "name".
 	 */
-	parseIdToName(id: string) {
+	parseIdToName(id: string, includeNamespace?: boolean) {
 		const splitBySeparator = id.split(this.separator);
 		const stringAfterSeparator = splitBySeparator.at(1);
 
 		// if ID string doesn't contain a separator
-		if (splitBySeparator.length === 1) {
+		if (splitBySeparator.length === 1 || !stringAfterSeparator) {
 			return id;
 		}
 
-		return stringAfterSeparator?.split('__').at(0) || id;
+		if (includeNamespace) {
+			return stringAfterSeparator;
+		}
+
+		return stringAfterSeparator.split('__').at(0) || id;
 	}
 
 	/**

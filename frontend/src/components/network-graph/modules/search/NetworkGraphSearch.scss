@@ -2,13 +2,18 @@
 
 #{NetworkGraph.$network-graph-root-element-selector} {
 	&__search {
-		position: absolute;
-		z-index: #{NetworkGraph.$network-graph-elements-z-index};
-		top: 0;
-		right: 0;
+		position: relative;
 
 		&-list {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			z-index: 2;
 			max-height: 200px;
+			background-color: var(--db-adaptive-bg-basic-level-1-default);
+			margin: 0;
+			border-radius: var(--db-border-radius-xs);
 			overflow: auto;
 		}
 

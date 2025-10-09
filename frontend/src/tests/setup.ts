@@ -1,7 +1,6 @@
 import 'src/assets/scss/main.scss';
-import { cleanup } from 'vitest-browser-react';
 import '../i18n';
-import { resetPerspectiveCounters } from './handlers/perspectives';
+import { cleanup } from 'vitest-browser-react';
 import { worker } from './worker';
 
 // TODO consider adding "vi.useFakeTimers({ shouldAdvanceTime: true });" to
@@ -16,7 +15,6 @@ beforeAll(async () => {
 afterEach(() => {
 	cleanup();
 	worker.resetHandlers();
-	resetPerspectiveCounters();
 });
 
 afterAll(() => {

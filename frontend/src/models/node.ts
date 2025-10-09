@@ -83,7 +83,7 @@ export type NodeConnections = {
 };
 
 export type NodeConnection = {
-	direction: 'ingoing' | 'outgoing';
+	direction: 'incoming' | 'outgoing';
 	neighbor: Node;
 	relation: Relation;
 };

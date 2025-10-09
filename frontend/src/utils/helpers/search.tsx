@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import Markdown from 'react-markdown';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
@@ -9,7 +10,6 @@ import { isObject, isPrimitive, isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { idFormatter } from 'src/utils/idFormatter';
-import Markdown from 'react-markdown';
 
 type RenderContentProps = {
 	content: unknown;
@@ -97,7 +97,10 @@ export const RenderContent = ({ content, applyMarkdown }: RenderContentProps): R
 	return contentToRender;
 };
 
-export const buildSearchResult = (nodes: Map<string, Node>, relations: Map<string, Relation>) => {
+export const buildPerspectiveSearchResult = (
+	nodes: Map<string, Node>,
+	relations: Map<string, Relation>
+) => {
 	const result: CypherQuerySearchResult = [];
 	const nodeIdsAlreadySeen = new Set<string>();
 
@@ -126,6 +129,30 @@ export const buildSearchResult = (nodes: Map<string, Node>, relations: Map<strin
 			result.push([['Source', node]]);
 		}
 	});
+
+	return result;
+};
+
+export const buildSimpleSearchResult = (nodes: Array<Node>, relations?: Array<Relation>) => {
+	const length = Math.max(nodes.length, relations?.length || 0);
+	const result: CypherQuerySearchResult = [];
+
+	for (let i = 0, l = length; i < l; i++) {
+		result[i] = [
+			['', ''],
+			['', '']
+		];
+
+		const node = nodes.at(i);
+		const relation = relations?.at(i);
+
+		if (node) {
+			result[i][0] = ['Node', node];
+		}
+		if (relation) {
+			result[i][1] = ['Relation', relation];
+		}
+	}
 
 	return result;
 };

@@ -1,5 +1,5 @@
 import { LabelVariantType } from '@db-ux/react-core-components/dist/shared/model';
-import { ReactNode } from 'react';
+import { ReactNode, RefObject } from 'react';
 import { ItemFinderProps } from 'src/components/item-finder/ItemFinder.interfaces';
 import { Node, NodeId } from 'src/models/node';
 import { GlobalComponentProps } from 'src/types/components';
@@ -20,6 +20,9 @@ export type NodeLabelsItemFinderProps = GlobalComponentProps & {
 	onTagsSelected?: (updatedTagLabelObjects: Array<Node>) => void;
 	highlightedTagIds?: Array<NodeId>;
 	markTagIdsAsWarning?: Array<NodeId>;
+	isEditMode?: boolean;
+	handleRef?: RefObject<NodeLabelsItemFinderHandle>;
+	isSelectAllDisabled?: boolean;
 } & (DefaultMode | EditMode);
 
 type DefaultMode = {
@@ -45,3 +48,9 @@ export type NodeLabelsItemFinderTagProps = {
 	onTagSelect: (tagId: NodeId) => void;
 	tooltipLabel: Node | null;
 };
+
+export type NodeLabelsItemFinderHandle = {
+	handleSave: () => Promise<void>;
+	handleUndo: () => void;
+	labels: Array<NodeId>;
+} | null;

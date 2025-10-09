@@ -1,9 +1,5 @@
-@use '@db-ux/core-foundations/build/styles/variables';
-
 .main-visual {
-	display: flex;
-	flex-direction: column;
-	overflow: auto;
+	height: 100%;
 
 	&__pre-render {
 		display: flex;

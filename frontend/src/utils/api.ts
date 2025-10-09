@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const backendApi = axios.create({
-	baseURL: `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_BACKEND_PORT || window.location.port}/api`,
+	baseURL: `${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_BACKEND_PORT || window.location.port}${window.location.pathname}api`,
 	withCredentials: true
 });
 

@@ -34,11 +34,11 @@ export const GlobalSearchResultsTable = ({
 	useItemsStore((store) => store.relations);
 	const rootElementClassName = clsx('global-search-results-table', className);
 
-	if (!result) {
+	if (!result.data) {
 		return null;
 	}
 
-	const tableHeadCells = result[0].map((item) => {
+	const tableHeadCells = result.data[0].map((item) => {
 		return item[0];
 	});
 
@@ -53,7 +53,7 @@ export const GlobalSearchResultsTable = ({
 					</TableRow>
 				</TableHead>
 				<TableBody>
-					{result.map((searchResult, index) => {
+					{result.data.map((searchResult, index) => {
 						return (
 							<TableRow key={index}>
 								<RenderSearchResultCellElement result={searchResult} />

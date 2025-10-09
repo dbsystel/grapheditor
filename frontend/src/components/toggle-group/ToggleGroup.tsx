@@ -102,9 +102,7 @@ export const ToggleGroup = ({ id, className, testId }: ToggleGroupProps) => {
 			</div>
 
 			<div>
-				<p>
-					<strong>{selectedSearchTypeLabel}</strong>
-				</p>
+				<strong>{selectedSearchTypeLabel}</strong>
 			</div>
 		</DBSection>
 	);

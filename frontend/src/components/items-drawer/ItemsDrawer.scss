@@ -1,33 +1,35 @@
 @use '@db-ux/core-foundations/build/styles/variables';
 
-.db-drawer {
-	.db-drawer-container {
+// the #items-drawer selector selects the DBDrawer root element, the .items-drawer
+// its first child element
+#items-drawer {
+	position: absolute;
+	height: auto;
+	background-color: transparent;
+	inset: 0 0 0 auto;
+
+	.items-drawer {
 		block-size: auto;
 		min-inline-size: min-content !important;
+		transform: none !important;
+		position: relative;
+		height: 100%;
 
 		.db-drawer-header {
-			&::before {
-				background-color: transparent;
-			}
+			padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md) !important;
 		}
 	}
 }
 
 .items-drawer {
 	--db-drawer-max-width: 578px;
-	position: absolute;
-	top: 128px;
-	bottom: 0;
-	padding: 0 var(--db-spacing-fixed-md);
 
 	&--collapsed {
-		max-inline-size: 50px !important;
+		max-inline-size: 30px !important;
 
-		.button-close-drawer {
-			display: none;
-		}
-
-		.db-drawer-content {
+		.db-drawer-content,
+		.button-close-drawer,
+		.items-drawer__header-content {
 			display: none;
 		}
 	}
@@ -38,30 +40,27 @@
 		align-items: center;
 	}
 
-	.db-drawer-header {
-		padding: var(--db-spacing-fixed-sm) 0;
-
-		.db-drawer-header-text {
-			width: 100%;
-		}
+	&__content {
+		height: 100%;
 	}
 
-	&__content {
+	&__header-content {
 		padding: var(--db-spacing-fixed-sm) var(--db-spacing-fixed-sm) var(--db-spacing-fixed-sm) 0;
-		transition:
-			opacity 0.3s ease,
-			visibility 0.3s ease;
-		opacity: 1;
-		visibility: visible;
+		height: 100%;
+	}
 
-		&.hidden {
-			opacity: 0;
-			display: none;
+	.db-drawer-header {
+		.db-drawer-header-text {
+			width: 100%;
 		}
 	}
 
 	> .db-drawer-content {
 		overflow: auto;
 		height: 100%;
+	}
+
+	.db-section {
+		padding-inline: 0;
 	}
 }

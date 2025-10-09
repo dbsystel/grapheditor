@@ -1,7 +1,4 @@
 .header {
-	padding: var(--db-spacing-fixed-none) var(--db-spacing-fixed-md) var(--db-spacing-fixed-sm)
-		var(--db-spacing-fixed-md);
-
 	&__select {
 		min-inline-size: 75px;
 		margin: 0 var(--db-spacing-fixed-sm);
@@ -11,8 +8,8 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding-inline: var(--db-spacing-fixed-md);
 		width: 100%;
+		margin-bottom: var(--db-spacing-fixed-md);
 
 		> div {
 			display: flex;
@@ -27,10 +24,5 @@
 
 	&__search-button {
 		font-weight: 400;
-	}
-
-	&__search-line {
-		padding-inline: var(--db-spacing-fixed-md);
-		height: 32px; // quickfix to prevent element jumps (https://github.com/db-ux-design-system/core-web/issues/4725)
 	}
 }

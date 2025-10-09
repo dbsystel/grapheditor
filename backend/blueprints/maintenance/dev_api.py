@@ -11,7 +11,15 @@ from blueprints.maintenance.login_api import require_tab_id
 blp = Blueprint("Dev tools", __name__, description="For development only")
 
 
-def run_file(filename):
+def _reset_graph():
+    g.conn.run("MATCH (n) DETACH DELETE n;")
+    # without a commit we sometimes get an error that one can't update
+    # data and change the schema in a single transaction. So we force
+    # it here.
+    g.conn.commit()
+
+
+def _run_file(filename):
     file_path = os.path.join(os.environ["GRAPHEDITOR_BASEDIR"], filename)
     current_app.logger.debug(f'Running cypher file {file_path}')
     with open(file_path, encoding="utf-8") as file:
@@ -45,7 +53,7 @@ class SetupNeo4j(MethodView):
     @require_tab_id()
     def get(self):
         """Compute _ft__tech_ for nodes and relations."""
-        run_file("cypher/generate_ft.cypher")
+        _run_file("cypher/generate_ft.cypher")
         return "_ft__tech_ properties generated."
 
 
@@ -59,22 +67,18 @@ class Reset(MethodView):
         Cleans the whole database, creates alice and bob nodes.
         """
 
-        g.conn.run("MATCH (n) DETACH DELETE n;")
-        # without a commit we sometimes get an error that one can't update
-        # data and change the schema in a single transaction. So we force
-        # it here.
-        g.conn.commit()
+        _reset_graph()
 
-        run_file("cypher/install_grapheditor_functions_and_procedures.cypher")
-        run_file("cypher/install_grapheditor_triggers.cypher")
+        _run_file("cypher/install_grapheditor_functions_and_procedures.cypher")
+        _run_file("cypher/install_grapheditor_triggers.cypher")
 
         while not g.conn.has_ft():
             time.sleep(1)
 
-        run_file("cypher/reset_dummy_data.cypher")
+        _run_file("cypher/reset_dummy_data.cypher")
         # force computation of ft and uid, since trigger may be not active yet.
-        run_file("cypher/generate_uuid.cypher")
-        run_file("cypher/generate_ft.cypher")
+        _run_file("cypher/generate_uuid.cypher")
+        _run_file("cypher/generate_ft.cypher")
 
         return "Reset done, objects created"
 
@@ -87,7 +91,7 @@ class ResetWithOSMData(MethodView):
         Rewrites the osm example data
         """
 
-        run_file("cypher/reset_graph.cypher")
+        _reset_graph()
 
         with open(
             os.path.join(
@@ -103,6 +107,6 @@ class ResetWithOSMData(MethodView):
                     g.conn.run(statement)
                     g.conn.commit()
 
-        run_file("cypher/generate_ft.cypher")
+        _run_file("cypher/generate_ft.cypher")
 
         return "OSM data done"

@@ -106,17 +106,15 @@ const MenuButtonWithSubMenu = ({
 		}
 
 		return (
-			<>
-				<DBPopover
-					ref={rootElementRef}
-					spacing="none"
-					placement={optionsPlacement}
-					open={isMenuOpen}
-					trigger={titleContent}
-				>
-					<OptionsContent options={options} />
-				</DBPopover>
-			</>
+			<DBPopover
+				ref={rootElementRef}
+				spacing="none"
+				placement={optionsPlacement}
+				open={isMenuOpen}
+				trigger={titleContent}
+			>
+				<OptionsContent options={options} />
+			</DBPopover>
 		);
 	}
 };

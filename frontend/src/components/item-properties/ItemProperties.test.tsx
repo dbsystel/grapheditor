@@ -55,7 +55,7 @@ describe('Components - ItemProperties', () => {
 	};
 
 	test('Render component', async () => {
-		const screen = render(<ItemProperties item={node} metaData={meta} />);
+		const screen = render(<ItemProperties item={node} metaData={meta} isEditMode={true} />);
 		const tabs = screen.getByRole('tab');
 
 		await vi.waitFor(() => {

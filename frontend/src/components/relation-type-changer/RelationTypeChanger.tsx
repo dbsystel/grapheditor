@@ -1,13 +1,13 @@
 import './RelationTypeChanger.scss';
-import { DBButton, DBTag } from '@db-ux/react-core-components';
+import { DBTag } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useCallback, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder/RelationTypeItemFinder';
 import { Node } from 'src/models/node';
 import { relationsApi } from 'src/utils/api/relations';
 import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 import { useGetNode } from 'src/utils/hooks/useGetNode';
 import { RelationTypeChangerProps } from './RelationTypeChanger.interfaces';
 
@@ -16,33 +16,31 @@ export const RelationTypeChanger = ({
 	showTooltipOnHover = true,
 	id,
 	className,
-	testId
+	testId,
+	isEditMode,
+	handleRef
 }: RelationTypeChangerProps) => {
-	const { t } = useTranslation();
-	const [isEditing, setIsEditing] = useState(false);
-	const [relationTypeNode, setRelationTypeNode] = useState<Node | null>(null);
 	const [selectedType, setSelectedType] = useState<Node | null>(null);
 	const [originalType, setOriginalType] = useState<Node | null>(null);
-	const [hasPendingChange, setHasPendingChange] = useState<boolean>(false);
 	const [renderTooltip, setRenderTooltip] = useState<boolean>(false);
-	const [ref, setRef] = useState<HTMLDivElement | null>(null);
+	const [tooltipRef, setTooltipRef] = useState<HTMLDivElement | null>(null);
 	const timeoutRef = useRef(0);
 	const rootElementClassName = clsx('relation-type-changer', className);
 
 	useGetNode({
 		nodeId: relation.type,
 		onSuccess: (response) => {
-			setRelationTypeNode(response.data);
+			setSelectedType(response.data);
+			setOriginalType(response.data);
 		}
 	});
 
 	const onRefChange = useCallback((element: HTMLDivElement | null) => {
-		setRef(element);
+		setTooltipRef(element);
 	}, []);
 
 	const onTypeChange = (option: Node) => {
 		setSelectedType(option);
-		setHasPendingChange(true);
 	};
 
 	const onEnterKey = (searchTerm: string, matchingTypes: Array<Node>) => {
@@ -51,32 +49,27 @@ export const RelationTypeChanger = ({
 		}
 	};
 
-	const startEditing = () => {
-		setIsEditing(true);
-		setSelectedType(relationTypeNode);
-		setOriginalType(relationTypeNode);
-	};
-
 	const handleUndo = () => {
-		if (originalType) {
-			setSelectedType(originalType);
-			setHasPendingChange(false);
-		}
+		setSelectedType(originalType);
 	};
 
-	const handleSave = () => {
+	const handleSave = async () => {
 		if (selectedType) {
 			const patchObject = {
 				id: relation.id,
 				type: selectedType.id
 			};
 
-			relationsApi.patchRelationsAndUpdateApplication([patchObject]);
-			setRelationTypeNode(selectedType); // Update the main state
+			await relationsApi.patchRelationsAndUpdateApplication([patchObject]);
+			setOriginalType(selectedType);
 		}
-		setHasPendingChange(false);
-		setIsEditing(false);
 	};
+
+	useImperativeHandle(handleRef, () => ({
+		handleSave,
+		handleUndo,
+		type: selectedType ? getNodeSemanticIdOrId(selectedType) : ''
+	}));
 
 	const onMouseEnter = () => {
 		if (showTooltipOnHover) {
@@ -100,65 +93,31 @@ export const RelationTypeChanger = ({
 		}
 	};
 
-	if (!relationTypeNode) {
+	if (!selectedType) {
 		return;
 	}
 
 	return (
 		<div id={id} className={rootElementClassName} ref={onRefChange} data-testid={testId}>
-			{!isEditing ? (
-				<div className="relation-type-changer__tag-edit">
-					<DBTag onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-						{relationTypeNode.title}
+			{!isEditMode ? (
+				<DBTag onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+					{selectedType.title}
 
-						{renderTooltip && (
-							<ItemOverviewTooltip item={relationTypeNode} tooltipRef={ref} />
-						)}
-					</DBTag>
-
-					<DBButton
-						icon="pen"
-						type="button"
-						size="small"
-						noText
-						variant="ghost"
-						title={t('edit')}
-						onClick={startEditing}
-					/>
-				</div>
+					{renderTooltip && (
+						<ItemOverviewTooltip item={selectedType} tooltipRef={tooltipRef} />
+					)}
+				</DBTag>
 			) : (
 				<div className="relation-type-changer__relation-change">
 					<div className="relation-type-changer__relation-finder">
 						<RelationTypeItemFinder
 							label=""
-							inputValue={selectedType?.title || relationTypeNode?.title}
-							value={selectedType ? [selectedType] : [relationTypeNode]}
+							inputValue={selectedType.title}
+							value={[selectedType]}
 							onChange={onTypeChange}
 							onEnterKey={onEnterKey}
 						/>
-						{hasPendingChange && (
-							<DBButton
-								type="button"
-								size="small"
-								variant="filled"
-								className="relation-type-changer__back-button"
-								onClick={handleUndo}
-							>
-								{t('relation-type-changer-undo-change-button')}
-							</DBButton>
-						)}
 					</div>
-
-					<DBButton
-						className="db-bg-successful"
-						icon="check"
-						type="button"
-						variant="brand"
-						noText
-						size="small"
-						title={t('save')}
-						onClick={handleSave}
-					/>
 				</div>
 			)}
 		</div>

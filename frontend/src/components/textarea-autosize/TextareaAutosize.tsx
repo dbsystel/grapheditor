@@ -124,25 +124,28 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 				data-testid={testId}
 				ref={onRootElementRefChange}
 			>
-				<div className="textarea-autosize__row-numbers db-bg-color-basic-level-3">
-					{lineNumbers.map((lineNumber, index) => {
-						const renderValue = lineNumber > 0 ? lineNumber : '\u00A0';
-						const key = lineNumber + '' + index;
+				<div className="textarea-autosize__content">
+					<div className="textarea-autosize__row-numbers db-bg-color-basic-level-3">
+						{lineNumbers.map((lineNumber, index) => {
+							const renderValue = lineNumber > 0 ? lineNumber : '\u00A0';
+							const key = lineNumber + '' + index;
 
-						return <div key={key}>{renderValue}</div>;
-					})}
-				</div>
-				<div className="textarea-autosize__wrapper">
-					<DBTextarea
-						ref={onRefChange}
-						rows={lineNumbers.length}
-						{...rest}
-						onChange={localOnChange}
-						onBlur={localOnBlur}
-						onFocus={localOnFocus}
-						value={value}
-					/>
-					<div ref={testElementRef} className="textarea-autosize__test-element"></div>
+							return <div key={key}>{renderValue}</div>;
+						})}
+					</div>
+					<div className="textarea-autosize__wrapper">
+						<DBTextarea
+							ref={onRefChange}
+							//rows={lineNumbers.length}
+							{...rest}
+							onChange={localOnChange}
+							onBlur={localOnBlur}
+							onFocus={localOnFocus}
+							value={value}
+							rows=""
+						/>
+						<div ref={testElementRef} className="textarea-autosize__test-element"></div>
+					</div>
 				</div>
 			</div>
 		);

@@ -4,9 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ModalProps } from './Modal.interfaces';
 
-export const Modal = ({ children, isOpen, backdrop, id, className, testId }: ModalProps) => {
+export const Modal = ({ children, isOpen, id, className, testId }: ModalProps) => {
 	const [dialogRef, setDialogRef] = useState<HTMLDialogElement | null>(null);
-
 	const rootElementClassName = clsx('modal', className);
 	/**
 	 * 	useCallback to prevent double calling of ref callback with null and the element
@@ -21,7 +20,7 @@ export const Modal = ({ children, isOpen, backdrop, id, className, testId }: Mod
 	 */
 	useEffect(() => {
 		if (isOpen && dialogRef) {
-			dialogRef.show();
+			dialogRef.showModal();
 		}
 	}, [isOpen, dialogRef]);
 
@@ -32,7 +31,6 @@ export const Modal = ({ children, isOpen, backdrop, id, className, testId }: Mod
 			className={rootElementClassName}
 			data-testid={testId}
 			ref={onRefChange}
-			data-backdrop={backdrop}
 		>
 			<div className="modal__content db-bg-color-basic-level-1">
 				<div className="modal__inner-content">{children}</div>

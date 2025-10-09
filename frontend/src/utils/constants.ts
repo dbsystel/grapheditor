@@ -135,6 +135,7 @@ export const GRAPH_HIDE_LABEL_BOX_SPACING = 2; // in px
 export const GRAPH_ARROW_HEAD_LENGTH_TO_THICKNESS_RATIO = 5;
 export const GRAPH_ARROW_HEAD_WIDENESS_TO_THICKNESS_RATIO = 3.5;
 export const GRAPH_RENDER_HTML_LABELS_THRESHOLD = 200;
+export const GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM = 0.3; // higher number means greater zoom-out
 
 export const ITEM_OVERVIEW_TIMEOUT_MILLISECONDS = 700;
 

@@ -37,6 +37,7 @@ from setup import (
     client_with_transaction,
 )
 from main import app
+from database.id_handling import get_base_id
 
 # pylint complains that portions of blueprints.* and this test are duplicate.
 # Usually it's acceptable (and even encouraged) to duplicate stuff between tests
@@ -227,7 +228,11 @@ def test_get_node_with_datetime():
         }
     )
     assert response.status_code == 200
-    assert dict(response.json['result'][0])['n']['properties']['MetaProperty::birth']['value'] == 'Sat, 12 May 1956 20:00:00 GMT'
+    props = dict(response.json['result'][0])['n']['properties']
+    assert (
+        props['MetaProperty::birth']['value']
+        == 'Sat, 12 May 1956 20:00:00 GMT'
+    )
 
 
 def test_put_node():
@@ -1995,6 +2000,170 @@ def test_all_node_properties():
         "MetaProperty::name__tech_",
         "MetaProperty::type__tech_",
     ]
+
+
+def test_parallax_without_filters():
+    "Simple parallax interaction."
+    restriction_nid = fetch_node_by_id(client, "MetaLabel::Restriction__tech_")['dbId']
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": (
+                f"match (a) where elementid(a) = '{get_base_id(restriction_nid)}' return a"
+            )
+        },
+    )
+    assert response.status_code == 200
+    initial_node_ids = [dict(row)["a"]["dbId"] for row in response.json["result"]]
+
+    response = client.post(
+        BASE_URL + "/api/v1/parallax",
+        headers=HEADERS,
+        json={
+            "nodeIds": initial_node_ids,
+            "steps": []
+        }
+    )
+    assert response.status_code == 200
+    assert restriction_nid in response.json["nodes"]
+    # Test restriction__tech_ incoming/outgoing relation types.
+    assert len(response.json["incomingRelationTypes"]) == 1
+    assert response.json["incomingRelationTypes"]["MetaRelation::prop__tech_"]["count"] == 1
+
+    assert len(response.json["outgoingRelationTypes"]) == 2
+    assert response.json["outgoingRelationTypes"]["MetaRelation::target__tech_"]["count"] == 3
+
+    # Test restriction__tech_ properties and labels.
+    assert set([
+        "MetaProperty::_ft__tech_",
+        "MetaProperty::_uuid__tech_",
+        "MetaProperty::description__tech_",
+        "MetaProperty::name__tech_"]) == set(response.json["properties"])
+
+    assert set([
+        "MetaLabel::MetaLabel__tech_",
+        "MetaLabel::___tech_"
+    ]) == set(response.json["labels"])
+
+    # Test single step.
+    response = client.post(
+        BASE_URL + "/api/v1/parallax",
+        headers=HEADERS,
+        json={
+            "nodeIds": initial_node_ids,
+            "steps": [
+                {
+                    "filters": {},
+                    "incomingRelationTypes": ["MetaRelation::prop__tech_"],
+                    "outgoingRelationTypes": ["MetaRelation::source__tech_"]
+                }
+            ]
+        }
+    )
+
+    assert response.status_code == 200
+    assert len(response.json["nodes"]) == 2
+    assert "MetaRelation::restricts__tech_" in response.json["outgoingRelationTypes"]
+    # the way back is still possible
+    assert "MetaRelation::prop__tech_" in response.json["outgoingRelationTypes"]
+    assert "MetaRelation::source__tech_" in response.json["incomingRelationTypes"]
+
+def test_parallax_initial_query_filters():
+    "Parallax with filters for initial search."
+    desc_nid = fetch_node_by_id(client, "MetaProperty::description__tech_")['dbId']
+
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": "match (a:MetaProperty__tech_) return a"
+        },
+    )
+    assert response.status_code == 200
+    initial_node_ids = [dict(row)["a"]["dbId"] for row in response.json["result"]]
+
+    # properties are ANDed, labels can be empty.
+    response = client.post(
+        BASE_URL + "/api/v1/parallax",
+        headers=HEADERS,
+        json={
+            "nodeIds": initial_node_ids,
+            "filters": {
+                "properties": {
+                    # filter property value can be part of actual property,
+                    # in this case it's description__tech_
+                    "MetaProperty::name__tech_": "description",
+                    "MetaProperty::type__tech_": "string"
+                }
+            },
+            "steps": []
+        }
+    )
+    assert response.status_code == 200
+    assert len(response.json["nodes"]) == 1
+    assert desc_nid in response.json["nodes"]
+
+    # labels are ORed. Properties are ORed with label filters
+    response = client.post(
+        BASE_URL + "/api/v1/parallax",
+        headers=HEADERS,
+        json={
+            "nodeIds": initial_node_ids,
+            "filters": {
+                    "properties": {
+                        "MetaProperty::name__tech_": "description__tech_"
+                    },
+                    "labels": ["MetaLabel::MetaProperty__tech_"]
+            },
+            "steps": []
+        }
+    )
+    assert response.status_code == 200
+    assert len(response.json["nodes"]) == 1
+    assert desc_nid in response.json["nodes"]
+
+def test_parallax_step_filters():
+    "Parallax with filters on steps."
+
+    # Following the prop__tech_ relation from description__tech_ MetaProperty node
+    # gives a.o.t. a Namespace__tech_ MetaLabel node.
+    namespace_nid = fetch_node_by_id(client, "MetaLabel::Namespace__tech_")['dbId']
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": "match (a:MetaProperty__tech_) return a"
+        },
+    )
+    assert response.status_code == 200
+    initial_node_ids = [dict(row)["a"]["dbId"] for row in response.json["result"]]
+
+    response = client.post(
+        BASE_URL + "/api/v1/parallax",
+        headers=HEADERS,
+        json={
+            "nodeIds": initial_node_ids,
+            "filters": {
+                "properties": {
+                    "MetaProperty::name__tech_": "description__tech_",
+                }
+            },
+            "steps": [
+                {
+                    "filters": {
+                        "properties": {
+                            "MetaProperty::name__tech_": "Namespace__tech_"
+                        }
+                    },
+                    "outgoingRelationTypes": ["MetaRelation::prop__tech_"]
+                }
+            ]
+        }
+    )
+    assert response.status_code == 200
+    assert len(response.json["nodes"]) == 1
+    assert namespace_nid in response.json["nodes"]
 
 
 if __name__ == "__main__":

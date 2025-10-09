@@ -3,56 +3,28 @@ import {
 	ItemPropertiesTableEntry
 } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
 import i18n from 'src/i18n';
-import { Item, ItemPropertyKey, ItemPropertyType } from 'src/models/item';
+import { ItemProperties, ItemPropertyKey, ItemPropertyType } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
-import { Relation } from 'src/models/relation';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { clone } from 'src/utils/helpers/general';
 import { getItemMissingPropertiesForMeta } from 'src/utils/helpers/items';
-import { isMetaNode, isNode } from 'src/utils/helpers/nodes';
-import { isRelation } from 'src/utils/helpers/relations';
-
-export const deleteProperty = (item: Node | Relation, propertyKey: string) => {
-	const itemClone = window.structuredClone(item);
-
-	if (
-		window.confirm(
-			`Delete property ${propertyKey} for ${isNode(item) ? 'node' : 'relation'} with ID ${
-				item.id
-			} ?`
-		)
-	) {
-		delete itemClone.properties[propertyKey];
-
-		const patchObject = {
-			id: itemClone.id,
-			properties: itemClone.properties
-		};
-
-		if (isNode(item)) {
-			nodesApi.patchNodesAndUpdateApplication([patchObject]);
-		} else if (isRelation(item)) {
-			relationsApi.patchRelationsAndUpdateApplication([patchObject]);
-		}
-	}
-};
+import { isMetaNode } from 'src/utils/helpers/nodes';
 
 export const processItemPropertiesEntries = ({
 	propertyNodes,
 	metaData,
 	filterMetaByNodeIds,
-	item,
+	itemProperties,
 	topEntriesPropertyKeys
 }: {
 	propertyNodes: Array<Node>;
 	metaData?: MetaForMeta;
 	filterMetaByNodeIds?: Array<NodeId>;
-	item: Item;
+	itemProperties: ItemProperties;
 	topEntriesPropertyKeys: Array<ItemPropertyKey>;
 }) => {
 	const propertyNodesCache: Record<NodeId, Node> = {};
-	const metaForMetaClone = window.structuredClone(metaData);
+	const metaForMetaClone = clone(metaData);
 	const newCompleteTableEntries: ItemPropertiesTableEntries = [];
 	let newIncompleteTableEntries: ItemPropertiesTableEntries = [];
 	const newTopEntries: ItemPropertiesTableEntries = [];
@@ -84,14 +56,13 @@ export const processItemPropertiesEntries = ({
 
 		// get missing properties
 		newIncompleteTableEntries = getItemMissingPropertiesForMeta(
-			item,
+			itemProperties,
 			metaForMetaClone
 		).missingProperties;
 	}
 
-	Object.entries(item.properties).forEach(([key, property]) => {
+	Object.entries(itemProperties).forEach(([key, property]) => {
 		const arrayEntry: ItemPropertiesTableEntry = [
-			item,
 			{ ...property, key: key },
 			propertyNodesCache[key]
 		];
@@ -106,7 +77,7 @@ export const processItemPropertiesEntries = ({
 	// filter data by (selected) labels meta data
 	const filterTableEntriesByMetaPropertyIds = (tableEntries: ItemPropertiesTableEntries) => {
 		return tableEntries.filter((tableEntry) => {
-			return processedPropertyIds.includes(tableEntry[1].key);
+			return processedPropertyIds.includes(tableEntry[0].key);
 		});
 	};
 
@@ -152,6 +123,20 @@ export const parsePropertyValue = (propertyType: ItemPropertyType, propertyValue
 	} catch {
 		return null;
 	}
+};
+
+export const validateItemProperties = (properties: ItemProperties) => {
+	for (const key in properties) {
+		const itemProperty = properties[key];
+
+		if (parsePropertyValue(itemProperty.type, itemProperty.value.toString()) === null) {
+			// item property is not valid
+			return false;
+		}
+	}
+
+	// item properties are valid
+	return true;
 };
 
 export const getPropertyValuePlaceholder = (propertyType: ItemPropertyType) => {

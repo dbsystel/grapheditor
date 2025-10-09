@@ -5,10 +5,9 @@ import { isObject } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 
-export const processResultCell = (result: CypherQuerySearchResult) => {
+export const processResult = (result: CypherQuerySearchResult) => {
 	const nodesMap: Map<NodeId, Node> = new Map();
 	const relationsMap: Map<RelationId, Relation> = new Map();
-
 	const processResultCell = (content: unknown) => {
 		// if content type is object
 		if (isObject(content)) {
@@ -29,13 +28,11 @@ export const processResultCell = (result: CypherQuerySearchResult) => {
 			});
 		}
 	};
-
 	result.forEach((searchResult) => {
 		Object.values(searchResult).map((rowValue) => {
 			processResultCell(rowValue[1]);
 		});
 	});
-
 	return {
 		nodesMap: nodesMap,
 		relationsMap: relationsMap

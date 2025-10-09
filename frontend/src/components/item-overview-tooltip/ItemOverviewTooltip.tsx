@@ -1,22 +1,22 @@
-import './ItemOverviewTooltip.scss';
 import clsx from 'clsx';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { ItemOverviewButton } from 'src/components/item-overview-button/ItemOverviewButton';
-import { Table } from 'src/components/table/Table';
 import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableHead } from 'src/components/table-head/TableHead';
 import { TableRow } from 'src/components/table-row/TableRow';
+import { Table } from 'src/components/table/Table';
 import { Tooltip } from 'src/components/tooltip/Tooltip';
+import { isString } from 'src/utils/helpers/general';
 import { getItemDBId } from 'src/utils/helpers/items';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { RenderContent } from 'src/utils/helpers/search';
 import { ItemOverviewTooltipProps } from './ItemOverviewTooltip.interfaces';
-import { isString } from 'src/utils/helpers/general';
+import './ItemOverviewTooltip.scss';
 
 /**
  * This component renders the content of each item, coming from ItemInfo or ItemOverviewButton component.

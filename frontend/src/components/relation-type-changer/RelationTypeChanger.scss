@@ -1,25 +1,4 @@
 .relation-type-changer {
-	&__tag-edit {
-		display: flex;
-		justify-content: space-between;
-
-		.db-button {
-			visibility: hidden;
-			opacity: 0;
-			transition: opacity 0.2s ease-in-out;
-
-			&:hover {
-				visibility: visible;
-				opacity: 1;
-			}
-		}
-
-		&:hover .db-button {
-			visibility: visible;
-			opacity: 1;
-		}
-	}
-
 	&__relation-change {
 		display: flex;
 		justify-content: space-between;

@@ -4,7 +4,7 @@ import { NodeId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { getFormattedCurrentDateTime, parseError } from 'src/utils/helpers/general';
+import { downloadFile, getFormattedCurrentDateTime, parseError } from 'src/utils/helpers/general';
 
 export const exportNodesAndRelationsAsImageAction = async (
 	nodeIds: Array<NodeId>,
@@ -110,21 +110,23 @@ export const exportNodesAndRelationsAsImageAction = async (
 					height
 				);
 
-				const screenshotDataUrl = canvas.toDataURL(mimeType);
-				const anchor = document.createElement('a');
-				// mime type from data URL image presentation wasn't enough
 				const fileExtension = mimeType.split('/')[1];
 
-				anchor.setAttribute('href', screenshotDataUrl);
-				anchor.setAttribute(
-					'download',
-					'export-' + getFormattedCurrentDateTime() + '.' + fileExtension
+				canvas.toBlob(
+					(blob) => {
+						if (blob) {
+							downloadFile({
+								name:
+									'export-' + getFormattedCurrentDateTime() + '.' + fileExtension,
+								content: blob
+							});
+
+							canvas.remove();
+						}
+					},
+					mimeType,
+					1
 				);
-				anchor.click();
-				// remove manually created elements (garbage collector would probably clean this up,
-				// but just to be sure)
-				anchor.remove();
-				canvas.remove();
 			} else {
 				console.error('Unable to get canvas context');
 			}

@@ -1,23 +1,18 @@
-import './MainVisual.scss';
 import { DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlobalSearchResultsObjectTable } from 'src/components/global-search-results-object-table/GlobalSearchResultsObjectTable';
 import { GlobalSearchResultsTable } from 'src/components/global-search-results-table/GlobalSearchResultsTable';
 import { Loading } from 'src/components/loading/Loading';
-import { processResultCell } from 'src/components/main-visual/helpers';
-import { useGraphStore } from 'src/stores/graph';
-import { useItemsStore } from 'src/stores/items';
 import { useSearchStore } from 'src/stores/search';
-import { useSettingsStore } from 'src/stores/settings';
-import { relationsApi } from 'src/utils/api/relations';
 import {
 	GRAPH_PRESENTATION_GRAPH,
 	GRAPH_PRESENTATION_OBJECT_TABLE,
 	GRAPH_PRESENTATION_RESULT_TABLE
 } from 'src/utils/constants';
 import { MainVisualProps } from './MainVisual.interfaces';
+import './MainVisual.scss';
 
 const NetworkGraph = lazy(() =>
 	import('src/components/network-graph/NetworkGraph').then((module) => {
@@ -36,56 +31,22 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 	const { t } = useTranslation();
 	const presentation = useSearchStore((store) => store.presentation);
 	const result = useSearchStore((store) => store.result);
-	const setIsResultProcessed = useSearchStore((store) => store.setIsResultProcessed);
 	const isResultProcessed = useSearchStore((store) => store.isResultProcessed);
 	const isLoading = useSearchStore((store) => store.isLoading);
-	const setNodes = useItemsStore((store) => store.setNodes);
-	const clearNodes = useItemsStore((store) => store.clearNodes);
-	const setRelations = useItemsStore((store) => store.setRelations);
-	const clearRelations = useItemsStore((store) => store.clearRelations);
-	const perspectiveId = useGraphStore((store) => store.perspectiveId);
 	const rootElementClassName = clsx('main-visual', className);
 	const dataLoadedAtLeastOnce = useRef(isLoading);
 
-	useEffect(() => {
-		if (perspectiveId) {
+	useMemo(() => {
+		if (result.data) {
 			dataLoadedAtLeastOnce.current = true;
 		}
-	}, [perspectiveId]);
-
-	useEffect(() => {
-		(async () => {
-			setIsResultProcessed(false);
-
-			if (result) {
-				const { nodesMap, relationsMap } = processResultCell(result);
-
-				if (nodesMap.size && useSettingsStore.getState().isAutoconnectEnabled) {
-					const response = await relationsApi.postRelationsByNodeIds({
-						additionalNodeIds: Array.from(nodesMap.keys())
-					});
-
-					response.data.forEach((relation) => {
-						if (!relationsMap.has(relation.id)) {
-							relationsMap.set(relation.id, relation);
-						}
-					});
-				}
-
-				dataLoadedAtLeastOnce.current = true;
-
-				clearNodes(true);
-				clearRelations(true);
-				setNodes(Array.from(nodesMap.values()));
-				setRelations(Array.from(relationsMap.values()));
-				setIsResultProcessed(true);
-			}
-		})();
 	}, [result]);
+
+	const preRenderClassName = rootElementClassName + 'main-visual__pre-render';
 
 	if (dataLoadedAtLeastOnce.current === false) {
 		return (
-			<DBSection spacing="none" className="main-visual__pre-render">
+			<DBSection spacing="none" className={preRenderClassName}>
 				<p>{t('main_visual_no_results')}</p>
 			</DBSection>
 		);
@@ -93,15 +54,15 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 
 	if (isLoading || !isResultProcessed) {
 		return (
-			<DBSection spacing="none" className="main-visual__pre-render">
+			<DBSection spacing="none" className={preRenderClassName}>
 				<Loading isLoading={true} />
 			</DBSection>
 		);
 	}
 
-	if (result === null || result.length === 0) {
+	if (result.data === null || result.data.length === 0) {
 		return (
-			<DBSection spacing="none" className="main-visual__pre-render">
+			<DBSection spacing="none" className={preRenderClassName}>
 				<p>{t('no_global_search_results_to_render')}</p>
 			</DBSection>
 		);

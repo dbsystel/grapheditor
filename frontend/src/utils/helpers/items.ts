@@ -1,5 +1,5 @@
 import { ItemPropertiesTableEntries } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
-import { Item } from 'src/models/item';
+import { Item, ItemProperties } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { endpoints } from 'src/utils/endpoints';
@@ -16,12 +16,15 @@ export const getItemDBId = (item: Item) => {
 	return item.dbId || item.id;
 };
 
-export const getItemMissingPropertiesForMeta = (item: Item, metaData: MetaForMeta) => {
+export const getItemMissingPropertiesForMeta = (
+	itemProperties: ItemProperties,
+	metaData: MetaForMeta
+) => {
 	const missingProperties: ItemPropertiesTableEntries = [];
 	const missingPropertiesIds: Array<NodeId> = [];
 	const processedIds: Array<string> = [];
 
-	const itemPropertyKeys = Object.keys(item.properties);
+	const itemPropertyKeys = Object.keys(itemProperties);
 	for (const [nodeId, propertyNodes] of Object.entries(metaData)) {
 		propertyNodes.forEach((propertyNode) => {
 			const propertyType = getNodeMetaPropertyType(propertyNode);
@@ -41,7 +44,6 @@ export const getItemMissingPropertiesForMeta = (item: Item, metaData: MetaForMet
 					processedIds.push(propertyNode.semanticId);
 
 					missingProperties.push([
-						item,
 						{
 							key: propertyNode.semanticId,
 							edit: true,
@@ -66,7 +68,7 @@ export const getItemMissingPropertiesForMeta = (item: Item, metaData: MetaForMet
  *
  * This was an attempt to be able to use only one patch function for both nodes and relations bulk patch.
  * In order to be able to distinguish between patch nodes and patch relations, we must use the
- * 	"_grapheditor_type" key. This key has to first manually be added and the later  removed from
+ * 	"_grapheditor_type" key. This key has to first manually be added and the later removed from
  * 	objects before we send them to server, otherwise server will fail at patching (it accepts only
  * 	specific object keys, and "_grapheditor_type" is not one of them).
  * 	Since it looks like we won't save many lines of code, we opted out for using the respected bulk

@@ -25,6 +25,8 @@ type GraphStore = {
 	sigma: GraphEditorSigma;
 	// TODO maybe use a more abstract name?
 	setSigma: (sigma: GraphEditorSigma) => void;
+	isGraphRendered: boolean;
+	setIsGraphRendered: (isGraphRendered: boolean) => void;
 	perspectiveId: string | null;
 	perspectiveName: string | null;
 	clearPerspective: () => void;
@@ -87,6 +89,7 @@ type GraphStore = {
 type InitialState = Omit<
 	GraphStore,
 	| 'setSigma'
+	| 'setIsGraphRendered'
 	| 'clearPerspective'
 	| 'setIsLoading'
 	| 'setPerspectiveId'
@@ -136,6 +139,7 @@ const getInitialState: () => InitialState = () => {
 
 	return {
 		sigma: initialFakeSigmaInstance,
+		isGraphRendered: false,
 		isLoading: false,
 		perspectiveId: null,
 		perspectiveName: null,
@@ -162,11 +166,14 @@ const getInitialState: () => InitialState = () => {
  * different than in graph, therefore we created our own addNode method).
  *
  * TODO add other sigma/graphology methods here, check modules/plugins
- * and move from direct sigma/graphology usage to this store
+ *  and move from direct sigma/graphology usage to this store
  */
 export const useGraphStore = create<GraphStore>((set, get) => {
 	return {
 		...getInitialState(),
+		setIsGraphRendered: (isGraphRendered) => {
+			set({ isGraphRendered: isGraphRendered });
+		},
 		setIsLoading: (isLoading: boolean) => set({ isLoading: isLoading }),
 		clearPerspective: () => set({ perspectiveId: null, perspectiveName: null }),
 		setPerspectiveId: (perspectiveId) => {

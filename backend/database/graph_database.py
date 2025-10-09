@@ -4,6 +4,7 @@
 # direct dependencies on a particular graph database (or even on
 # cypher, when possible) and use a subclass of GraphDatabase instead.
 
+from typing import List
 from abc import ABC, abstractmethod
 
 # We don't want to spread database-specific logic across many files,
@@ -27,7 +28,7 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_nodes_by_ids(self, ids, replace_by_pseudo_node=False):
+    def get_nodes_by_ids(self, ids, replace_by_pseudo_node=False, filters=None):
         """Fetch multiple nodes by id from the database.
         Return a dictionary of original IDs to nodes.
         If an ID is not found and replace_by_pseudo_node is True, the ID is
@@ -60,7 +61,7 @@ class GraphDatabase(ABC):
 
         filters is a dict with following possible entries:
 
-        - direction: Either "ingoing", "outgoing" or "both". Default:
+        - direction: Either "incoming", "outgoing" or "both". Default:
             "both"
 
         - relation_type: A string representing the relation type,
@@ -89,8 +90,24 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_nodes_neighbors(self, id_map, rel_type, direction):
-        """Same as get_nodes_relations, but for multiple IDs."""
+    def get_nodes_neighbors(self, id_map, relation_types, direction, neighbors_filters=None):
+        """Return all neighbors from nodes in id_map.
+
+        Args:
+            id_map: Maps user-provided IDs (aka. original id) with
+                    those found in the database.
+
+            relation_types: List of relation types. For example: ['likes__dummy_'].
+
+        Returns:
+            A dict mapping node IDs (original ones found in id_map) to
+            another dict (string -> node) representing neighbors
+            (mapping each ID to the neighbor node itself). This is an
+            easy and efficient way of guaranteeing uniqueness of
+            neighbor nodes (a set wouldn't work, since at least for
+            now nodes are represented as plain dicts, and thus are not
+            hashable).
+        """
         pass
 
     @abstractmethod
@@ -156,8 +173,10 @@ class GraphDatabase(ABC):
     # ====================== General Info =====================================
 
     @abstractmethod
-    def get_all_labels(self):
-        """Return all labels as GraphEditorIDs."""
+    def get_all_labels(self, nids: List[str] = None):
+        """Return all labels as GraphEditorIDs.
+        If nids is set, only labels of node ids in it are returned.
+        """
         pass
 
     @abstractmethod
@@ -166,8 +185,10 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_all_node_properties(self):
-        """Return all node properties as stringids."""
+    def get_all_node_properties(self, nids: List[str] = None):
+        """Return semantic IDs of all node properties.
+           If nids is set, only properties of node ids in it are returned.
+        """
         pass
 
     @abstractmethod

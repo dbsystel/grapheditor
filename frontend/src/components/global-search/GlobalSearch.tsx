@@ -13,6 +13,7 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
 } from 'src/utils/constants';
+import { clone } from 'src/utils/helpers/general';
 import { GlobalSearchProps } from './GlobalSearch.interfaces';
 
 /**
@@ -21,7 +22,7 @@ import { GlobalSearchProps } from './GlobalSearch.interfaces';
  */
 
 export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) => {
-	// we could also be a hook, since renderings will be consistent
+	// this could also be a hook, since renderings will be consistent
 	const type = useSearchStore.getState().type;
 
 	// exit early if "type" is not a search type
@@ -33,6 +34,7 @@ export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) 
 	const [searchParams, setSearchParameters] = useSearchParams();
 	const setQuery = useSearchStore((store) => store.setQuery);
 	const searchValue = useSearchStore((store) => store.searchValue);
+	const setSearchValue = useSearchStore((store) => store.setSearchValue);
 	const executeSearch = useSearchStore((store) => store.executeSearch);
 	const addHistoryEntry = useSearchStore((store) => store.addHistoryEntry);
 	const exportSelectedHistory = useSearchStore((store) => store.exportSelectedHistory);
@@ -62,18 +64,20 @@ export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) 
 	const selectedHistory = getSelectedHistory();
 
 	useEffect(() => {
-		setSearchState((prevState) => {
-			const state = window.structuredClone(prevState);
-			const selectedState = state[type];
+		const selectedState = searchState[type];
 
-			if (selectedState && !selectedState.isDirty) {
+		if (selectedState && !selectedState.isDirty && selectedState.value !== searchValue) {
+			setSearchState((prevState) => {
+				const state = clone(prevState);
+				const selectedState = state[type];
+
 				selectedState.value = searchValue;
 				selectedState.temporaryValue = searchValue;
-			}
 
-			return state;
-		});
-	}, [searchValue]);
+				return state;
+			});
+		}
+	}, [type, searchValue]);
 
 	const triggerSearch = () => {
 		const searchQuery = getValue();
@@ -81,8 +85,8 @@ export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) 
 		// update search store
 		setQuery(searchQuery);
 		clearPerspective();
-		executeSearch();
 		addHistoryEntry(type, searchQuery);
+		executeSearch();
 
 		setSearchParameters({
 			...Object.fromEntries(searchParams),
@@ -102,8 +106,9 @@ export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) 
 	};
 
 	const setTextareaValue = (value: string) => {
+		setSearchValue(value);
 		setSearchState((prevState) => {
-			const state = window.structuredClone(prevState);
+			const state = clone(prevState);
 
 			state[type].value = value;
 			state[type].isDirty = true;
@@ -138,7 +143,7 @@ export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) 
 			return;
 		}
 
-		const selectedSearchState = window.structuredClone(getSelectedSearchState());
+		const selectedSearchState = clone(getSelectedSearchState());
 		let historyIndex = selectedSearchState.historyIndex;
 
 		if (direction === 'backward') {

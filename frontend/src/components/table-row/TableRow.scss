@@ -1,8 +1,22 @@
 .table-row {
 	display: table-row;
 
-	/* 
-		This is a temporary solution until we get designs from UX/UI. 
+	&:last-child {
+		.table-cell {
+			border-bottom: none;
+		}
+	}
+
+	&--hoverable-row {
+		transition: background-color 0.2s ease-in-out;
+
+		&:hover {
+			background-color: var(--db-neutral-bg-basic-level-1-hovered);
+		}
+	}
+
+	/*
+		This is a temporary solution until we get designs from UX/UI.
 	*/
 	&--style-1 {
 		background-color: blue;

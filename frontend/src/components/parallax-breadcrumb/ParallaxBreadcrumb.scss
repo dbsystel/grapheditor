@@ -1,0 +1,41 @@
+.parallax-breadcrumb {
+	$this: &;
+	position: relative;
+	padding: 5px 0;
+
+	&[data-inactive] {
+		#{$this}__title {
+			opacity: 0.4;
+		}
+	}
+
+	&__title {
+		cursor: pointer;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	> div {
+		position: relative;
+	}
+
+	&__tooltip-content {
+		word-break: break-all;
+		overflow: auto;
+	}
+
+	.db-tooltip {
+		width: 300px;
+		position: static !important;
+		inset-inline: auto !important;
+		inset-block: auto !important;
+		transform: translate(0, 0) !important;
+		opacity: 1 !important;
+
+		&:before {
+			content: none;
+		}
+	}
+}

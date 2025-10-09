@@ -6,10 +6,10 @@ import { Relation } from 'src/models/relation';
 import { useItemsStore } from 'src/stores/items';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
 import { NOT_AVAILABLE_SIGN } from 'src/utils/constants';
+import { isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { RenderContent } from 'src/utils/helpers/search';
-import { isString } from 'src/utils/helpers/general';
 
 export const getSearchResultTableContent = (result: CypherQuerySearchResult) => {
 	const keys: Array<Exclude<keyof Node, 'properties'> | Exclude<keyof Relation, 'properties'>> = [

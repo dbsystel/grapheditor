@@ -16,11 +16,15 @@ import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
-import { GRAPH_LAYOUT_PERSPECTIVE, GraphEditorTypeSimplified } from 'src/utils/constants';
+import {
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES,
+	GRAPH_LAYOUT_PERSPECTIVE,
+	GraphEditorTypeSimplified
+} from 'src/utils/constants';
 import { deleteNodes } from 'src/utils/fetch/deleteNodes';
 import { patchNodes } from 'src/utils/fetch/patchNodes';
 import { isObject } from 'src/utils/helpers/general';
-import { buildSearchResult } from 'src/utils/helpers/search';
+import { buildPerspectiveSearchResult } from 'src/utils/helpers/search';
 import { idFormatter } from 'src/utils/idFormatter';
 
 export const isNode = (data: unknown): data is Node => {
@@ -82,6 +86,10 @@ export const getNodeMetaPropertyType = (node: Node): ItemPropertyType | undefine
 	]?.type;
 };
 
+export const getNodeSemanticIdOrId = (node: Node) => {
+	return node.semanticId || node.id;
+};
+
 export const nodeContainsSearchTerm = (
 	node: Node,
 	searchTerm: string,
@@ -129,11 +137,12 @@ export const generateNode = (id: string, data?: Omit<Partial<Node>, 'id'>): Node
 	};
 };
 
+// TODO migrate to a observer
 export const processPerspective = (perspective: Perspective) => {
 	const nodes: Map<string, Node> = new Map(Object.entries(perspective.nodes));
 	const relations: Map<string, Relation> = new Map();
 
-	const { setResult, setAlgorithm, setIsResultProcessed } = useSearchStore.getState();
+	const { setAlgorithm, setIsResultProcessed, setResult } = useSearchStore.getState();
 	const { setPerspectiveId, setPerspectiveName, unHighlightNodes, unHighlightRelations } =
 		useGraphStore.getState();
 
@@ -149,7 +158,10 @@ export const processPerspective = (perspective: Perspective) => {
 	setPerspectiveName(perspective.name || '');
 	setAlgorithm(GRAPH_LAYOUT_PERSPECTIVE);
 	setIsResultProcessed(false);
-	setResult(buildSearchResult(nodes, relations));
+	setResult(
+		buildPerspectiveSearchResult(nodes, relations),
+		GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
+	);
 };
 
 export const processNodeConnections = (node: Node, connections: Array<NodeConnection>) => {

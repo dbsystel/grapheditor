@@ -9,7 +9,7 @@ export const postNodeConnections = ({ nodeId }: PostNodeConnectionsParameters) =
 	return backendApi.post<PostNodeConnectionsResponse>(
 		endpoints.getNodeConnectionsPath({ nodeId: nodeId }),
 		{
-			direction: 'both', // ingoing | outgoing | both
+			direction: 'both', // incoming | outgoing | both
 			// filter options
 			relation_properties: {},
 			neighbor_labels: [],

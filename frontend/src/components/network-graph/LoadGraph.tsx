@@ -37,6 +37,7 @@ export const LoadGraph = () => {
 		indexParallelRelations,
 		addNode,
 		addRelation,
+		setIsGraphRendered,
 		sigma
 	} = useGraphStore((store) => store);
 	const {
@@ -65,6 +66,7 @@ export const LoadGraph = () => {
 		sigma.addListener('downStage', unHighlightRelations);
 
 		return () => {
+			setIsGraphRendered(false);
 			sigma.getMouseCaptor().removeListener('mousedown', disableAutoscale);
 			sigma.removeListener('downStage', unHighlightNodes);
 			sigma.removeListener('downStage', unHighlightRelations);
@@ -165,10 +167,15 @@ export const LoadGraph = () => {
 		const { cameraStateChanged } = fitGraphToViewport(sigma, sigma.getGraph().nodes());
 
 		if (cameraStateChanged) {
-			sigma.once('afterRender', showGraphContainer);
+			sigma.once('afterRender', fitGraphCallback);
 		} else {
-			showGraphContainer();
+			fitGraphCallback();
 		}
+	};
+
+	const fitGraphCallback = () => {
+		showGraphContainer();
+		setIsGraphRendered(true);
 	};
 
 	const labelColor = () => {

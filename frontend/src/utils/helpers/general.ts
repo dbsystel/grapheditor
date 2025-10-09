@@ -59,6 +59,14 @@ export const isProduction = () => {
 	return import.meta.env.PROD;
 };
 
+export const objectContainsKey = (object: Record<string, unknown>, key: string) => {
+	return Object.prototype.hasOwnProperty.call(object, key);
+};
+
+export const twoObjectValuesAreEqual = (object1: unknown, object2: unknown) => {
+	return JSON.stringify(object1) === JSON.stringify(object2);
+};
+
 export const isAppSupportedLanguage = (value: unknown): value is AppLanguage => {
 	let languageIsSupported = false;
 
@@ -89,6 +97,10 @@ export const parseError = (error: unknown) => {
 
 export const copyTextToClipboard = (text: string) => {
 	return window.navigator.clipboard.writeText(text);
+};
+
+export const clone = <T>(data: T): T => {
+	return window.structuredClone(data);
 };
 
 /**
@@ -139,4 +151,34 @@ export const getFormattedCurrentDateTime = () => {
 		.replaceAll(':', '-');
 
 	return formattedDateTime;
+};
+
+// name: full name, including extension
+type DownloadFileOptions =
+	| {
+			name: string;
+			content: Blob;
+	  }
+	| {
+			name: string;
+			content: string; // ObjectUrl
+			mimeType: string;
+	  };
+
+export const downloadFile = (options: DownloadFileOptions) => {
+	const anchorElement = document.createElement('a');
+	let file;
+
+	if (options.content instanceof Blob) {
+		file = options.content;
+	} else if ('mimeType' in options) {
+		file = new Blob([options.content], { type: options.mimeType });
+	}
+
+	if (file) {
+		anchorElement.href = URL.createObjectURL(file);
+		anchorElement.download = options.name;
+		anchorElement.click();
+		anchorElement.remove();
+	}
 };

@@ -34,10 +34,3 @@ type PatchRelationPartial = RequireAtLeastOne<PatchRelationPick>;
 // note: TS might throw an error saying the property X is required in this type, but it means one of
 // PatchNodePick type keys is required, not exactly the one TS says
 export type PatchRelation = { id: RelationId } & PatchRelationPartial;
-
-const a: PatchRelation = {
-	id: 'd',
-	type: 'a'
-};
-
-console.log(a);

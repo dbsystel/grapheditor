@@ -57,14 +57,6 @@
 		text-align: right;
 	}
 
-	&__hoverable-row {
-		transition: background-color 0.2s ease-in-out;
-
-		&:hover {
-			background-color: var(--db-neutral-bg-basic-level-1-hovered);
-		}
-	}
-
 	&__headline {
 		font-size: 1.2rem;
 	}

@@ -1,3 +1,15 @@
-FROM grapheditor-frontend-base
+ARG DOCKER_REGISTRY
+FROM ${DOCKER_REGISTRY}node:20-bookworm
+
+WORKDIR /opt/grapheditor-frontend
+
+COPY frontend .
+
+RUN apt update
+RUN apt install -y xdg-utils
+RUN npm install
+RUN npm playwright install
+
+EXPOSE 8080
 
 CMD ["npm", "run", "dev", "--", "--host"]

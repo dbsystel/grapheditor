@@ -4,19 +4,13 @@
 	max-width: 100%; // override user-agent style
 	max-height: 100%; // override user-agent style
 	z-index: 9999;
-	background-color: color-mix(
-		in srgb,
-		transparent var(--db-bg-transparent, 20%),
-		var(--db-base-bg-enabled)
-	);
+	background-color: transparent;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 
-	&[data-backdrop='none'] {
-		&::backdrop {
-			display: none;
-		}
+	&::backdrop {
+		display: none;
 	}
 
 	&__content {

@@ -1,16 +1,19 @@
 import './NodeLabelsItemFinder.scss';
-import { DBButton, DBCheckbox, DBIcon, DBTag, DBTooltip } from '@db-ux/react-core-components';
+import { DBCheckbox, DBIcon, DBTag, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { Node } from 'src/models/node';
 import { useItemsStore } from 'src/stores/items';
 import { nodesApi } from 'src/utils/api/nodes';
-import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
-import { generateNode, nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
+import { GraphEditorTypeSimplified, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import {
+	generateNode,
+	getNodeSemanticIdOrId,
+	nodeContainsSearchTerm
+} from 'src/utils/helpers/nodes';
 import { useGetNodesLabelsNodes } from 'src/utils/hooks/useGetNodesLabelsNodes';
 import { idFormatter } from 'src/utils/idFormatter';
 import {
@@ -19,7 +22,7 @@ import {
 } from './NodeLabelsItemFinder.interfaces';
 
 export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
-	const { id, className, testId, showTooltipOnHover = true, onTagsSelected } = props;
+	const { id, className, testId, showTooltipOnHover = true, onTagsSelected, handleRef } = props;
 	const { t } = useTranslation();
 	// labels used by the ItemFinder component as options
 	const [labelOptions, setLabelOptions] = useState<Array<Node>>([]);
@@ -28,26 +31,26 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const [labelInputValue, setLabelInputValue] = useState('');
 	// all labels (used for filtering options for the ItemFinder component)
 	const allLabels = useRef<Array<Node>>([]);
-	const [editLabels, setEditLabels] = useState(false);
 	const setNode = useItemsStore((store) => store.setNode);
-	const isDefaultMode = props.mode === 'default';
-	const isEditMode = props.mode === 'edit';
-	const isEditModeActive = props.mode === 'edit' && editLabels;
 	const rootElementClassName = clsx('node-labels-item-finder', className);
 	const label = props.label || t('create_node_label');
-	const [isAddButtonClicked, setIsAddButtonClicked] = useState<boolean>(false);
 	const [tooltipLabel, setTooltipLabel] = useState<Node | null>(null);
 	const timeoutRef = useRef(0);
 	const [newlyAddedTags, setNewlyAddedTags] = useState<Array<string>>([]);
 	const [selectedTagIds, setSelectedTagIds] = useState<Array<string>>([]);
+	const [originalValue, setOriginalValue] = useState<Array<Node> | undefined>(undefined);
 	const sortedLabels = useMemo(() => {
 		return value?.slice().sort((a, b) => a.title.localeCompare(b.title));
 	}, [value]);
+	const indeterminateCheckboxRef = useRef<HTMLInputElement>(null);
 	const allTagIds = sortedLabels?.map((label) => label.id) || [];
 	const isCheckboxChecked = selectedTagIds.length === allTagIds.length && allTagIds.length > 0;
 	const isCheckboxIndeterminate =
 		selectedTagIds.length > 0 && selectedTagIds.length < allTagIds.length;
-	const indeterminateCheckboxRef = useRef<HTMLInputElement>(null);
+	const isDefaultMode = props.mode === 'default';
+	const isEditMode = props.mode === 'edit';
+	const editLabels = isEditMode && !!props.isEditMode;
+	const isEditModeActive = props.mode === 'edit' && editLabels;
 
 	const { isLoading: isLabelsLoading, reFetch: reFetchLabels } = useGetNodesLabelsNodes({
 		executeImmediately: false,
@@ -60,6 +63,12 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 			setLabelOptions(data);
 		}
 	});
+
+	useImperativeHandle(handleRef, () => ({
+		handleSave,
+		handleUndo,
+		labels: (value || []).map((label) => getNodeSemanticIdOrId(label))
+	}));
 
 	useEffect(() => {
 		return () => {
@@ -84,6 +93,12 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 			indeterminateCheckboxRef.current.indeterminate = isCheckboxIndeterminate;
 		}
 	}, [isCheckboxIndeterminate]);
+
+	useEffect(() => {
+		if (!isEditModeActive && props.value) {
+			setOriginalValue(props.value);
+		}
+	}, [props.value, isEditModeActive]);
 
 	/**
 	 * Function executed on the ItemFinder labels search.
@@ -138,7 +153,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		setNewlyAddedTags((prev) => [...prev, newLabel.id]);
 	};
 
-	const onSave = async () => {
+	const handleSave = async () => {
 		if (isEditMode) {
 			const patchObject = {
 				id: props.node.id,
@@ -147,19 +162,14 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 
 			await nodesApi.patchNodesAndUpdateApplication([patchObject]);
 
-			setEditLabels(false);
-			setIsAddButtonClicked(false);
-
 			setNewlyAddedTags([]);
+			setOriginalValue(value);
 		}
 	};
 
-	const onEdit = () => {
-		setEditLabels(true);
-	};
-
-	const onAddButtonClick = () => {
-		setIsAddButtonClicked(true);
+	const handleUndo = () => {
+		setValue(originalValue);
+		setNewlyAddedTags([]);
 	};
 
 	const onMouseEnter = (label: Node) => {
@@ -248,60 +258,27 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 									/>
 								);
 							})}
-						{isEditModeActive && (
-							<div>
-								<DBButton
-									className="node-labels-item-finder__add-button"
-									variant="ghost"
-									noText
-									icon="plus"
-									size="small"
-									onClick={onAddButtonClick}
-								/>
-							</div>
-						)}
 					</div>
 				)}
 
-				<div className="node-labels-item-finder__head">
-					{isEditMode && !isEditModeActive && (
-						<div className="node-labels-item-finder__edit-button-and-checkbox">
-							<DBButton
-								className="node-labels-item-finder__edit-button"
-								icon="pen"
-								type="button"
-								size="small"
-								noText
-								variant="ghost"
-								title={t('edit')}
-								onClick={onEdit}
-							/>
+				{!!props.isSelectAllDisabled === false && (
+					<div className="node-labels-item-finder__head">
+						<DBCheckbox
+							onClick={handleCheckboxClick}
+							ref={indeterminateCheckboxRef}
+							checked={isCheckboxChecked}
+						/>
 
-							<DBCheckbox
-								id="node-labels-item-finder__check"
-								onClick={handleCheckboxClick}
-								ref={indeterminateCheckboxRef}
-								checked={isCheckboxChecked}
-							/>
-
-							<DBTooltip
-								id="node-labels-item-finder__check"
-								width="fixed"
-								placement="left-end"
-								showArrow={false}
-							>
-								{isCheckboxChecked
-									? t('node-labels-item-finder-checkbox-uncheck_all_labels')
-									: t('node-labels-item-finder-checkbox-select_all_labels')}
-							</DBTooltip>
-						</div>
-					)}
-
-					{isEditModeActive && <SaveButton onSave={onSave} />}
-				</div>
+						<DBTooltip width="fixed" placement="left-end" showArrow={false}>
+							{isCheckboxChecked
+								? t('node-labels-item-finder-checkbox-uncheck_all_labels')
+								: t('node-labels-item-finder-checkbox-select_all_labels')}
+						</DBTooltip>
+					</div>
+				)}
 			</div>
 
-			{(isDefaultMode || isAddButtonClicked) && (
+			{(isDefaultMode || props.isEditMode) && (
 				<ItemFinder
 					className="node-labels-item-finder__itemfinder"
 					placeholder={props.placeholder}
@@ -323,23 +300,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 				/>
 			)}
 		</div>
-	);
-};
-
-const SaveButton = ({ onSave }: { onSave: () => void }) => {
-	const { t } = useTranslation();
-
-	return (
-		<DBButton
-			className="db-bg-successful"
-			icon="check"
-			type="button"
-			variant="brand"
-			noText
-			size="small"
-			title={t('save')}
-			onClick={onSave}
-		/>
 	);
 };
 

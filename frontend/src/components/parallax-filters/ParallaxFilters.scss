@@ -1,0 +1,21 @@
+.parallax-filters {
+	&__content {
+		margin-left: 5px;
+	}
+
+	&__filter {
+		display: flex;
+		font-size: 12px;
+
+		&:not(:last-child) {
+			margin-bottom: 5px;
+		}
+
+		.db-input {
+			label {
+				padding: 0;
+				font-size: 12px;
+			}
+		}
+	}
+}

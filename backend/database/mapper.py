@@ -2,6 +2,7 @@
 GraphEditor and vice-versa
 """
 
+import re
 import neo4j
 
 from blueprints.display.style_support import apply_style_rules
@@ -372,3 +373,6 @@ def _dict_to_cypher_part(d):
     s += ", ".join(entries)
     s += "}"
     return s
+
+
+prop_name_pat = re.compile(r"^(\w|-)+$")

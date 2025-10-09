@@ -16,12 +16,14 @@ def find_a_value(obj, attributes=None, keys=None, default=None):
     keys = [] if keys is None else keys
 
     for key in keys:
-        if key in obj:
-            return obj[key]
+        for obj_key in obj.keys():
+            if obj_key.lower().startswith(key):
+                return obj[obj_key]
 
     for attribute in attributes:
-        if hasattr(obj, attribute):
-            return getattr(obj, attribute)
+        for obj_key in obj.__dict__.keys():
+            if obj_key.lower().startswith(attribute):
+                return getattr(obj, obj_key)
 
     return default
 

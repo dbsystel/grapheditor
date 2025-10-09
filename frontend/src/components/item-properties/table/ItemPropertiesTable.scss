@@ -68,18 +68,7 @@
 	}
 
 	&__hoverable-row {
-		transition: background-color 0.2s ease-in-out;
 		vertical-align: top;
-
-		&:hover {
-			background-color: var(--db-neutral-bg-basic-level-1-hovered);
-		}
-
-		&:last-child {
-			> #{$this}__cell {
-				border-bottom: none;
-			}
-		}
 
 		#{$this}__textarea {
 			textarea {

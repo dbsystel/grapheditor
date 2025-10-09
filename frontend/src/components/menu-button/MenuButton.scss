@@ -5,14 +5,23 @@
 		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
 	}
 
-	.db-popover-content {
-		z-index: 9999;
+	&:not(.header-settings) {
+		.db-popover-content {
+			z-index: 9999;
 
-		// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
-		position: absolute !important;
-		inset-inline: auto !important;
-		inset-block: auto !important;
-		inset-block-start: 100% !important;
+			// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
+			position: absolute !important;
+			inset-inline: auto !important;
+			inset-block: auto !important;
+			inset-block-start: 100% !important;
+
+			// prevent the element causing overflow (where possible) although it is not visible
+			[data-open="false"] {
+				block-size: 0;
+				inline-size: 0;
+				overflow: hidden;
+			}
+		}
 	}
 
 	button {

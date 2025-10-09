@@ -16,10 +16,10 @@ import {
 	GRAPH_LAYOUT_FORCE_ATLAS_2,
 	GRAPH_PRESENTATION_GRAPH
 } from 'src/utils/constants';
-import { parseError } from 'src/utils/helpers/general';
-import { isNode } from 'src/utils/helpers/nodes';
+import { clone, downloadFile, parseError } from 'src/utils/helpers/general';
+import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { createJSONStorage, persist, subscribeWithSelector } from 'zustand/middleware';
 
 export type LayoutModuleType =
 	| 'random'
@@ -29,6 +29,18 @@ export type LayoutModuleType =
 	| 'perspective'
 	| 'none';
 
+export type SearchResultType =
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
+	| 'parallax'
+	| '';
+
+export type SearchStoreResult = {
+	data: CypherQuerySearchResult | null;
+	type: SearchResultType;
+};
+
 // TODO remove "perspective" pieces of the store
 type SearchStore = {
 	type: SearchStoreType;
@@ -37,7 +49,7 @@ type SearchStore = {
 	presentation: string;
 	algorithm: LayoutModuleType;
 	style: string;
-	result: CypherQuerySearchResult | null;
+	result: SearchStoreResult;
 	isResultProcessed: boolean;
 	searchValue: string;
 	newlyUploadedStyle: string;
@@ -46,7 +58,7 @@ type SearchStore = {
 	getUrlSearchParameters: () => URLSearchParams;
 	setType: (type: SearchStoreType) => void;
 	setQuery: (query: string) => void;
-	setResult: (result: CypherQuerySearchResult | null) => void;
+	setResult: (result: CypherQuerySearchResult | null, type: SearchResultType) => void;
 	setIsResultProcessed: (processed: boolean) => void;
 	setNewlyUploadedStyle: (style: string) => void;
 	initialize: () => void;
@@ -95,226 +107,224 @@ export type SearchStoreSearchType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT;
 
 /**
- * Store for keeping track what type of query a user chose and what the query is.
+ * Store for keeping tracking user search results.
+ * TODO consider migrating search results to a new store, something like "application" store
  */
-
 export const useSearchStore = create<SearchStore>()(
-	persist(
-		(set, get) => ({
-			type: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
-			query: '',
-			key: '',
-			presentation: '',
-			algorithm: GRAPH_LAYOUT_FORCE_ATLAS_2,
-			style: '',
-			result: null,
-			isResultProcessed: false,
-			isLoading: false,
-			searchValue: GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE,
-			newlyUploadedStyle: '',
-			resetStyles: false,
-			history: {
-				[GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY]: [],
-				[GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT]: []
-			},
-			setType: (type) => set({ type: type }),
-			setQuery: (query) => set({ query: query }),
-			setPresentation: (presentation) => set({ presentation: presentation }),
-			setAlgorithm: (algorithm) => set({ algorithm: algorithm }),
-			setStyle: (style) => set({ style: style }),
-			setResult: (result) => set({ result: result }),
-			setIsResultProcessed: (processed) => {
-				set({ isResultProcessed: processed });
-			},
-			executeSearch: async () => {
-				const query = get().query;
-				const type = get().type;
+	subscribeWithSelector(
+		persist(
+			(set, get) => ({
+				type: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
+				query: '',
+				key: '',
+				presentation: '',
+				algorithm: GRAPH_LAYOUT_FORCE_ATLAS_2,
+				style: '',
+				result: {
+					data: null,
+					type: ''
+				},
+				isResultProcessed: false,
+				isLoading: false,
+				searchValue: GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE,
+				newlyUploadedStyle: '',
+				resetStyles: false,
+				history: {
+					[GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY]: [],
+					[GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT]: []
+				},
+				setType: (type) => set({ type: type }),
+				setQuery: (query) => set({ query: query }),
+				setPresentation: (presentation) => set({ presentation: presentation }),
+				setAlgorithm: (algorithm) => set({ algorithm: algorithm }),
+				setStyle: (style) => set({ style: style }),
+				setResult: (result, type) =>
+					set({
+						result: {
+							data: result,
+							type: type
+						}
+					}),
+				setIsResultProcessed: (processed) => {
+					set({ isResultProcessed: processed });
+				},
+				executeSearch: async () => {
+					const query = get().query;
+					const type = get().type;
+					let searchResultType: SearchResultType = '';
 
-				if (!query.trim()) {
-					return;
-				}
-
-				get().setResult(null);
-				get().setIsLoading(true);
-
-				let responseResult: CypherQuerySearchResult = [];
-
-				try {
-					// if cypher query search
-					if (type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
-						const response = await searchApi.postCypherQuerySearch({
-							queryText: query || ''
-						});
-
-						responseResult = response.data.result;
+					if (!query.trim()) {
+						return;
 					}
-					// if regular, full-text search
-					else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
-						const responses = await searchApi.getFullTextSearch({
-							searchTerm: query || ''
-						});
-						// make full-text search results format consistent with the cypher query
-						// results format, so we can reuse existing components
-						const result: CypherQuerySearchResult = [];
 
-						responses.forEach((response) => {
-							response.data.forEach((item, index) => {
-								if (!result[index]) {
-									result[index] = [
-										['', ''],
-										['', '']
-									];
-								}
+					get().setResult(null, '');
+					get().setIsLoading(true);
 
-								if (isNode(item)) {
-									result[index][0] = ['Node', item];
-								} else {
-									result[index][1] = ['Relation', item];
-								}
+					let responseResult: CypherQuerySearchResult = [];
+
+					try {
+						// if cypher query search
+						if (type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
+							const response = await searchApi.postCypherQuerySearch({
+								queryText: query || ''
 							});
-						});
 
-						responseResult = result;
+							responseResult = response.data.result;
+							searchResultType = GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY;
+						}
+						// if regular, full-text search
+						else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
+							const responses = await searchApi.getFullTextSearch({
+								searchTerm: query || ''
+							});
+							// make full-text search results format consistent with the cypher query
+							// results format, so we can reuse existing components
+							responseResult = buildSimpleSearchResult(
+								responses[0].data, // nodes API response
+								responses[1].data // relations API response
+							);
+							searchResultType = GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT;
+						}
+					} catch (error) {
+						if (isAxiosError(error)) {
+							Promise.reject(error);
+						} else {
+							throw new Error(parseError(error));
+						}
+					} finally {
+						get().setIsLoading(false);
+						get().setResult(responseResult, searchResultType);
 					}
-				} catch (error) {
-					if (isAxiosError(error)) {
-						Promise.reject(error);
-					} else {
-						throw new Error(parseError(error));
+				},
+				setSearchValue: (searchValue) => set({ searchValue: searchValue }),
+				getDefaultSearchValue: (type) => {
+					if (type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
+						return GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE;
+					} else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
+						return GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE;
 					}
-				} finally {
-					get().setIsLoading(false);
-					get().setResult(responseResult);
-				}
-			},
-			setSearchValue: (searchValue) => set({ searchValue: searchValue }),
-			getDefaultSearchValue: (type) => {
-				if (type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
-					return GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE;
-				} else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
-					return GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE;
-				}
 
-				return '';
-			},
-			getUrlSearchParameter: (key) => {
-				return get().getUrlSearchParameters().get(key);
-			},
-			getUrlSearchParameters: () => {
-				return new URL(window.location.href).searchParams;
-			},
-			setNewlyUploadedStyle: (style: string) => set({ newlyUploadedStyle: style }),
-			setResetStyles: (updated: boolean) => set({ resetStyles: updated }),
-			initialize: () => {
-				const params = get().getUrlSearchParameters();
+					return '';
+				},
+				getUrlSearchParameter: (key) => {
+					return get().getUrlSearchParameters().get(key);
+				},
+				getUrlSearchParameters: () => {
+					return new URL(window.location.href).searchParams;
+				},
+				setNewlyUploadedStyle: (style: string) => set({ newlyUploadedStyle: style }),
+				setResetStyles: (updated: boolean) => set({ resetStyles: updated }),
+				initialize: () => {
+					const params = get().getUrlSearchParameters();
 
-				const type = params.get(GLOBAL_SEARCH_TYPE_KEY);
-				const query = params.get(GLOBAL_SEARCH_PARAMETER_KEY);
-				const presentation = params.get(GLOBAL_SEARCH_PRESENTATION_KEY);
-				const algorithm = params.get(GLOBAL_SEARCH_ALGORITHM_KEY) as LayoutModuleType;
+					const type = params.get(GLOBAL_SEARCH_TYPE_KEY);
+					const query = params.get(GLOBAL_SEARCH_PARAMETER_KEY);
+					const presentation = params.get(GLOBAL_SEARCH_PRESENTATION_KEY);
+					const algorithm = params.get(GLOBAL_SEARCH_ALGORITHM_KEY) as LayoutModuleType;
 
-				set({
-					type:
-						type && get().isSearchType(type)
-							? type
-							: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
-				});
-				set({ query: query || '' });
-				set({ presentation: presentation || GRAPH_PRESENTATION_GRAPH });
-				set({ algorithm: algorithm || GRAPH_LAYOUT_FORCE_ATLAS_2 });
-				set({
-					searchValue: query ? query : GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE
-				});
-			},
-			setIsLoading: (value: boolean) => set({ isLoading: value }),
-			addHistoryEntry: (type, value) => {
-				const history = window.structuredClone(get().history);
-				let selectedHistory;
+					set({
+						type:
+							type && get().isSearchType(type)
+								? type
+								: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
+					});
+					set({ query: query || '' });
+					set({ presentation: presentation || GRAPH_PRESENTATION_GRAPH });
+					set({ algorithm: algorithm || GRAPH_LAYOUT_FORCE_ATLAS_2 });
+					set({
+						searchValue: query ? query : GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE
+					});
+				},
+				setIsLoading: (value: boolean) => set({ isLoading: value }),
+				addHistoryEntry: (type, value) => {
+					const history = clone(get().history);
+					let selectedHistory;
 
-				if (get().isSearchType(type)) {
-					selectedHistory = history[type];
+					if (get().isSearchType(type)) {
+						selectedHistory = history[type];
 
-					if (selectedHistory[0] !== value) {
-						selectedHistory.unshift(value);
+						if (selectedHistory[0] !== value) {
+							selectedHistory.unshift(value);
+
+							set({
+								history: history
+							});
+						}
+					}
+				},
+				getSelectedHistory: () => {
+					const history = get().history;
+					const type = get().type;
+					let selectedHistory;
+
+					if (get().isSearchType(type)) {
+						selectedHistory = history[type];
+					}
+
+					return selectedHistory;
+				},
+				exportSelectedHistory: () => {
+					const selectedHistory = get().getSelectedHistory();
+					const type = get().type;
+
+					if (!selectedHistory) {
+						return;
+					}
+
+					let content = '';
+
+					selectedHistory.forEach((historyEntry, index) => {
+						if (index) {
+							content += '\n';
+						}
+						content += historyEntry;
+						content += '\n';
+						content += '------------------------------------------------';
+					});
+
+					downloadFile({
+						content: content,
+						mimeType: 'text/plain',
+						name: 'graph-editor-' + type + '-search-history.txt'
+					});
+				},
+				clearSelectedHistory: () => {
+					const type = get().type;
+
+					if (!get().isSearchType(type)) {
+						return;
+					}
+
+					if (
+						window.confirm(
+							i18n.t('confirm_clear_search_history_entries', { type: type })
+						)
+					) {
+						const history = clone(get().history);
+
+						history[type] = [];
 
 						set({
 							history: history
 						});
 					}
+				},
+				isSearchType: (type): type is SearchStoreSearchType => {
+					return (
+						type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
+						type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
+					);
 				}
-			},
-			getSelectedHistory: () => {
-				const history = get().history;
-				const type = get().type;
-				let selectedHistory;
-
-				if (get().isSearchType(type)) {
-					selectedHistory = history[type];
+			}),
+			{
+				name: APP_STORAGE_KEY_PREFIX + 'search', // name of the item in the storage (must be unique)
+				storage: createJSONStorage(() => window.localStorage), // (optional) by default, 'localStorage' is used
+				partialize: (store) => {
+					return {
+						history: store.history
+					};
 				}
-
-				return selectedHistory;
-			},
-			exportSelectedHistory: () => {
-				const selectedHistory = get().getSelectedHistory();
-				const type = get().type;
-
-				if (!selectedHistory) {
-					return;
-				}
-
-				let content = '';
-
-				selectedHistory.forEach((historyEntry, index) => {
-					if (index) {
-						content += '\n';
-					}
-					content += historyEntry;
-					content += '\n';
-					content += '------------------------------------------------';
-				});
-
-				const anchorElement = document.createElement('a');
-				const file = new Blob([content], { type: 'text/plain' });
-				anchorElement.href = URL.createObjectURL(file);
-				anchorElement.download = 'graph-editor-' + type + '-search-history.txt';
-				anchorElement.click();
-			},
-			clearSelectedHistory: () => {
-				const type = get().type;
-
-				if (!get().isSearchType(type)) {
-					return;
-				}
-
-				console.log('---clearSelectedHistory');
-
-				if (
-					window.confirm(i18n.t('confirm_clear_search_history_entries', { type: type }))
-				) {
-					const history = window.structuredClone(get().history);
-
-					history[type] = [];
-
-					set({
-						history: history
-					});
-				}
-			},
-			isSearchType: (type): type is SearchStoreSearchType => {
-				return (
-					type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
-					type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
-				);
 			}
-		}),
-		{
-			name: APP_STORAGE_KEY_PREFIX + 'search', // name of the item in the storage (must be unique)
-			storage: createJSONStorage(() => window.localStorage), // (optional) by default, 'localStorage' is used
-			partialize: (store) => {
-				return {
-					history: store.history
-				};
-			}
-		}
+		)
 	)
 );

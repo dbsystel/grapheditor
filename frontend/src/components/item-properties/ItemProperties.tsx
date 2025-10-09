@@ -1,7 +1,11 @@
 import clsx from 'clsx';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { processItemPropertiesEntries } from 'src/components/item-properties/helpers';
+import {
+	processItemPropertiesEntries,
+	showNotificationForPropertyTypeAndValueMismatch,
+	validateItemProperties
+} from 'src/components/item-properties/helpers';
 import { ItemPropertiesTable } from 'src/components/item-properties/table/ItemPropertiesTable';
 import { ItemPropertiesTableEntries } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
 import { ItemPropertiesAddNewProperty } from 'src/components/item-properties/tabs/add-new-property/ItemPropertiesAddNewProperty';
@@ -11,6 +15,11 @@ import { TabPanel } from 'src/components/tab-panel/TabPanel';
 import { Tabs } from 'src/components/tabs/Tabs';
 import { ItemPropertyKey, ItemPropertyWithKey } from 'src/models/item';
 import { useItemsStore } from 'src/stores/items';
+import { nodesApi } from 'src/utils/api/nodes';
+import { relationsApi } from 'src/utils/api/relations';
+import { clone, objectContainsKey } from 'src/utils/helpers/general';
+import { isNode } from 'src/utils/helpers/nodes';
+import { isRelation } from 'src/utils/helpers/relations';
 import { ItemPropertiesProps } from './ItemProperties.interfaces';
 
 export const ItemProperties = ({
@@ -21,10 +30,12 @@ export const ItemProperties = ({
 	filterMetaByNodeIds,
 	id,
 	className,
-	testId
+	testId,
+	isEditMode,
+	handleRef
 }: ItemPropertiesProps) => {
 	const { t } = useTranslation();
-	const rootElementClassName = clsx('item-properties', className);
+	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
 	// splitting this state into multiple states and batching their update would
 	// sometimes cause React not to rerender the component although one of the states
 	// was updated (this behaviour would happen rarely, every ~15/20 times)
@@ -38,15 +49,22 @@ export const ItemProperties = ({
 		renderIncompleteTab: false
 	});
 	const [renderKey, setRenderKey] = useState('');
+	const [isLoading, setIsLoading] = useState(false);
+	const tabsActiveIndexRef = useRef(-1); // -1 = none
 	const topEntriesPropertyKeysCacheRef = useRef<Array<ItemPropertyKey>>([]);
-	// -1 = none
-	const tabsActiveIndexRef = useRef(-1);
-	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
 	const propsStorageRef = useRef({
 		metaData: metaData,
 		filterMetaByNodeIds: filterMetaByNodeIds,
-		item: item
+		itemProperties: clone(item.properties)
 	});
+	const propertiesRef = useRef(clone(item.properties));
+	const rootElementClassName = clsx('item-properties', className);
+
+	useImperativeHandle(handleRef, () => ({
+		handleSave,
+		handleUndo,
+		properties: propertiesRef.current
+	}));
 
 	useEffect(() => {
 		/**
@@ -58,19 +76,19 @@ export const ItemProperties = ({
 		propsStorageRef.current = {
 			metaData: metaData,
 			filterMetaByNodeIds: filterMetaByNodeIds,
-			item: item
+			itemProperties: propertiesRef.current
 		};
 
 		const processTableEntries = async () => {
-			const { metaData, filterMetaByNodeIds, item } = propsStorageRef.current;
-			const propertyNodes = await getNodesAsync(Object.keys(item.properties));
+			const { metaData, filterMetaByNodeIds, itemProperties } = propsStorageRef.current;
+			const propertyNodes = await getNodesAsync(Object.keys(itemProperties));
 
 			const { newCompleteEntries, newIncompleteEntries, newTopEntries } =
 				processItemPropertiesEntries({
 					propertyNodes: propertyNodes,
 					metaData: metaData,
 					filterMetaByNodeIds: filterMetaByNodeIds,
-					item: item,
+					itemProperties: itemProperties,
 					topEntriesPropertyKeys: topEntriesPropertyKeysCacheRef.current
 				});
 
@@ -89,19 +107,14 @@ export const ItemProperties = ({
 		processTableEntries();
 	}, [item, renderKey, metaData, filterMetaByNodeIds]);
 
-	const onPropertyCreate = (property: ItemPropertyWithKey) => {
-		topEntriesPropertyKeysCacheRef.current.push(property.key);
-	};
-
-	// sort as sort into complete/incomplete columns, not sort alphabetically
-	// or similar
+	// sort as sort into complete/incomplete columns, not sort alphabetically or similar
 	const sortTopEntriesMap = (keepActiveTabIndex?: boolean) => {
 		if (!keepActiveTabIndex) {
 			tabsActiveIndexRef.current = -1;
 		}
 
 		topEntriesPropertyKeysCacheRef.current = [];
-		setRenderKey(window.crypto.randomUUID());
+		refreshComponent();
 	};
 
 	const onTabChange = (tabElement: HTMLInputElement, tabIndex: number) => {
@@ -109,27 +122,107 @@ export const ItemProperties = ({
 		sortTopEntriesMap(true);
 	};
 
+	const handleSave = async () => {
+		if (!isLoading) {
+			const itemPropertiesAreValid = validateItemProperties(propertiesRef.current);
+
+			if (!itemPropertiesAreValid) {
+				showNotificationForPropertyTypeAndValueMismatch();
+				return;
+			}
+
+			setIsLoading(true);
+
+			const patchObject = {
+				id: item.id,
+				properties: propertiesRef.current
+			};
+
+			if (isNode(item)) {
+				await nodesApi.patchNodesAndUpdateApplication([patchObject]);
+			} else if (isRelation(item)) {
+				await relationsApi.patchRelationsAndUpdateApplication([patchObject]);
+			}
+
+			topEntriesPropertyKeysCacheRef.current = [];
+			setIsLoading(false);
+		}
+	};
+
+	const handleUndo = () => {
+		propertiesRef.current = clone(item.properties);
+		topEntriesPropertyKeysCacheRef.current = [];
+		refreshComponent();
+	};
+
+	const onPropertyCreate = (property: ItemPropertyWithKey) => {
+		propertiesRef.current[property.key] = {
+			value: property.value,
+			type: property.type,
+			edit: true
+		};
+
+		topEntriesPropertyKeysCacheRef.current.push(property.key);
+		refreshComponent();
+	};
+
+	const onPropertyChange = (key: ItemPropertyKey, value: string) => {
+		// if we work with missing ("recommended") properties
+		if (!objectContainsKey(propertiesRef.current, key)) {
+			propertiesRef.current[key] = {
+				type: 'string',
+				value: '',
+				edit: true
+			};
+		}
+
+		propertiesRef.current[key].value = value;
+	};
+
+	const onPropertyDelete = (key: ItemPropertyKey) => {
+		delete propertiesRef.current[key];
+		refreshComponent();
+	};
+
+	const refreshComponent = () => {
+		setRenderKey(window.crypto.randomUUID());
+	};
+
 	return (
-		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<Tabs initialSelectedMode="manually" onTabChange={onTabChange}>
-				<TabList>
-					<TabItem icon="plus">{t('tab_title_new_property')}</TabItem>
-					{entriesState.renderIncompleteTab && (
-						<TabItem icon="exclamation_mark_circle">
-							{t('tab_title_missing_properties')}
-						</TabItem>
-					)}
-				</TabList>
-				<TabPanel onTabClose={sortTopEntriesMap}>
-					<ItemPropertiesAddNewProperty item={item} onPropertyCreate={onPropertyCreate} />
-				</TabPanel>
-			</Tabs>
+		<div
+			id={id}
+			className={rootElementClassName}
+			data-testid={testId}
+			style={{
+				opacity: isLoading ? 0.4 : undefined,
+				pointerEvents: isLoading ? 'none' : undefined
+			}}
+		>
+			{isEditMode && (
+				<Tabs initialSelectedMode="manually" onTabChange={onTabChange}>
+					<TabList>
+						<TabItem icon="plus">{t('tab_title_new_property')}</TabItem>
+						{entriesState.renderIncompleteTab && (
+							<TabItem icon="exclamation_mark_circle">
+								{t('tab_title_missing_properties')}
+							</TabItem>
+						)}
+					</TabList>
+					<TabPanel onTabClose={sortTopEntriesMap}>
+						<ItemPropertiesAddNewProperty onPropertyCreate={onPropertyCreate} />
+					</TabPanel>
+				</Tabs>
+			)}
 
 			<ItemPropertiesTable
 				topEntries={entriesState.top}
 				entries={entriesState.complete}
+				areTopEntriesMissingProperties={tabsActiveIndexRef.current === 1}
 				onPropertyRowMouseEnter={onPropertyRowMouseEnter}
 				onPropertyRowMouseLeave={onPropertyRowMouseLeave}
+				onPropertyChange={onPropertyChange}
+				onPropertyDelete={onPropertyDelete}
+				isEditMode={isEditMode}
 			/>
 		</div>
 	);

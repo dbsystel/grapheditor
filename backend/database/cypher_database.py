@@ -4,6 +4,7 @@
 # specific parts. If in the future we switch to a different engine, we
 # can still subclass it.
 
+from typing import List
 from flask import abort, g, current_app
 
 from database import mapper, id_handling
@@ -104,7 +105,7 @@ class CypherDatabase(GraphDatabase):
             return self._generate_pseudo_node(nid)
         return None
 
-    def get_nodes_by_ids(self, ids, replace_by_pseudo_node=False):
+    def get_nodes_by_ids(self, ids, replace_by_pseudo_node=False, filters=None):
         """Fetch multiple nodes by id from the database.
         Return a dictionary of original IDs to nodes.
         If an ID is not found and replace_by_pseudo_node is True, the ID is
@@ -115,12 +116,31 @@ class CypherDatabase(GraphDatabase):
         raw_db_id_to_input_id_map = {
             value: key for key, value in input_id_to_raw_db_map.items()
         }
+        label_filters = filters.get('labels', None) if filters else None
+        property_filters = filters.get('properties', None) if filters else None
+        label_filters_expression = """
+            AND any(label IN $label_filters
+                    WHERE label in labels(n))
+        """ if label_filters else ""
+
+        property_filter_expr = """
+            AND all(pname IN keys($property_filters)
+            WHERE n[pname] CONTAINS $property_filters[pname])
+        """ if property_filters else ""
+
+        query_text = f"""MATCH (n)
+        WHERE toString({g.cypher_id}(n)) IN $raw_db_ids
+        {label_filters_expression}
+        {property_filter_expr}
+        RETURN n, toString({g.cypher_id}(n)) AS id"""
+
+        current_app.logger.debug(f"QUERY: {query_text}")
 
         query_result = self._run(
-            f"""MATCH (n)
-                WHERE toString({g.cypher_id}(n)) IN $raw_db_ids
-                RETURN n, toString({g.cypher_id}(n)) AS id""",
+            query_text,
             raw_db_ids=list(raw_db_id_to_input_id_map.keys()),
+            label_filters=label_filters,
+            property_filters=property_filters
         )
         fetched_nodes = {}
 
@@ -360,28 +380,28 @@ class CypherDatabase(GraphDatabase):
     def _get_node_relations_by_raw_db_id(self, raw_db_id, filters):
         """Get node relations from node with internal db_id."""
 
-        ingoing_with_source = []
+        incoming_with_source = []
         outgoing_with_target = []
         direction = filters["direction"]
         exprs = self._get_node_relations_filter_expressions(filters)
 
-        if direction in {"both", "ingoing"}:
+        if direction in {"both", "incoming"}:
             neighbor_props = exprs.get("neighbor_properties")
             rel_props = exprs.get("relation_properties")
             where_clauses = exprs.get("where_clauses")
-            ingoing_res = self._run(
+            incoming_res = self._run(
                 f"MATCH (neighbor{neighbor_props})-[r{rel_props}]->(n)"
                 f" WHERE {g.cypher_id}(n)={cast_id('$nid')} {where_clauses} "
                 "RETURN r, neighbor",
                 nid=raw_db_id,
             )
-            ingoing_with_source = [
+            incoming_with_source = [
                 {
                     "relation": mapper.neorelation2grapheditor(row["r"]),
                     "neighbor": mapper.neonode2grapheditor(row["neighbor"]),
-                    "direction": "ingoing",
+                    "direction": "incoming",
                 }
-                for row in ingoing_res
+                for row in incoming_res
             ]
 
         if direction in {"both", "outgoing"}:
@@ -402,12 +422,12 @@ class CypherDatabase(GraphDatabase):
                 }
                 for row in outgoing_res
             ]
-        return ingoing_with_source + outgoing_with_target
+        return incoming_with_source + outgoing_with_target
 
     def _get_node_relations_by_semantic_id(self, semantic_id, filters):
         """Get node relations from node with semantic_id.
         Return None if invalid."""
-        ingoing_with_source = []
+        incoming_with_source = []
         outgoing_with_target = []
         direction = filters["direction"]
         metatype = extract_id_metatype(semantic_id)
@@ -420,11 +440,11 @@ class CypherDatabase(GraphDatabase):
 
         exprs = self._get_node_relations_filter_expressions(filters)
 
-        if direction in {"both", "ingoing"}:
+        if direction in {"both", "incoming"}:
             neighbor_props = exprs.get("neighbor_properties")
             rel_props = exprs.get("relation_properties")
             where_clauses = exprs.get("where_clauses")
-            ingoing_res = self._run(
+            incoming_res = self._run(
                 # pylint: disable=line-too-long
                 f"""
                 MATCH (neighbor{neighbor_props})-[r{rel_props}]->(n{node_filter})
@@ -432,13 +452,13 @@ class CypherDatabase(GraphDatabase):
                 RETURN r, neighbor""",
                 name=base_id,
             )
-            ingoing_with_source = [
+            incoming_with_source = [
                 {
                     "relation": mapper.neorelation2grapheditor(row["r"]),
                     "neighbor": mapper.neonode2grapheditor(row["neighbor"]),
-                    "direction": "ingoing",
+                    "direction": "incoming",
                 }
-                for row in ingoing_res
+                for row in incoming_res
             ]
 
         if direction in {"both", "outgoing"}:
@@ -459,7 +479,7 @@ class CypherDatabase(GraphDatabase):
                 }
                 for row in outgoing_res
             ]
-        return ingoing_with_source + outgoing_with_target
+        return incoming_with_source + outgoing_with_target
 
     def get_node_relations(self, nid, filters):
         """Return all relations that have node with ID 'nid' as source
@@ -485,17 +505,39 @@ class CypherDatabase(GraphDatabase):
         # if nid was not of kind id::, treat it as an semantic id
         return self._get_node_relations_by_semantic_id(nid, filters)
 
-    def _neighbors_query_string(self, rel_type="", direction="incoming"):
+    def _neighbors_query_string(self, relation_types=None, direction="incoming",
+                                neighbors_filters=None):
         """Return a query string for fetching neighbors from multiple nodes."""
         # swap target/node variables according to direction
         source_var = "n" if direction == "incoming" else "m"
         target_var = "m" if direction == "incoming" else "n"
+        if relation_types is None:
+            relation_types = []
+        rel_type_expr = (
+            " AND type(r) IN $relation_types "
+            if relation_types else ""
+        )
+
+        label_filters = neighbors_filters.get('labels', None) if neighbors_filters else None
+        property_filters = neighbors_filters.get('properties', None) if neighbors_filters else None
+        label_filters_expr = """
+            AND any(label IN $label_filters
+                    WHERE label in labels(n))
+        """ if label_filters else ""
+
+        property_filter_expr = """
+            AND all(pname IN keys($property_filters)
+            WHERE n[pname] CONTAINS $property_filters[pname])
+        """ if property_filters else ""
 
         return f"""
         UNWIND $id_pairs AS id_pair
         WITH id_pair[0] AS original_id, id_pair[1] AS raw_db_id
-        MATCH ({source_var})-[r:{rel_type}]->({target_var})
+        MATCH ({source_var})-[r]->({target_var})
         WHERE {g.cypher_id}(m) = {cast_id('raw_db_id')}
+        {label_filters_expr}
+        {property_filter_expr}
+        {rel_type_expr}
         RETURN original_id, n
         """
 
@@ -514,16 +556,18 @@ class CypherDatabase(GraphDatabase):
 
 
     def get_nodes_neighbors(
-        self, id_map: dict[str, str], rel_type: str, direction="both"
-    ) -> dict[str, str]:
+            self, id_map: dict[str, str],
+            relation_types: list[str],
+            direction="both",
+            neighbors_filters=None
+    ) -> dict[str, dict]:
         """Return all neighbors from nodes in id_map.
 
         Args:
             id_map: Maps user-provided IDs (aka. original id) with
                     those found in the database.
 
-            rel_type: Represents a relation type, passed directly to
-                      cypher query. For example: 'likes'
+            relation_types: List of relation types. For example: ['likes__dummy_'].
 
         Returns:
             A dict mapping node IDs (original ones found in id_map) to
@@ -540,9 +584,16 @@ class CypherDatabase(GraphDatabase):
         id_pairs = dict_to_array(id_map)
 
         result = {}
+        property_filters = neighbors_filters.get('properties', None) if neighbors_filters else None
+        label_filters = neighbors_filters.get('labels', None) if neighbors_filters else None
+
         if direction in ["both", "outgoing"]:
-            query_str = self._neighbors_query_string(rel_type, "outgoing")
-            res = g.conn.run(query_str, id_pairs=id_pairs)
+            query_str = self._neighbors_query_string(relation_types, "outgoing", neighbors_filters)
+            res = g.conn.run(query_str,
+                             id_pairs=id_pairs,
+                             relation_types=relation_types,
+                             label_filters=label_filters,
+                             property_filters=property_filters)
 
             for row in res:
                 node = mapper.neonode2grapheditor(row["n"])
@@ -552,8 +603,12 @@ class CypherDatabase(GraphDatabase):
                 else:
                     result[oid] = {node["id"]: node}
         else:
-            query_str = self._neighbors_query_string(rel_type, "incoming")
-            res = g.conn.run(query_str, id_pairs=id_pairs)
+            query_str = self._neighbors_query_string(relation_types, "incoming", neighbors_filters)
+            res = g.conn.run(query_str,
+                             id_pairs=id_pairs,
+                             relation_types=relation_types,
+                             label_filters=label_filters,
+                             property_filters=property_filters)
 
             for row in res:
                 node = mapper.neonode2grapheditor(row["n"])
@@ -564,6 +619,30 @@ class CypherDatabase(GraphDatabase):
                     result[oid] = {node["id"]: node}
 
         return result
+
+    def incoming_relation_types(self, node_ids):
+        query_text = """
+        MATCH (a)-[r]->(b)
+        WHERE elementid(b) IN $node_ids
+        RETURN type(r) AS rel_type, count(a) AS num_neighbors
+        """
+        result = self._run(query_text, node_ids=node_ids)
+        return {
+            row['rel_type']: row['num_neighbors']
+            for row in result
+        }
+
+    def outgoing_relation_types(self, node_ids):
+        query_text = """
+        MATCH (a)-[r]->(b)
+        WHERE elementid(a) IN $node_ids
+        RETURN type(r) AS rel_type, count(b) AS num_neighbors
+        """
+        result = self._run(query_text, node_ids=node_ids)
+        return {
+            row['rel_type']: row['num_neighbors']
+            for row in result
+        }
 
     def query_nodes(self, text, labels, pseudo):
         """Return nodes which contain text and labels.
@@ -1008,23 +1087,33 @@ class CypherDatabase(GraphDatabase):
         self._get_metaproperties()
         self._get_metarelations()
 
-    def get_all_labels(self):
-        """Return all labels as GraphEditorIDs."""
-        query = """MATCH (n) UNWIND labels(n) AS l
-        RETURN DISTINCT l AS label
-        UNION
-        MATCH (m:MetaLabel__tech_)
-        RETURN DISTINCT m.name__tech_ AS label
+    def get_all_labels(self, nids: List[str] = None):
+        """Return all labels as GraphEditorIDs.
+        If nids is set, only labels of node ids in it are returned.
         """
-        result = self._run(query)
-        stringids = set()
+        if nids:
+            query = f"""
+            MATCH (n) WHERE {g.cypher_id}(n) IN $nids
+            UNWIND labels(n) AS l
+            RETURN DISTINCT l AS label
+            """
+            result = self._run(query, nids=nids)
+        else:
+            query = """MATCH (n) UNWIND labels(n) AS l
+            RETURN DISTINCT l AS label
+            UNION
+            MATCH (m:MetaLabel__tech_)
+            RETURN DISTINCT m.name__tech_ AS label
+            """
+            result = self._run(query)
+        semantic_ids = set()
         for r in result:
             label = r["label"]
             stringid = compute_semantic_id(
                 label, GraphEditorLabel.MetaLabel
             )
-            stringids.add(stringid)
-        return sorted(list(stringids))
+            semantic_ids.add(stringid)
+        return sorted(list(semantic_ids))
 
     def get_all_types(self):
         """Return all relation types as GraphEditorIDs."""
@@ -1057,16 +1146,27 @@ class CypherDatabase(GraphDatabase):
 
         return sorted(list(stringids))
 
-    def get_all_node_properties(self):
-        """Return all node properties as stringids."""
-        query = """MATCH (n)
-                   UNWIND keys(n) AS key
-                   RETURN DISTINCT key AS prop
-                   UNION
-                   MATCH (p:MetaProperty__tech_)-[r:prop__tech_]->(n:MetaLabel__tech_)
-                   RETURN DISTINCT p.name__tech_ AS prop
+    def get_all_node_properties(self, nids: List[str] = None):
+        """Return semantic IDs of all node properties.
+        If nids is set, only properties of node ids in it are returned.
         """
-        result = self._run(query)
+
+        if nids:
+            query = f"""
+            MATCH (n) WHERE {g.cypher_id}(n) in $nids
+            UNWIND keys(n) AS key
+            RETURN DISTINCT key AS prop
+            """
+            result = self._run(query, nids=[get_base_id(nid) for nid in nids])
+        else:
+            query = """MATCH (n)
+            UNWIND keys(n) AS key
+            RETURN DISTINCT key AS prop
+            UNION
+            MATCH (p:MetaProperty__tech_)-[r:prop__tech_]->(n:MetaLabel__tech_)
+            RETURN DISTINCT p.name__tech_ AS prop
+            """
+            result = self._run(query)
         return self._properties_result_to_stringids(result)
 
     def get_all_relation_properties(self):

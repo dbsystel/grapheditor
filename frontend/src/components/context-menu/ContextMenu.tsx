@@ -84,7 +84,7 @@ export const ContextMenu = () => {
 	}
 
 	return (
-		<Modal isOpen={true} className="context-menu-modal" backdrop="none">
+		<Modal isOpen={true} className="context-menu-modal">
 			<div
 				className="context-menu-modal__content"
 				style={contextMenuStyle}

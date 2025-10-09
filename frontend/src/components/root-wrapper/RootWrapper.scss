@@ -1,5 +1,35 @@
 .root-wrapper {
 	display: grid;
-	grid-template-rows: auto 1fr;
-	min-height: 100dvh;
+	grid-template-areas:
+    "header header header"
+    "left-widget content right-widget";
+	grid-template-rows: auto minmax(0, 100%);
+	grid-template-columns: auto 1fr auto;
+	height: 100dvh;
+	padding: var(--db-spacing-fixed-md);
+	gap: var(--db-spacing-fixed-md);
+	overflow: hidden;
+	position: relative;
+	background-color: var(--db-adaptive-bg-basic-level-2-default);
+
+	.header {
+		grid-area: header;
+	}
+
+	.left-widget {
+		grid-area: left-widget;
+	}
+
+	.content {
+		grid-area: content;
+	}
+
+	.right-widget {
+		grid-area: right-widget;
+	}
+
+	#items-drawer {
+		grid-row: 2;
+		grid-column: 3;
+	}
 }

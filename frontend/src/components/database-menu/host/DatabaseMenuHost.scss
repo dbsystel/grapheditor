@@ -2,10 +2,10 @@
 	&__host {
 		display: flex;
 		align-items: center;
-		margin: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+		margin: 0 var(--db-spacing-fixed-md);
 
 		> p {
-			margin-left: var(--db-spacing-fixed-xs);
+			margin: 0 0 0 var(--db-spacing-fixed-xs);
 		}
 	}
 }

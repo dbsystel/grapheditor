@@ -1,0 +1,29 @@
+.right-widget {
+	position: relative;
+
+	.db-drawer {
+		height: 100%;
+
+		&[data-backdrop] {
+			position: static;
+		}
+
+		&[open] {
+			.db-drawer-container {
+				animation: none;
+
+				&:not([data-width='full']) {
+					max-inline-size: none;
+				}
+			}
+		}
+
+		.db-drawer-container {
+			position: static;
+		}
+	}
+
+	.db-drawer-content {
+		padding: var(--db-spacing-fixed-md) !important;
+	}
+}

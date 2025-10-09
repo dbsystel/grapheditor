@@ -1,7 +1,7 @@
 import './ItemPropertiesAddNewProperty.scss';
 import { DBButton, DBInput, DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
@@ -12,24 +12,18 @@ import {
 } from 'src/components/item-properties/helpers';
 import { FormItemProperty } from 'src/models/general';
 import { Node } from 'src/models/node';
-import { useItemsStore } from 'src/stores/items';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
 import { ALLOWED_ITEM_PROPERTY_TYPE_OPTIONS, GraphEditorTypeSimplified } from 'src/utils/constants';
-import { isNode, nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
-import { isRelation } from 'src/utils/helpers/relations';
+import { nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
 import { useGetNodesPropertiesNodes } from 'src/utils/hooks/useGetNodesPropertiesNodes';
 import { idFormatter } from 'src/utils/idFormatter';
 import { ItemPropertiesAddNewPropertyProps } from './ItemPropertiesAddNewProperty.interfaces';
 
 export const ItemPropertiesAddNewProperty = ({
-	item,
 	onPropertyCreate,
 	id,
 	className,
 	testId
 }: ItemPropertiesAddNewPropertyProps) => {
-	// react-hook-form data
 	const { control, trigger, setValue, getValues, formState, resetField, watch } =
 		useForm<FormItemProperty>({
 			mode: 'onSubmit',
@@ -42,19 +36,13 @@ export const ItemPropertiesAddNewProperty = ({
 		});
 	const { errors } = formState;
 	const { t } = useTranslation();
-	const [isLoading, setIsLoading] = useState(false);
 	const [allProperties, setAllProperties] = useState<Array<Node>>([]);
 	const [propertyOptions, setPropertyOptions] = useState<Array<Node>>([]);
 	const [selectedProperty, setSelectedProperty] = useState<Node | null>(null);
-	const getNodeAsync = useItemsStore((store) => store.getNodeAsync);
 	const rootElementClassName = clsx('item-properties-tabs__add-new-property', className);
 
-	useEffect(() => {
-		reFetch();
-	}, [item]);
-
-	const { reFetch, isLoading: isNodesPropertiesLoading } = useGetNodesPropertiesNodes({
-		executeImmediately: false,
+	const { isLoading: isNodesPropertiesLoading } = useGetNodesPropertiesNodes({
+		executeImmediately: true,
 		onSuccess: (properties) => {
 			setAllProperties(properties);
 			setPropertyOptions(properties);
@@ -80,7 +68,7 @@ export const ItemPropertiesAddNewProperty = ({
 	const onPropertyCreateLocal = async () => {
 		const propertyValidationOk = await trigger();
 
-		if (propertyValidationOk && !isLoading) {
+		if (propertyValidationOk) {
 			const { key, value, type } = getValues();
 			const parsedValue = parsePropertyValue(type, value);
 
@@ -89,44 +77,21 @@ export const ItemPropertiesAddNewProperty = ({
 				return;
 			}
 
-			setIsLoading(true);
-
 			const semanticId = idFormatter.isValidSemanticId(key)
 				? key
 				: idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_PROPERTY, key);
-			const itemClone = window.structuredClone(item);
 
-			itemClone.properties[semanticId] = {
+			onPropertyCreate({
+				key: semanticId,
 				value: parsedValue,
 				type: type,
 				edit: true
-			};
-
-			await getNodeAsync(semanticId, true);
-
-			if (onPropertyCreate) {
-				onPropertyCreate({
-					key: semanticId,
-					...itemClone.properties[semanticId]
-				});
-			}
-
-			const patchObject = {
-				id: itemClone.id,
-				properties: itemClone.properties
-			};
-
-			if (isNode(item)) {
-				await nodesApi.patchNodesAndUpdateApplication([patchObject]);
-			} else if (isRelation(item)) {
-				await relationsApi.patchRelationsAndUpdateApplication([patchObject]);
-			}
+			});
 
 			resetField('key');
 			resetField('value');
 
 			setSelectedProperty(null);
-			setIsLoading(false);
 		}
 	};
 
@@ -208,7 +173,7 @@ export const ItemPropertiesAddNewProperty = ({
 							semantic={errors?.key ? 'critical' : 'adaptive'}
 							invalidMessage={errors?.key?.message}
 							validMessage=""
-							isDisabled={isLoading || isNodesPropertiesLoading}
+							isDisabled={isNodesPropertiesLoading}
 						/>
 					);
 				}}
@@ -225,7 +190,6 @@ export const ItemPropertiesAddNewProperty = ({
 							options={ALLOWED_ITEM_PROPERTY_TYPE_OPTIONS}
 							label={t('form_property_type')}
 							variant="floating"
-							disabled={isLoading}
 						/>
 					);
 				}}
@@ -240,7 +204,6 @@ export const ItemPropertiesAddNewProperty = ({
 						onChange={(event) => onPropertyChange(event, onChange, 'value')}
 						onBlur={onBlur}
 						value={value}
-						disabled={isLoading}
 						validMessage=""
 						invalidMessage=""
 					/>
@@ -250,7 +213,6 @@ export const ItemPropertiesAddNewProperty = ({
 				className="item-properties-tabs__add-new-property-save-button"
 				type="submit"
 				variant="filled"
-				disabled={isLoading}
 				size="small"
 				onClick={onPropertyCreateLocal}
 			>

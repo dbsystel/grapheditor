@@ -7,7 +7,6 @@
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-	padding: variables.$db-spacing-fixed-md;
 
 	&--is-loading {
 		opacity: 0.4;
@@ -25,27 +24,8 @@
 		}
 	}
 
-	&__options {
-		position: absolute;
-		top: 100px;
-		left: 10px;
-		z-index: #{NetworkGraph.$network-graph-elements-z-index};
-		max-width: 260px;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-
-		// disable semi-transparent background on form elements
-		.db-select select,
-		.db-input input {
-			background-color: var(--db-adaptive-bg-basic-level-1-default);
-
-			&:not(:disabled):not([aria-disabled='true']) {
-				&:hover {
-					background-color: var(--db-adaptive-bg-basic-level-1-default);
-				}
-			}
-		}
+	&__top-widget {
+		margin-bottom: 5px;
 	}
 
 	// sigma layers elements order
@@ -61,7 +41,6 @@
 	}
 	.sigma-labels {
 		z-index: 30;
-		/*opacity: 0;*/
 	}
 	.sigma-hoverNodes {
 		z-index: 40;

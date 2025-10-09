@@ -46,6 +46,7 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 	const rootElementClassName = clsx('items-drawer', className, {
 		'items-drawer--collapsed': isCollapsed
 	});
+	const contentElementClassName = clsx('items-drawer__content');
 
 	useEffect(() => {
 		const onItemsRemove = (items: Array<Item>) => {
@@ -64,14 +65,14 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 	}, []);
 
 	const onClose = () => {
-		reset();
-
 		if (activeDrawerEntry && activeDrawerEntry.onDrawerClose) {
 			activeDrawerEntry.onDrawerClose(activeDrawerEntry);
 		}
+
+		reset();
 	};
 
-	const toggleDrawerSize = () => {
+	const toggleDrawer = () => {
 		setIsCollapsed((prev) => !prev);
 	};
 
@@ -122,25 +123,26 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 					backdrop="none"
 					open={true}
 					onClose={onClose}
+					direction="right"
 					drawerHeader={
 						<DrawerHead
 							breadcrumbs={breadcrumbItems}
 							activeBreadcrumbIndex={activeEntryIndex}
 							onClose={onClose}
 							isCollapsed={isCollapsed}
-							toggleDrawerSize={toggleDrawerSize}
+							toggleDrawer={toggleDrawer}
 						/>
 					}
 					spacing="none"
 				>
-					<div className={clsx('items-drawer__content', { hidden: isCollapsed })}>
+					<div className={contentElementClassName}>
 						<ErrorBoundary>
 							<RenderComponent drawerEntry={activeDrawerEntry} item={activeItem} />
 						</ErrorBoundary>
 					</div>
 				</DBDrawer>
 			</ItemsDrawerProvider>,
-			document.body
+			document.getElementsByClassName('right-widget')[0]
 		)
 	);
 };
@@ -188,22 +190,24 @@ const ComponentWrapper = ({ children, entry }: PropsWithChildren<{ entry: Drawer
 const DrawerHead = ({
 	breadcrumbs,
 	isCollapsed,
-	toggleDrawerSize,
+	toggleDrawer,
 	activeBreadcrumbIndex
 }: DrawerHeadProps & {
 	isCollapsed: boolean;
-	toggleDrawerSize: () => void;
+	toggleDrawer: () => void;
 	activeBreadcrumbIndex: number;
 }) => {
+	const headerContentClassName = clsx('items-drawer__header-content');
+
 	return (
 		<DBSection spacing="none" className="items-drawer__header">
 			<DBButton
 				icon={isCollapsed ? 'chevron_left' : 'chevron_right'}
-				onClick={toggleDrawerSize}
+				onClick={toggleDrawer}
 				variant="ghost"
 				noText
 			/>
-			<div className={clsx('items-drawer__content', { hidden: isCollapsed })}>
+			<div className={headerContentClassName}>
 				<Breadcrumbs
 					breadcrumbs={breadcrumbs}
 					activeBreadcrumbIndex={activeBreadcrumbIndex}

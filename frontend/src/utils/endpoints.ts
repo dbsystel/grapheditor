@@ -59,6 +59,9 @@ export const endpoints = {
 	getNodesBulkFetchPath: () => {
 		return '/v1/nodes/bulk_fetch';
 	},
+	getParallaxPath: () => {
+		return '/v1/parallax';
+	},
 	getPerspectivePath: ({ perspectiveId }: { perspectiveId: string }) => {
 		return `/v1/perspectives/${perspectiveId}`;
 	},

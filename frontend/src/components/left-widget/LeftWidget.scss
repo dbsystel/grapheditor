@@ -1,0 +1,50 @@
+.left-widget {
+	.db-drawer {
+		height: 100%;
+
+		&[data-backdrop] {
+			position: static;
+		}
+
+		&[open] {
+			.db-drawer-container {
+				animation: none;
+
+				&:not([data-width='full']) {
+					max-inline-size: none;
+				}
+			}
+		}
+
+		.db-drawer-container {
+			position: static;
+		}
+
+		.button-close-drawer {
+			display: none;
+		}
+	}
+
+	&--collapsed {
+		.db-drawer-content {
+			display: none;
+		}
+	}
+
+	.db-drawer-content {
+		padding: var(--db-spacing-fixed-md) !important;
+		inline-size: 300px;
+
+		> .db-accordion {
+			> .db-accordion-item {
+				> details {
+					> div {
+						display: flex;
+						flex-direction: column;
+						gap: 10px;
+					}
+				}
+			}
+		}
+	}
+}

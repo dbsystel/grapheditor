@@ -103,8 +103,7 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 			setSigma(sigma);
 
 			// assign sigma to the StateManager
-			const stateManager = StateManager.getInstance();
-			stateManager.setSigma(sigma);
+			StateManager.getInstance().setSigma(sigma);
 
 			setGraphSigmaIsSet(true);
 

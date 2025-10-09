@@ -32,9 +32,9 @@ class Cypherquery(MethodView):
         result = []
 
         for record in neo_res:
-            grapheditor_record = {}
+            api_record = {}
             for key in record.keys():
                 val = record.get(key)
-                grapheditor_record[key] = mapper.neoobject2grapheditor(val)
-            result.append(grapheditor_record.items())
+                api_record[key] = mapper.neoobject2grapheditor(val)
+            result.append(api_record.items())
         return {"result": result}

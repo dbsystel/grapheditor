@@ -6,3 +6,6 @@ properties to the store.
 For example, if we go with the `Pick` type and we add one new property to a store, we have to always remind ourselves to about the
 reset method. But if we use the `Omit` type, TypeScript will automatically remind us that the new property is missing in the reset
 method type definition.
+
+### TODOs
+1. Migrate perspectives to a separate store
