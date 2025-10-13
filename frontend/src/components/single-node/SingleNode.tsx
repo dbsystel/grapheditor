@@ -207,7 +207,7 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 
 					<p className="single-item__title-title">
 						{node.title}{' '}
-						<DBTooltip placement="bottom-end">
+						<DBTooltip placement="bottom-end" color="red" >
 							{t('single-node-node')} {node.title}
 						</DBTooltip>
 					</p>

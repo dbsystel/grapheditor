@@ -3,7 +3,6 @@ import clsx from 'clsx';
 import { useCallback, useRef } from 'react';
 import { LoadGraph } from 'src/components/network-graph/LoadGraph';
 import { NetworkGraphSearch } from 'src/components/network-graph/modules/search/NetworkGraphSearch';
-import { NetworkGraphZoomFactor } from 'src/components/network-graph/modules/zoom-factor/NetworkGraphZoomFactor';
 import { NetworkGraphContainer } from 'src/components/network-graph/NetworkGraphContainer';
 import { NetworkGraphAutoConnectNode } from 'src/components/network-graph/plugins/auto-connect-node/NetworkGraphAutoConnectNode';
 import { NetworkGraphCanvasContextMenu } from 'src/components/network-graph/plugins/canvas-context-menu/NetworkGraphCanvasContextMenu';

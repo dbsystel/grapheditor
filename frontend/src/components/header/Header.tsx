@@ -1,5 +1,6 @@
 import './Header.scss';
-import { DBButton, DBDivider, DBSection, DBSelect } from '@db-ux/react-core-components';
+import './Header.scss';
+import { DBButton, DBDivider, DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useRef } from 'react';
 import { DatabaseMenu } from 'src/components/database-menu/DatabaseMenu';
@@ -8,8 +9,9 @@ import { GlobalSearchRef } from 'src/components/global-search/GlobalSearch.inter
 import { HeaderPerspectivePopover } from 'src/components/header/perspective-popover/HeaderPerspectivePopover';
 import { HeaderFullscreen } from 'src/components/header-fullscreen/HeaderFullscreen';
 import { HeaderSettings } from 'src/components/header-settings/HeaderSettings';
+import { ParaQueries } from 'src/components/para-queries/ParaQueries';
 import { PerspectiveFinder } from 'src/components/perspective-finder/PerspectiveFinder';
-import { ToggleGroup } from 'src/components/toggle-group/ToggleGroup';
+import { SearchOptions } from 'src/components/search-options/SearchOptions';
 import { useSearchStore } from 'src/stores/search';
 import { HeaderProps } from './Header.interfaces';
 
@@ -18,23 +20,22 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 	const searchType = useSearchStore((store) => store.type);
 	const globalSearchRef = useRef<GlobalSearchRef>({ triggerSearch: () => {} });
 
+	const triggerSearch = () => {
+		globalSearchRef.current.triggerSearch();
+	};
+
 	// Depending on which SearchType the user selected we show a different component
 	const isFullTextOrCypherQuery = searchType === 'full-text' || searchType === 'cypher-query';
 	const isPerspective = searchType === 'perspectives';
-
-	const triggerSearch = () => {
-		if (globalSearchRef.current) {
-			globalSearchRef.current.triggerSearch();
-		}
-	};
+	const isParaQueries = searchType === 'para-queries';
 
 	return (
 		<DBSection spacing="none" className={rootElementClassName} id={id} data-testid={testId}>
 			<div className="header__control-line">
 				<div>
-					<ToggleGroup />
+					<SearchOptions />
 					<DBDivider variant="vertical" emphasis="weak" className="header__divider" />
-					{isFullTextOrCypherQuery && (
+					{(isFullTextOrCypherQuery || isParaQueries) && (
 						<DBButton
 							variant="ghost"
 							icon="play"
@@ -61,6 +62,7 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 			<div className="header__search-line">
 				{isFullTextOrCypherQuery && <GlobalSearch ref={globalSearchRef} />}
 				{isPerspective && <PerspectiveFinder />}
+				{isParaQueries && <ParaQueries ref={globalSearchRef} />}
 			</div>
 		</DBSection>
 	);

@@ -8,7 +8,7 @@
 
 	&__select-type {
 		display: flex;
-		border-radius: var(--db-border-radius-2xs);
+		border-radius: var(--db-border-radius-xs);
 		border: 1px solid var(--db-neutral-on-bg-basic-emphasis-70-default);
 	}
 
@@ -20,7 +20,7 @@
 
 		&.toggle-group--selected {
 			background-color: var(--db-neutral-on-bg-basic-emphasis-70-default);
-			color: #ffffff!important;
+			color: #ffffff !important;
 
 			&:hover {
 				background-color: var(--db-neutral-on-bg-basic-emphasis-50-default);

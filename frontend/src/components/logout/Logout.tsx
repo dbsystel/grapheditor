@@ -30,11 +30,10 @@ export const Logout = ({ withLabel, id, className, testId }: LogoutProps) => {
 			data-testid={testId}
 			type="button"
 			icon="log_out"
-			variant="brand"
+			variant="filled"
 			onClick={onDisconnect}
-			noText
 		>
-			{withLabel ? 'Disconnect' : ''}
+			{withLabel ? 'Disconnect' : ''}Logout
 		</DBButton>
 	);
 };

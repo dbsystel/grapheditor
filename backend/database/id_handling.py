@@ -22,6 +22,8 @@ class GraphEditorLabel(Enum):
     MetaLabel = "MetaLabel__tech_"
     MetaRelation = "MetaRelation__tech_"
     MetaProperty = "MetaProperty__tech_"
+    Parameter = "Parameter__tech_"
+    Paraquery = "Paraquery__tech_"
     Perspective = "Perspective__tech_"
     Restriction = "Restriction__tech_"
     Source = "Source__tech_"

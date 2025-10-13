@@ -106,7 +106,7 @@ def test_all_labels():
     )
     assert response.status_code == 200
 
-    assert sorted(response.json["labels"]) == [
+    assert set([
         "MetaLabel::MetaLabel__tech_",
         "MetaLabel::MetaProperty__tech_",
         "MetaLabel::MetaRelation__tech_",
@@ -115,7 +115,7 @@ def test_all_labels():
         "MetaLabel::Restriction__tech_",
         "MetaLabel::UNUSED_LABEL",
         "MetaLabel::___tech_",
-    ]
+    ]).issubset(set(response.json["labels"]))
 
     delete_response = client.delete(
         BASE_URL + f"/api/v1/nodes/{post_response.json['semanticId']}",
@@ -991,11 +991,11 @@ def test_all_relation_properties():
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert sorted(response.json["properties"]) == [
+    assert set([
         "MetaProperty::_ft__tech_",
         "MetaProperty::_uuid__tech_",
         "MetaProperty::since__dummy_",
-    ]
+    ]).issubset(set(response.json["properties"]))
 
 
 def test_all_types():
@@ -1004,13 +1004,13 @@ def test_all_types():
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert sorted(response.json["types"]) == [
+    assert set([
         "MetaRelation::likes__dummy_",
         "MetaRelation::prop__tech_",
         "MetaRelation::restricts__tech_",
         "MetaRelation::source__tech_",
         "MetaRelation::target__tech_",
-    ]
+    ]).issubset(set(response.json["types"]))
 
 
 def test_post_query():
@@ -1033,6 +1033,25 @@ def test_post_query():
     assert row["[a, b]"][0]["_grapheditor_type"] == "node"
     # This doesn't work if row contains a Restriction
     # assert "name" in row["keys(a)"]
+
+
+def test_post_query_with_parameters():
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": "match (a) where $label in labels(a) and a.name__dummy_=$name return a",
+            "parameters": {
+                "label": "Person__dummy_",
+                "name": "Alice"
+            }
+        },
+    )
+    assert response.status_code == 200
+    row = dict(response.json["result"][0])
+    assert row["a"]["_grapheditor_type"] == "node"
+    alice_node = row["a"]
+    assert alice_node["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
 
 
 def test_post_query_with_syntax_error():
@@ -1992,14 +2011,14 @@ def test_all_node_properties():
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert sorted(response.json["properties"]) == [
+    assert set([
         "MetaProperty::_ft__tech_",
         "MetaProperty::_uuid__tech_",
         "MetaProperty::description__tech_",
         "MetaProperty::name__dummy_",
         "MetaProperty::name__tech_",
         "MetaProperty::type__tech_",
-    ]
+    ]).issubset(set(response.json["properties"]))
 
 
 def test_parallax_without_filters():
@@ -2164,6 +2183,56 @@ def test_parallax_step_filters():
     assert response.status_code == 200
     assert len(response.json["nodes"]) == 1
     assert namespace_nid in response.json["nodes"]
+
+
+def test_paraquery():
+    """Test if getting paraqueries return info from Paraquery node and
+    corresponding parameters.
+    """
+    paraquery_id = fetch_sample_node_id(client, "Query by label and property")
+    response = client.get(
+        BASE_URL + "/api/v1/paraquery",
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    paraquery = response.json["paraqueries"][paraquery_id]
+    label_suggestions = paraquery["parameters"]["label"]["suggestions"]
+    property_name_suggestions = paraquery["parameters"]["propertyName"]["suggestions"]
+
+    # suggestions have at least expected values.
+    assert set(["MetaLabel__tech_",
+                "MetaProperty__tech_",
+                "MetaRelation__tech_",
+                "Namespace__tech_",
+                "Parameter__tech_",
+                "Paraquery__tech_",
+                "Person__dummy_",
+                "Restriction__tech_"]).issubset(label_suggestions)
+
+    assert set(["cypher__tech_",
+                "description__tech_",
+                "help_text__tech_",
+                "name__dummy_",
+                "name__tech_",
+                "selection__tech_",
+                "type__tech_",
+                "user_text__tech_"]).issubset(property_name_suggestions)
+
+    # the cypher query is valid and can be executed.
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": paraquery["cypher"],
+            "parameters": {
+                "label": "Person__dummy_",
+                "propertyName": "name__dummy_",
+                "propertyValue": "Alice",
+            }
+        }
+    )
+    row = dict(response.json["result"][0])
+    assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
 
 
 if __name__ == "__main__":

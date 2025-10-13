@@ -1,5 +1,6 @@
 import './DatabaseMenuSelector.scss';
 import { DBCustomSelect } from '@db-ux/react-core-components';
+import { GeneralEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +12,6 @@ import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
-import { isObject } from 'src/utils/helpers/general';
 import { useGetDatabaseCurrent } from 'src/utils/hooks/useGetDatabaseCurrent';
 import { useGetDatabases } from 'src/utils/hooks/useGetDatabases';
 import { usePostDatabaseCurrent } from 'src/utils/hooks/usePostDatabaseCurrent';
@@ -44,7 +44,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		name: '',
 		onSuccess: () => {
 			// TODO check if other properties should be reset in search store,
-			// and if a "reset" method like in stores below would be useful
+			//  and if a "reset" method like in stores below would be useful
 			useSearchStore.getState().setResult([], '');
 			useClipboardStore.getState().reset();
 			useContextMenuStore.getState().reset();
@@ -79,9 +79,8 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		setSelectedDatabase(newlySelectedDatabase);
 	};
 
-	// Typescript quickfix until https://github.com/db-ux-design-system/core-web/issues/4285 is fixed
-	const fetchDatabases = (event: unknown) => {
-		if (isObject(event) && 'newState' in event && event.newState === 'open') {
+	const fetchDatabases = (event: GeneralEvent<HTMLDetailsElement>) => {
+		if ('newState' in event && event.newState === 'open') {
 			reFetchDatabases();
 		}
 	};

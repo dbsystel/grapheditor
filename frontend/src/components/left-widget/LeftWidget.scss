@@ -41,7 +41,7 @@
 					> div {
 						display: flex;
 						flex-direction: column;
-						gap: 10px;
+						gap: var(--db-spacing-fixed-md);
 					}
 				}
 			}

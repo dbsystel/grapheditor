@@ -11,6 +11,8 @@ export const GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE = '';
 export const GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY = 'cypher-query';
 export const GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT = 'full-text';
 export const GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES = 'perspectives';
+export const GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES = 'para-queries';
+export const GLOBAL_SEARCH_TYPE_VALUE_PARALLAX = 'parallax';
 
 export const GRAPH_PRESENTATION_GRAPH = 'graph';
 export const GRAPH_PRESENTATION_OBJECT_TABLE = 'object-table';

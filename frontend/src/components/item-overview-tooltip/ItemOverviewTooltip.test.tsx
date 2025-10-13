@@ -12,18 +12,18 @@ describe('Components - ItemOverviewTooltip', () => {
 
 		const buttons = screen.getByRole('button').elements();
 		const modal = screen.getByRole('dialog').element();
-		const title = screen.getByRole('heading', { level: 4 });
+		const title = screen.getByRole('heading', { level: 6 });
 
-		expect(title).toHaveTextContent(i18n.t('title_node_single_view'));
+		expect(title).toHaveTextContent(node.title);
 		expect(screen.getByText(node.description)).toBeInTheDocument();
-		expect(
-			screen.getByText(`${i18n.t('single_view_title')}: ${node.title}`)
-		).toBeInTheDocument();
-		expect(screen.getByText(`ID: ${node.id}`)).toBeInTheDocument();
+		expect(screen.getByText(node.id)).toBeInTheDocument();
+		expect(screen.getByText(i18n.t('single_view_description'))).toBeInTheDocument();
+		expect(screen.getByText(i18n.t('item_overview_tooltip_labels'))).toBeInTheDocument();
+		expect(screen.getByText(i18n.t('item_overview_tooltip_property_title'))).toBeInTheDocument();
 
-		node.labels.forEach((label) => {
-			expect(screen.getByText(idFormatter.parseIdToName(label))).toBeInTheDocument();
-		});
+		  node.labels.forEach((label) => {
+		  	expect(screen.getByText(idFormatter.parseIdToName(label))).toBeInTheDocument();
+		  });
 
 		expect(buttons).toHaveLength(6);
 		expect(modal).toBeInTheDocument();

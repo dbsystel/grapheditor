@@ -22,6 +22,11 @@ import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelati
  * Depending on from which startpoint it has been rendered.
  */
 
+function getDirectionIcon(sourceNode: Node, targetNode: Node, direction:string ): string{
+	return sourceNode.id == targetNode.id ? "undo": 
+	"";
+}
+
 export const Connections = ({ node, id, className, testId }: ConnectionsProps) => {
 	const [connectionBoxData, setConnectionBoxData] = useState<Array<ConnectionObject>>([]);
 	const [newConnectionBoxData, setNewConnectionBoxData] = useState<Array<ConnectionObject>>([]);
@@ -151,6 +156,7 @@ const ConnectionsBox = ({
 						<TableCell className="connections__cell connections__icon-only">
 							{direction === 'outgoing' && <div data-icon="arrow_right"></div>}
 							{direction === 'incoming' && <div data-icon="arrow_left"></div>}
+							{sourceNode?.semanticId === targetNode?.semanticId && <div data-icon="undo"></div>}
 						</TableCell>
 
 						<TableCell className="connections__cell connections__relation-name">

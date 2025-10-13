@@ -1,4 +1,3 @@
-import './LeftWidget.scss';
 import {
 	DBAccordion,
 	DBAccordionItem,
@@ -13,6 +12,7 @@ import { LeftWidgetNetworkGraphSettings } from 'src/components/left-widget/netwo
 import { LeftWidgetNewItemSettings } from 'src/components/left-widget/new-item-settings/LeftWidgetNewItemSettings';
 import { ParallaxFilters } from 'src/components/parallax-filters/ParallaxFilters';
 import { LeftWidgetProps } from './LeftWidget.interfaces';
+import './LeftWidget.scss';
 import { LeftWidgetPresentation } from './presentation/LeftWidgetPresentation';
 
 export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
@@ -41,7 +41,7 @@ export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 				drawerHeader={<DrawerHead toggleDrawer={toggleDrawer} isCollapsed={isCollapsed} />}
 				spacing="none"
 			>
-				<DBAccordion behavior="multiple" initOpenIndex={[0, 1]} variant="card">
+				<DBAccordion behavior="multiple" initOpenIndex={[0]} variant="card">
 					<DBAccordionItem headline={presentationLabel}>
 						<LeftWidgetPresentation />
 					</DBAccordionItem>

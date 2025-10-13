@@ -3,6 +3,14 @@ from marshmallow import Schema, fields
 
 class QueryPostSchema(Schema):
     querytext = fields.Str(metadata={"description": "The text of the query"})
+    parameters = fields.Dict(
+        keys=fields.Str(),
+        values=fields.Raw(),
+        metadata={
+            "description": "Optional map of parameter names to their values."
+        },
+        required=False
+    )
 
 
 class ResultSchema(Schema):
@@ -16,7 +24,10 @@ class ResultSchema(Schema):
 
 
 cypher_query_example = {
-    "querytext": "match p=(a)-[r]->(b) return a,r,[a, b],23,{x: a}"
+    "querytext": "match (a) where $label in labels(a) return a",
+    "parameters": {
+        "label": "Person__dummy_"
+    }
 }
 
 cypher_result_example = {

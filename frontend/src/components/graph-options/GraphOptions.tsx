@@ -1,9 +1,9 @@
-import './GraphOptions.scss';
 import { DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { ToggleGroup } from 'src/components/toggle-group/ToggleGroup';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { LayoutModuleType, useSearchStore } from 'src/stores/search';
@@ -27,6 +27,7 @@ import { useGetStyleCurrent } from 'src/utils/hooks/useGetStyleCurrent';
 import { useGetStyles } from 'src/utils/hooks/useGetStyles';
 import { usePostStyleCurrent } from 'src/utils/hooks/usePostStyleCurrent';
 import { GraphOptionsProps } from './GraphOptions.interfaces';
+import './GraphOptions.scss';
 
 export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 	const { t } = useTranslation();
@@ -174,10 +175,14 @@ export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 		});
 	}
 
-	const onPresentationChange = (event: ChangeEvent<HTMLSelectElement>) => {
-		searchStore.setPresentation(event.target.value);
-		setUrlParams(GLOBAL_SEARCH_PRESENTATION_KEY, event.target.value);
+	const onPresentationToggleChange = (value: string) => {
+		searchStore.setPresentation(value);
+		setUrlParams(GLOBAL_SEARCH_PRESENTATION_KEY, value);
 	};
+
+	const selectedPresentationLabel = presentationOptions.find(
+		(option) => option.value === searchStore.presentation
+	)?.label;
 
 	const onAlgorithmChange = (event: ChangeEvent<HTMLSelectElement>) => {
 		searchStore.setAlgorithm(event.target.value as LayoutModuleType);
@@ -205,34 +210,27 @@ export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 		});
 	};
 
-	const presentationIcon = presentationOptions.find((option) => {
-		return option.value === searchStore.presentation;
-	});
-
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<DBSelect
-				className="graph-options__presentation-label"
-				value={searchStore.presentation}
-				label={t('data_presentation_presentation_label')}
+			<ToggleGroup
+				className="graph-options__presentation-toggle"
 				options={presentationOptions}
-				onChange={onPresentationChange}
-				icon={presentationIcon?.icon}
-				variant="floating"
+				value={searchStore.presentation}
+				onChange={onPresentationToggleChange}
+				selectedLabel={selectedPresentationLabel}
+				size="medium"
 			/>
 			<DBSelect
 				value={searchStore.algorithm}
 				label={t('data_presentation_algorithm_label')}
 				options={algorithmOptions}
 				onChange={onAlgorithmChange}
-				variant="floating"
 			/>
 			<DBSelect
 				value={searchStore.style}
 				label={t('data_presentation_file_label')}
 				options={styleOptions}
 				onChange={onStyleChange}
-				variant="floating"
 				disabled={isPostStyleLoading}
 			/>
 		</div>

@@ -16,7 +16,7 @@
 			inset-block-start: 100% !important;
 
 			// prevent the element causing overflow (where possible) although it is not visible
-			[data-open="false"] {
+			[data-open='false'] {
 				block-size: 0;
 				inline-size: 0;
 				overflow: hidden;

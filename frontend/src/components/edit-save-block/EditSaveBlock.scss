@@ -10,6 +10,12 @@
 	}
 }
 
+@mixin show-editing-buttons {
+	.edit-save-buttons__buttons {
+		display: block;
+	}
+}
+
 // note: allow only one section to be editable at the time
 .edit-save-block {
 	&--edit-mode {
@@ -26,6 +32,30 @@
 				@include hide-editing-buttons;
 			}
 		}
+	}
+
+	&--small {
+		padding-left: var(--db-spacing-fixed-3xs);
+		margin-left: var(--db-spacing-fixed-none);
+
+		details{
+			
+			summary{
+				margin: var(--db-spacing-fixed-none);
+				font-size: x-small;
+				font-style: normal;
+				color: var(--db-on-bg-color-emphasis-90);
+				padding: var(--db-spacing-fixed-3xs);
+			}
+			div{
+				font-size: small;
+				padding-top: var(--db-spacing-fixed-none) !important;
+				padding-left: var(--db-spacing-fixed-xs) !important;
+				padding-right: var(--db-spacing-fixed-3xs) !important;
+				padding-bottom: var(--db-spacing-fixed-3xs) !important;
+			}
+		}
+		
 	}
 
 	&:has(~ .edit-save-block--edit-mode) {

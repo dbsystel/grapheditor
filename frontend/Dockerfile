@@ -8,7 +8,6 @@ COPY frontend .
 RUN apt update
 RUN apt install -y xdg-utils
 RUN npm install
-RUN npm playwright install
 
 EXPOSE 8080
 

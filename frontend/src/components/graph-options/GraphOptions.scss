@@ -3,11 +3,5 @@
 .graph-options {
 	display: flex;
 	flex-direction: column;
-	gap: var(--db-spacing-fixed-xs);
-
-	&__presentation-label {
-		label {
-			padding-left: 24px;
-		}
-	}
+	gap: var(--db-spacing-fixed-md);
 }

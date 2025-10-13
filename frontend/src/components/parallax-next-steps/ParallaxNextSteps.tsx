@@ -1,4 +1,3 @@
-import './ParallaxNextSteps.scss';
 import { DBButton, DBCheckbox, DBDrawer, DBIcon, DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
@@ -6,16 +5,17 @@ import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemOverviewButton } from 'src/components/item-overview-button/ItemOverviewButton';
 import { ParallaxRelationsProps } from 'src/components/right-widget/RightWidget.interfaces';
-import { Table } from 'src/components/table/Table';
 import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
+import { Table } from 'src/components/table/Table';
 import { RelationType } from 'src/models/relation';
 import { ParallaxHistory, useParallaxStore } from 'src/stores/parallax';
 import { useSearchStore } from 'src/stores/search';
 import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 import { usePostParallax } from 'src/utils/hooks/usePostParallax';
 import { ParallaxNextStepsProps } from './ParallaxNextSteps.interfaces';
+import './ParallaxNextSteps.scss';
 
 export const ParallaxNextSteps = ({ id, className, testId }: ParallaxNextStepsProps) => {
 	const { t } = useTranslation();
@@ -145,6 +145,7 @@ export const ParallaxNextSteps = ({ id, className, testId }: ParallaxNextStepsPr
 
 	const title = t('parallax_next_steps_title');
 	const showButtonTitle = t('parallax_next_steps_show_button_title');
+	const noParallaxDataMessage = t('parallax_next_steps_no_parallax_data_message');
 
 	return (
 		<DBDrawer
@@ -161,21 +162,27 @@ export const ParallaxNextSteps = ({ id, className, testId }: ParallaxNextStepsPr
 			<ErrorBoundary>
 				<DBSection spacing="none">
 					<h4>{title}</h4>
+					{!parallaxData ? (
+						<p>
+							<DBIcon icon="information_circle" /> {noParallaxDataMessage}
+						</p>
+					) : (
+						<div>
+							<ParallaxRelations
+								nextStepRelations={nextStepRelations}
+								onRelationChange={handleRelationChange}
+								selectedRelations={selectedNextRelations}
+							/>
 
-					{parallaxData && (
-						<ParallaxRelations
-							nextStepRelations={nextStepRelations}
-							onRelationChange={handleRelationChange}
-							selectedRelations={selectedNextRelations}
-						/>
+							<DBButton
+								variant="brand"
+								onClick={nextParallaxStep}
+								disabled={isLoading || !parallaxData}
+							>
+								{showButtonTitle}
+							</DBButton>
+						</div>
 					)}
-					<DBButton
-						variant="brand"
-						onClick={nextParallaxStep}
-						disabled={isLoading || !parallaxData}
-					>
-						{showButtonTitle}
-					</DBButton>
 				</DBSection>
 			</ErrorBoundary>
 		</DBDrawer>

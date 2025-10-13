@@ -7,6 +7,8 @@ import { EditSaveBlockProps } from './EditSaveBlock.interfaces';
 
 export const EditSaveBlock = ({
 	children,
+	variant = 'default',
+	isEditable = true,
 	isEditMode,
 	headline,
 	onEditClick,
@@ -17,20 +19,24 @@ export const EditSaveBlock = ({
 	testId
 }: EditSaveBlockProps) => {
 	const rootElementClassName = clsx('edit-save-block', className, {
-		'edit-save-block--edit-mode': isEditMode
+		'edit-save-block--edit-mode': isEditMode,
+		'edit-save-block--small': variant === 'small'
 	});
 
 	return (
 		<DBAccordionItem
 			id={id}
+			default-open
 			className={rootElementClassName}
 			headline={
 				<EditSaveButtons
 					headline={headline}
 					isEditMode={isEditMode}
+					isEditable={isEditable}
 					onEditClick={onEditClick}
 					onSaveClick={onSaveClick}
 					onUndoClick={onUndoClick}
+
 				/>
 			}
 			data-testid={testId}

@@ -1,6 +1,20 @@
 .parallax-filters {
+	p {
+		display: flex;
+		column-gap: var(--db-spacing-fixed-xs);
+		margin: 0;
+	}
+
 	&__content {
 		margin-left: 5px;
+
+		h6 {
+			margin-bottom: var(--db-spacing-fixed-sm);
+		}
+
+		h6:nth-of-type(2) {
+			margin-top: var(--db-spacing-fixed-lg);
+		}
 	}
 
 	&__filter {
@@ -12,10 +26,21 @@
 		}
 
 		.db-input {
+			width: 90%;
 			label {
 				padding: 0;
 				font-size: 12px;
 			}
+		}
+	}
+
+	&__filters {
+		display: flex;
+		flex-direction: column;
+
+		.db-button {
+			margin-top: var(--db-spacing-fixed-sm);
+			align-self: flex-end;
 		}
 	}
 }

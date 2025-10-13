@@ -2,7 +2,29 @@
 	$this: &;
 
 	.db-popover-content {
-		width: 200px;
+		width: 250px;
+
+		.db-card {
+			padding: var(--db-spacing-fixed-lg);
+
+			p {
+				display: flex;
+				column-gap: var(--db-spacing-fixed-xs);
+			}
+
+			.db-select {
+				margin-top: var(--db-spacing-fixed-sm);
+			}
+
+			.db-select:nth-of-type(3) {
+				margin-bottom: var(--db-spacing-fixed-sm);
+			}
+
+			.db-button {
+				margin-top: var(--db-spacing-fixed-sm);
+				justify-content: flex-start;
+			}
+		}
 	}
 
 	#{$this} {

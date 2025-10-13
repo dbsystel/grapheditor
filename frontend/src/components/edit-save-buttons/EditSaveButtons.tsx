@@ -11,6 +11,7 @@ export const EditSaveButtons = ({
 	className,
 	testId,
 	isEditMode,
+	isEditable,
 	onEditClick,
 	onSaveClick,
 	onUndoClick
@@ -38,7 +39,7 @@ export const EditSaveButtons = ({
 			<p>{headline}</p>
 
 			<div className="edit-save-buttons__buttons">
-				{!isEditMode ? (
+			{isEditable ? (!isEditMode ? (
 					<DBButton onClick={toggleEdit} variant="ghost" size="small" icon="pen">
 						{t('edit_save_buttons_edit')}
 					</DBButton>
@@ -58,7 +59,8 @@ export const EditSaveButtons = ({
 							{t('edit_save_buttons_save')}
 						</DBButton>
 					</div>
-				)}
+				)) : ''}	
+				
 			</div>
 		</div>
 	);

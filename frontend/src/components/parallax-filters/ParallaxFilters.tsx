@@ -1,5 +1,4 @@
-import './ParallaxFilters.scss';
-import { DBButton, DBCustomSelect, DBInput } from '@db-ux/react-core-components';
+import { DBButton, DBCustomSelect, DBIcon, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ import { clone } from 'src/utils/helpers/general';
 import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 import { idFormatter } from 'src/utils/idFormatter';
 import { ParallaxFiltersProps } from './ParallaxFilters.interfaces';
+import './ParallaxFilters.scss';
 
 export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps) => {
 	const { t } = useTranslation();
@@ -22,6 +22,7 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 	const setParallaxData = useParallaxStore((store) => store.setParallaxData);
 	const setParallaxInitialQuery = useParallaxStore((store) => store.setInitialQuery);
 	const setParallaxIsLoading = useParallaxStore((store) => store.setIsLoading);
+	const isLoading = useParallaxStore((store) => store.isLoading);
 	const setParallaxHistory = useParallaxStore((store) => store.setHistory);
 	const setResult = useSearchStore((store) => store.setResult);
 	const [labelsFilterDropdown, setLabelsFilterDropdown] = useState<{
@@ -56,10 +57,6 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 			});
 		}
 	}, [currentParallaxHistoryIndex, initialParallaxQuery, parallaxHistory]);
-
-	if (!parallaxData) {
-		return;
-	}
 
 	const applyPropertyFilters = () => {
 		const initialQuery = clone(initialParallaxQuery);
@@ -117,60 +114,75 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 	const labelsTitle = t('parallax_filters_labels_title');
 	const propertiesTitle = t('parallax_filters_properties_title');
 	const applyButtonTitle = t('parallax_filters_apply_button_title');
+	const labelSelectPlaceholder = t('parallax_filters_select_placeholder');
+	const labelSelectSearchPlaceholder = t('parallax_filters_select_search_placeholder');
+	const noParallaxDataMessage = t('parallax_next_steps_no_parallax_data_message');
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<div className="parallax-filters__content">
-				<h6>{labelsTitle}</h6>
-				<DBCustomSelect
-					options={labelsFilterDropdown.options}
-					values={labelsFilterDropdown.values}
-					showLabel={false}
-					placeholder=""
-					showSearch={true}
-					searchPlaceholder="Search placeholder"
-					noResultsText="No results"
-					showIcon={false}
-					showClearSelection={true}
-					onOptionSelected={onLabelsFilterChange}
-					dropdownWidth="full"
-					label=""
-					selectAllLabel="Select all"
-					multiple={true}
-				/>
+			{!parallaxData ? (
+				<p>
+					<DBIcon icon="information_circle" /> {noParallaxDataMessage}
+				</p>
+			) : (
+				<div className="parallax-filters__content">
+					<h6>{labelsTitle}</h6>
+					<DBCustomSelect
+						options={labelsFilterDropdown.options}
+						values={labelsFilterDropdown.values}
+						showLabel={false}
+						placeholder={labelSelectPlaceholder}
+						showSearch={true}
+						searchPlaceholder={labelSelectSearchPlaceholder}
+						noResultsText="No results"
+						showIcon={false}
+						showClearSelection={true}
+						onOptionSelected={onLabelsFilterChange}
+						dropdownWidth="full"
+						label=""
+						selectAllLabel="Select all"
+						multiple={true}
+					/>
 
-				<h6>{propertiesTitle}</h6>
-				<div className="parallax-filters__filters">
-					{parallaxData.properties.map((propertyId, index) => {
-						const label = idFormatter.parseIdToName(propertyId, true);
-						const defaultValue = filtersRef.current.properties[propertyId];
+					<h6>{propertiesTitle}</h6>
+					<div className="parallax-filters__filters">
+						{parallaxData.properties.map((propertyId, index) => {
+							const label = idFormatter.parseIdToName(propertyId, true);
+							const defaultValue = filtersRef.current.properties[propertyId];
 
-						const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-							if (event.target.value.trim()) {
-								filtersRef.current.properties[propertyId] = event.target.value;
-							} else {
-								delete filtersRef.current.properties[propertyId];
-							}
-						};
+							const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+								if (event.target.value.trim()) {
+									filtersRef.current.properties[propertyId] = event.target.value;
+								} else {
+									delete filtersRef.current.properties[propertyId];
+								}
+							};
 
-						return (
-							<div
-								className="parallax-filters__filter"
-								key={propertyId + '-' + index}
-							>
-								<DBInput
-									defaultValue={defaultValue}
-									label={label}
-									placeholder=""
-									validation="no-validation"
-									onChange={onChange}
-								/>
-							</div>
-						);
-					})}
-					<DBButton onClick={applyPropertyFilters}>{applyButtonTitle}</DBButton>
+							return (
+								<div
+									className="parallax-filters__filter"
+									key={propertyId + '-' + index}
+								>
+									<DBInput
+										defaultValue={defaultValue}
+										label={label}
+										placeholder=""
+										validation="no-validation"
+										onChange={onChange}
+									/>
+								</div>
+							);
+						})}
+						<DBButton
+							onClick={applyPropertyFilters}
+							variant="brand"
+							disabled={isLoading || !parallaxData}
+						>
+							{applyButtonTitle}
+						</DBButton>
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 };

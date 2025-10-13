@@ -76,7 +76,39 @@ create
 
   (namespacelabel:MetaLabel__tech_ {name__tech_:"Namespace__tech_" , description__tech_:"Definition of a namespace"}),
   (metaname)-[:prop__tech_]->(namespacelabel),
-  (description)-[:prop__tech_]->(namespacelabel)
+  (description)-[:prop__tech_]->(namespacelabel),
+
+  (paraquery:Paraquery__tech_ {
+      name__tech_: "Query by label", description__tech_: "Return all nodes of a certain type",
+      user_text__tech_: "I want all nodes of type $label.", cypher__tech_: "match (a:$($label)) return a"
+  }),
+  (param:Parameter__tech_ {
+      help_text__tech_: "Selection of available node types.",
+      type__tech_: "string", selection__tech_: "call db.labels() yield label return label"
+  }),
+  (param)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_"}]->(paraquery),
+
+
+  (paraquery2:Paraquery__tech_ {
+      name__tech_: "Query by label and property", description__tech_: "Return all nodes that have a specific property and a certain value on a property.",
+      user_text__tech_: "I want all nodes with $label and $propertyName=$propertyValue.",
+      cypher__tech_: "match (a:$($label)) where a[$propertyName] = $propertyValue return a"
+  }),
+  (paramLabel:Parameter__tech_ {
+      help_text__tech_: "Selection of available node types.",
+      type__tech_: "string", selection__tech_: "call db.labels() yield label return label"
+  }),
+  (paramPropName:Parameter__tech_ {
+      help_text__tech_: "Selection of available node properties.",
+      type__tech_: "string", selection__tech_: "match (a) unwind keys(a) as prop return distinct prop"
+  }),
+  (paramPropValue:Parameter__tech_ {
+      help_text__tech_: "A node property value.",
+      type__tech_: "string"
+  }),
+  (paramLabel)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_"}]->(paraquery2),
+  (paramPropName)-[:parameter__tech_ {parameter_name__tech_: "propertyName", default_value__tech_: "name__dummy_"}]->(paraquery2),
+  (paramPropValue)-[:parameter__tech_ {parameter_name__tech_: "propertyValue"}]->(paraquery2)
 ;
 
 match (n)

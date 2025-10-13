@@ -5,6 +5,12 @@
 		}
 	}
 
+	p {
+		display: flex;
+		column-gap: var(--db-spacing-fixed-xs);
+		margin: var(--db-spacing-fixed-lg) 0;
+	}
+
 	&__header {
 		display: flex;
 		justify-content: space-between;
@@ -13,6 +19,7 @@
 
 	&__table {
 		width: 100%;
+		margin: var(--db-spacing-fixed-md) 0;
 
 		.table-cell {
 			padding-top: var(--db-spacing-fixed-xs);

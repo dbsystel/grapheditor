@@ -12,6 +12,8 @@ import {
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
+	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES,
+	GLOBAL_SEARCH_TYPE_VALUE_PARALLAX,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES,
 	GRAPH_LAYOUT_FORCE_ATLAS_2,
 	GRAPH_PRESENTATION_GRAPH
@@ -33,7 +35,7 @@ export type SearchResultType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
-	| 'parallax'
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
 	| '';
 
 export type SearchStoreResult = {
@@ -45,6 +47,7 @@ export type SearchStoreResult = {
 type SearchStore = {
 	type: SearchStoreType;
 	query: string;
+	cypherQueryParameters: Record<string, string>;
 	key: string;
 	presentation: string;
 	algorithm: LayoutModuleType;
@@ -58,6 +61,7 @@ type SearchStore = {
 	getUrlSearchParameters: () => URLSearchParams;
 	setType: (type: SearchStoreType) => void;
 	setQuery: (query: string) => void;
+	setCypherQueryParameters: (parameters: Record<string, string>) => void;
 	setResult: (result: CypherQuerySearchResult | null, type: SearchResultType) => void;
 	setIsResultProcessed: (processed: boolean) => void;
 	setNewlyUploadedStyle: (style: string) => void;
@@ -99,7 +103,8 @@ export type SearchStoreHistoryItem = Array<string>;
 export type SearchStoreType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES;
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES;
 
 // search store search types
 export type SearchStoreSearchType =
@@ -117,6 +122,7 @@ export const useSearchStore = create<SearchStore>()(
 				type: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 				query: '',
 				key: '',
+				cypherQueryParameters: {},
 				presentation: '',
 				algorithm: GRAPH_LAYOUT_FORCE_ATLAS_2,
 				style: '',
@@ -135,6 +141,9 @@ export const useSearchStore = create<SearchStore>()(
 				},
 				setType: (type) => set({ type: type }),
 				setQuery: (query) => set({ query: query }),
+				setCypherQueryParameters: (parameters) => {
+					set({ cypherQueryParameters: parameters });
+				},
 				setPresentation: (presentation) => set({ presentation: presentation }),
 				setAlgorithm: (algorithm) => set({ algorithm: algorithm }),
 				setStyle: (style) => set({ style: style }),
@@ -150,6 +159,7 @@ export const useSearchStore = create<SearchStore>()(
 				},
 				executeSearch: async () => {
 					const query = get().query;
+					const cypherQueryParameters = get().cypherQueryParameters;
 					const type = get().type;
 					let searchResultType: SearchResultType = '';
 
@@ -164,9 +174,13 @@ export const useSearchStore = create<SearchStore>()(
 
 					try {
 						// if cypher query search
-						if (type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
+						if (
+							type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
+							type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES
+						) {
 							const response = await searchApi.postCypherQuerySearch({
-								queryText: query || ''
+								queryText: query || '',
+								parameters: cypherQueryParameters
 							});
 
 							responseResult = response.data.result;

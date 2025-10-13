@@ -1056,6 +1056,56 @@ class CypherDatabase(GraphDatabase):
 
         return pid
 
+    # ---------------------- Paraqueries ---------------------------------
+
+    def _get_parameter_suggestions(self, selection_query):
+        result = g.conn.run(selection_query)
+        suggestions = []
+        for row in result:
+            suggestions.append(row.value())
+        return suggestions
+
+    def get_paraqueries(self):
+        result = g.conn.run(f"""
+        MATCH (param:Parameter__tech_)-[rel:parameter__tech_]->(pquery:Paraquery__tech_)
+        RETURN {g.cypher_id}(pquery) AS pquery_id, pquery,
+               {g.cypher_id}(param) AS param_id, param,
+               rel
+        """)
+        pquery_dict = dict()
+        for row in result:
+            pquery_id = f"id::{row['pquery_id']}"
+            param_id = f"id::{row['param_id']}"
+            pquery_node = row["pquery"]
+            param_node = row["param"]
+            rel = row["rel"]
+            param_name = rel.get("parameter_name__tech_", None)
+            if not param_name:
+                current_app.logger.warning(f"Parameter doesn't have a name {param_id}")
+                continue
+
+            if pquery_id not in pquery_dict:
+                pquery_dict[pquery_id] = {
+                    "description": pquery_node.get("description__tech_", ""),
+                    "user_text": pquery_node.get("user_text__tech_", ""),
+                    "cypher": pquery_node.get("cypher__tech_", ""),
+                    "parameters": dict()
+                }
+            params = pquery_dict[pquery_id]["parameters"]
+            if param_name not in params:
+                new_param = {
+                    "help_text": param_node.get("help_text__tech_", ""),
+                    "type": param_node.get("type__tech_", "")
+                }
+                if "default_value__tech_" in rel:
+                    new_param["default_value"] = rel["default_value__tech_"]
+                if "selection__tech_" in param_node:
+                    suggestions = self._get_parameter_suggestions(param_node["selection__tech_"])
+                    new_param["suggestions"] = sorted(suggestions)
+                params[param_name] = new_param
+        return pquery_dict
+
+
     # ---------------------- General information ------------------------------
     def _get_metaobjects(self, metalabel):
         """Get all elements with the given 'metalabel' (MetaLabel, MetaProperty

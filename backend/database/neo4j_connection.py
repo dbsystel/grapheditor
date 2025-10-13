@@ -120,7 +120,7 @@ class Neo4jConnection:
                 else:
                     r = repr(v)
                 out = out.replace(f"${k}", r)
-            print(out)
+            current_app.logger.debug(out)
         try:
             return self.tx.run(query, **params)
         except neo4j.exceptions.ClientError as e:

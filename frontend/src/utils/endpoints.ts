@@ -117,5 +117,8 @@ export const endpoints = {
 	},
 	getMetaForMetaPath: () => {
 		return '/v1/meta/meta_for_meta';
+	},
+	getParaQueriesPath: () => {
+		return '/v1/paraquery';
 	}
 } as const;

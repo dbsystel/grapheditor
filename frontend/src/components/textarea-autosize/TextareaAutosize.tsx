@@ -3,17 +3,18 @@ import { DBTextarea } from '@db-ux/react-core-components';
 import { InteractionEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { ChangeEvent, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { TextareaAutosizeProps } from './TextareaAutosize.interfaces';
 
 /**
  * Overly-simplified version of https://github.com/mui/material-ui/blob/next/packages/mui-base/src/TextareaAutosize/TextareaAutosize.tsx.
  *
  * NOTE: This component is a REPLACEMENT for the DBTextarea component until this
- * https://github.com/db-ui/mono/issues/2508 has been resolved and/or the DBTextarea
+ * https://github.com/db-ux-design-system/core-web/issues/2508 has been resolved and/or the DBTextarea
  * component supports autosize functionality.
  *
  * NOTE: Set the textarea value directly via a reference, instead of updating a state.
- * This works as a temporary workaround for the https://github.com/db-ui/mono/issues/2508 issue.
+ * This works as a temporary workaround for the https://github.com/db-ux-design-system/core-web/issues/2508 issue.
  */
 export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaAutosizeProps>(
 	({ onBlur, onFocus, id, className, testId, onChange, value, ...rest }, ref) => {
@@ -26,6 +27,25 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 		const rootElementRef = useRef<HTMLDivElement>(null);
 		const rootElementDefaultHeight = useRef(0);
 		const testElementRef = useRef<HTMLDivElement>(null);
+		const rootElementSize = useRef({ width: -1 });
+		const observerRef = useRef(
+			new ResizeObserver(function (mutations) {
+				const observerSize = mutations.at(0)?.contentBoxSize.at(0);
+
+				if (observerSize) {
+					// initial render
+					if (rootElementSize.current.width === -1) {
+						rootElementSize.current.width = observerSize.inlineSize;
+					}
+					// if width has changed
+					else if (rootElementSize.current.width !== observerSize.inlineSize) {
+						rootElementSize.current.width = observerSize.inlineSize;
+						delayedCallback(localRefreshHeight);
+					}
+				}
+			})
+		);
+		const delayedCallback = useDebounce(200);
 
 		useEffect(() => {
 			localRefreshHeight();
@@ -35,6 +55,9 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 			if (element) {
 				rootElementRef.current = element;
 				rootElementDefaultHeight.current = element.offsetHeight;
+				observerRef.current.observe(element);
+			} else {
+				observerRef.current.disconnect();
 			}
 		}, []);
 		/**
@@ -81,6 +104,7 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 						}
 					}
 				});
+
 				testElement.innerText = '';
 
 				setLineNumbers(newLineNumbers);
@@ -104,14 +128,8 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 		};
 
 		const localOnFocus = (event: InteractionEvent<HTMLTextAreaElement>) => {
-			const rootElement = rootElementRef.current;
-
-			if (rootElement) {
-				rootElement.style.height = 'auto';
-			}
-
 			setIsFocused(true);
-			localRefreshHeight();
+
 			if (onFocus) {
 				onFocus(event);
 			}

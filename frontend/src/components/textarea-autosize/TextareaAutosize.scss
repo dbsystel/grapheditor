@@ -7,6 +7,7 @@
 	font-size: 14px;
 	background-color: var(--db-adaptive-bg-basic-transparent-semi-default);
 	resize: vertical;
+	padding-bottom: 12px; // needed for the resize element
 
 	&--focused {
 		outline: var(--db-border-width-2xs) solid
@@ -18,7 +19,7 @@
 
 	&__content {
 		display: flex;
-
+		min-height: 100%;
 	}
 
 	&__row-numbers {
@@ -27,7 +28,6 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		height: fit-content;
 		color: var(--db-adaptive-on-bg-basic-emphasis-80-default);
 		border-radius: var(--db-border-radius-xs);
 		border-top-right-radius: 0;
@@ -35,7 +35,6 @@
 	}
 
 	.db-textarea {
-		//display: block;
 		width: 100%;
 		height: 100%;
 		font: inherit;
@@ -50,7 +49,6 @@
 			border: none;
 			width: 100%;
 			height: 100%;
-			font-family: monospace;
 			background-color: transparent;
 
 			&:hover {
@@ -71,6 +69,7 @@
 
 	&__wrapper {
 		width: 100%;
+		min-height: 100%;
 		padding: 0;
 		position: relative;
 	}
@@ -83,5 +82,11 @@
 		z-index: -1;
 		visibility: hidden;
 		opacity: 0;
+	}
+
+	.db-textarea textarea,
+	&__test-element {
+		overflow-wrap: break-word;
+		font-family: monospace;
 	}
 }

@@ -1,16 +1,14 @@
-import './HeaderSettings.scss';
-import { DBButton, DBCheckbox, DBLink, DBSelect } from '@db-ux/react-core-components';
+import { DBCheckbox, DBDivider, DBIcon, DBLink, DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ChangeEvent, useRef } from 'react';
+import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Logout } from 'src/components/logout/Logout';
 import { MenuButton } from 'src/components/menu-button/MenuButton';
 import { MenuButtonOption } from 'src/components/menu-button/MenuButton.interfaces';
 import { useSettingsStore } from 'src/stores/settings';
-import { HeaderSettingsProps } from './HeaderSettings.interfaces';
-import { HeaderFullscreen } from 'src/components/header-fullscreen/HeaderFullscreen';
 import { isAppSupportedLanguage, setApplicationTheme } from 'src/utils/helpers/general';
-import { GlobalSearchRef } from 'src/components/global-search/GlobalSearch.interfaces';
-import { Logout } from 'src/components/logout/Logout';
+import { HeaderSettingsProps } from './HeaderSettings.interfaces';
+import './HeaderSettings.scss';
 
 export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) => {
 	const { t, i18n } = useTranslation();
@@ -20,6 +18,11 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 	const setLanguage = useSettingsStore((store) => store.setLanguage);
 	const theme = useSettingsStore((store) => store.theme);
 	const rootElementClassName = clsx('header-settings', className);
+	const themeOptions = [
+		{ value: 'light', label: t('theme_light'), icon: 'sun' },
+		{ value: 'dark', label: t('theme_dark'), icon: 'moon' }
+	];
+	const currentThemeIcon = theme === 'light' ? 'sun' : 'moon';
 
 	const onAutoconnectToggle = (event: ChangeEvent<HTMLInputElement>) => {
 		setIsAutoconnectEnabled(event.target.checked);
@@ -34,77 +37,90 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 		}
 	};
 
-	const toggleTheme = () => {
-		const newTheme = theme === 'light' ? 'dark' : 'light';
+	const onThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+		const newTheme = event.target.value;
 
-		setApplicationTheme(newTheme);
+		if (newTheme === 'light' || newTheme === 'dark') {
+			setApplicationTheme(newTheme);
+		}
 	};
 
 	const options: Array<MenuButtonOption> = [
 		{
 			title: (
-				<div
-					key="header-settings__autoconnect"
-					className="menu-button__option header-settings__autoconnect"
-				>
+				<div key="header-settings__autoconnect" className=" header-settings__autoconnect">
 					<DBCheckbox onChange={onAutoconnectToggle} checked={isAutoconnectEnabled}>
-						{t('autoconnect_label')} <br />({t('autoconnect_info_message')})
+						{t('autoconnect_label')}
 					</DBCheckbox>
+
+					<p>
+						<DBIcon icon="information_circle" /> {t('autoconnect_info_message')}
+					</p>
+
+					<DBDivider />
 				</div>
 			),
 			shouldRenderTitleAsIs: true
 		},
 		{
-			title: (
-				<DBButton
-					key="header-settings__theme"
-					icon={theme === 'light' ? 'sun' : 'moon'}
-					onClick={toggleTheme}
-					variant="ghost"
-					className="db-density-functional"
-					type="button"
-					noText
-					data-testid="header_theme_toggle_button"
-				/>
-			),
+			title: <h6 key="header-settings__settings_headline">{t('settings')}</h6>,
 			shouldRenderTitleAsIs: true
 		},
 		{
 			title: (
 				<DBSelect
-					key="header-settings__language"
-					className="header__select"
+					key="header-settings__language_selection"
 					value={language}
 					onChange={onLanguageChange}
 					options={[{ value: 'de' }, { value: 'en' }]}
-					variant="floating"
 					label={t('language_selection_title')}
 				/>
 			),
 			shouldRenderTitleAsIs: true
 		},
 		{
-			title: <Logout key="header-settings__logout" />,
+			title: (
+				<div key="header-settings__theme_selection">
+					<DBSelect
+						value={theme}
+						icon={currentThemeIcon}
+						onChange={onThemeChange}
+						options={themeOptions}
+						label={t('mode_selection_title')}
+					/>
+					<DBDivider />
+				</div>
+			),
+			shouldRenderTitleAsIs: true
+		},
+		{
+			title: <h6 key="header-settings__links_headline">{t('links')}</h6>,
 			shouldRenderTitleAsIs: true
 		},
 		{
 			title: (
-				<div key="header-settings__source_code" className="menu-button__option">
-					{t('application_source_code')}:&nbsp;
-					<DBLink href="https://github.com/dbsystel/grapheditor" target="_blank">
-						GitHub
-					</DBLink>
+				<div key="header-settings__links">
+					<div>
+						{t('application_source_code')}:&nbsp;
+						<DBLink href="https://github.com/dbsystel/grapheditor" target="_blank">
+							GitHub
+						</DBLink>
+					</div>
+					<div>
+						{t('application_license')}:&nbsp;
+						<DBLink href="https://www.gnu.org/licenses/agpl-3.0.txt" target="_blank">
+							AGPL 3.0
+						</DBLink>
+					</div>
 				</div>
 			),
 			shouldRenderTitleAsIs: true
 		},
 		{
 			title: (
-				<div key="header-settings__license" className="menu-button__option">
-					{t('application_license')}:&nbsp;
-					<DBLink href="https://www.gnu.org/licenses/agpl-3.0.txt" target="_blank">
-						AGPL 3.0
-					</DBLink>
+				<div key="header-settings__logout">
+					<DBDivider />
+					<Logout />
 				</div>
 			),
 			shouldRenderTitleAsIs: true

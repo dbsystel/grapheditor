@@ -2,11 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.10.2
+
+- MVP of Parameterized Queries (ParaQueries)
+- UX improvements
 
 ## 2025.10.1
 
 - MVP of set based browsing
-- Imroved detail view on nodes and relations
+- Improved detail view on nodes and relations
 - Better connection handling
 - Improved CONTRIBUTORS.md
 

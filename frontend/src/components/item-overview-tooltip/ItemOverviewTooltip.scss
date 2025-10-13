@@ -20,8 +20,31 @@
 
 	&__item-overview-tooltip-label-names {
 		display: flex;
-		gap: 5px;
+		gap: 4px;
+	}	
+	
+	&__item-overview-tooltip-title {
+		display: flex;
+		align-items: center;
+		gap: 4px;
 	}
+
+	&__item-overview-tooltip-title-box {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 4px;
+		margin-top: var(--db-spacing-fixed-xs);
+		margin-left: var(--db-spacing-fixed-3xs);
+	}
+
+		&__item-overview-tooltip-title-id {
+		display: flex;
+		align-items: center;
+		gap: var(--db-spacing-fixed-sm);
+		margin-left: var(--db-spacing-fixed-2xs);
+	}
+
 
 	&__item-overview-tooltip--tooltip {
 		max-width: 50%;
@@ -68,5 +91,11 @@
 				}
 			}
 		}
+	}
+}
+.div{
+	&__item-overview-tooltip-open-button
+	.db-button {
+		float: right;
 	}
 }

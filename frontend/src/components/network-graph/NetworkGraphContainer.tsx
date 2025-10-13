@@ -97,7 +97,8 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 					curved: CurvedEdgeArrowProgram
 				},
 				zoomingRatio: useGraphStore.getState().zoomFactor,
-				minEdgeThickness: GRAPH_DEFAULT_EDGE_MIN_THICKNESS
+				minEdgeThickness: GRAPH_DEFAULT_EDGE_MIN_THICKNESS,
+				allowInvalidContainer: true
 			});
 
 			setSigma(sigma);

@@ -22,6 +22,7 @@ from blueprints.graph.relation_api_v1 import blp as relation_api
 from blueprints.graph.meta_api_v1 import blp as meta_api
 from blueprints.graph.query_api_v1 import blp as query_api
 from blueprints.graph.parallax_api_v1 import blp as parallax_api
+from blueprints.graph.paraquery_api_v1 import blp as paraquery_api
 from blueprints.display.perspective_api_v1 import blp as perspective_api
 from blueprints.display.style_api_v1 import blp as style_api
 from blueprints.context_menu_api_v1 import blp as context_menu_api
@@ -117,6 +118,8 @@ api.register_blueprint(meta_api, url_prefix=f"{api_prefix}/api/v1/meta")
 
 api.register_blueprint(parallax_api, url_prefix=f"{api_prefix}/api/v1/parallax")
 
+api.register_blueprint(paraquery_api, url_prefix=f"{api_prefix}/api/v1/paraquery")
+
 api.register_blueprint(query_api, url_prefix=f"{api_prefix}/api/v1/query")
 
 api.register_blueprint(perspective_api, url_prefix=f"{api_prefix}/api/v1/perspectives")
@@ -146,6 +149,7 @@ def route_requires_connection():
         "/api/v1/meta",
         "/api/v1/nodes",
         "/api/v1/parallax",
+        "/api/v1/paraquery",
         "/api/v1/perspectives",
         "/api/v1/query",
         "/api/v1/relations",

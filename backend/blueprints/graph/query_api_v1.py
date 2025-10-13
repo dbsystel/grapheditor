@@ -5,6 +5,7 @@ from flask_smorest import Blueprint
 from blueprints.graph import query_model
 from blueprints.maintenance.login_api import require_tab_id
 from database import mapper
+from database.id_handling import get_base_id
 
 blp = Blueprint(
     "Neo4j query", __name__, description="Differend kind of queries"
@@ -14,7 +15,8 @@ blp = Blueprint(
 @blp.route("cypher")
 class Cypherquery(MethodView):
     @blp.arguments(
-        query_model.QueryPostSchema, example=query_model.cypher_query_example
+        query_model.QueryPostSchema, example=query_model.cypher_query_example,
+        as_kwargs=True
     )
     @blp.response(
         200,
@@ -22,13 +24,16 @@ class Cypherquery(MethodView):
         example=query_model.cypher_result_example,
     )
     @require_tab_id()
-    def post(self, query):
+    def post(self, querytext, parameters=None):
         """
         Query with arbitary cypher
         """
 
-        querytext = query["querytext"]
-        neo_res = g.conn.run(querytext)
+        params = {
+            k: get_base_id(v) if isinstance(v, str) else v
+            for k, v in parameters.items()
+        } if parameters else {}
+        neo_res = g.conn.run(querytext, **params)
         result = []
 
         for record in neo_res:
