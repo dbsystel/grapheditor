@@ -1,4 +1,20 @@
-[[_TOC_]]
+<!-- TOC -->
+* [Intro](#intro)
+  * [Status and features](#status-and-features)
+  * [Screenshot](#screenshot)
+  * [Architecture](#architecture)
+* [Authors](#authors)
+* [LICENSE](#license)
+* [Contributions, updates and contact](#contributions-updates-and-contact)
+* [Updates and contributions](#updates-and-contributions)
+* [Running it](#running-it)
+  * [Docker](#docker)
+    * [Mac issues with allocated memory](#mac-issues-with-allocated-memory)
+    * [Changes in node_modules](#changes-in-node_modules)
+    * [Mounting host directories with correct rights](#mounting-host-directories-with-correct-rights)
+  * [Exe](#exe)
+  * [Directly](#directly)
+<!-- TOC -->
 
 # Intro
 

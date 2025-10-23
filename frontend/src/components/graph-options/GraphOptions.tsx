@@ -1,3 +1,4 @@
+import './GraphOptions.scss';
 import { DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useEffect, useState } from 'react';
@@ -27,7 +28,6 @@ import { useGetStyleCurrent } from 'src/utils/hooks/useGetStyleCurrent';
 import { useGetStyles } from 'src/utils/hooks/useGetStyles';
 import { usePostStyleCurrent } from 'src/utils/hooks/usePostStyleCurrent';
 import { GraphOptionsProps } from './GraphOptions.interfaces';
-import './GraphOptions.scss';
 
 export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 	const { t } = useTranslation();
@@ -73,7 +73,7 @@ export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 				nodesApi
 					.getPerspective({ perspectiveId: perspectiveId })
 					.then((response) => processPerspective(response.data));
-			} else if (searchStore.executeSearch) {
+			} else {
 				searchStore.executeSearch();
 			}
 		},

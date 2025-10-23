@@ -18,21 +18,14 @@ type ParallaxStore = {
 	initialQuery: ParallaxInitialQuery;
 	history: Array<ParallaxHistory>;
 	currentHistoryIndex: number;
-
-	// Loading and error states
 	isLoading: boolean;
-	error: string | null;
-
 	// Core data management API (similar to items store pattern)
 	setParallaxData: (data: ParallaxData) => void;
 	clearParallaxData: () => void;
 	setHistory: (historyEntries: Array<ParallaxHistory>) => void;
 	setInitialQuery: (initialQuery: ParallaxInitialQuery) => void;
 	setCurrentHistoryIndex: (currentHistoryIndex: number) => void;
-
-	// Loading/Error state management
 	setIsLoading: (loading: boolean) => void;
-	setError: (error: string | null) => void;
 
 	reset: () => void;
 };
@@ -43,7 +36,6 @@ type InitialParallaxState = Omit<
 	| 'clearParallaxData'
 	| 'setHistory'
 	| 'setIsLoading'
-	| 'setError'
 	| 'reset'
 	| 'setCurrentHistoryIndex'
 	| 'setInitialQuery'
@@ -59,12 +51,11 @@ const getInitialParallaxState = (): InitialParallaxState => ({
 		}
 	},
 	isLoading: false,
-	error: null,
 	history: [],
 	currentHistoryIndex: -1 // -1 means no history entry is selected
 });
 
-export const useParallaxStore = create<ParallaxStore>((set, get) => ({
+export const useParallaxStore = create<ParallaxStore>((set) => ({
 	...getInitialParallaxState(),
 
 	// Core data management (following items store pattern)
@@ -91,10 +82,7 @@ export const useParallaxStore = create<ParallaxStore>((set, get) => ({
 			initialQuery: initialQuery
 		});
 	},
-	// State management
 	setIsLoading: (loading) => set({ isLoading: loading }),
-	setError: (error) => set({ error: error }),
-
 	reset: () => {
 		set(getInitialParallaxState());
 	}

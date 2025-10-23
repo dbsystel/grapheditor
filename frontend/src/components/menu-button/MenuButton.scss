@@ -49,4 +49,9 @@
 			width: 100%;
 		}
 	}
+
+	.db-popover-content > .db-card > .db-popover > .db-popover-content > .db-card {
+		max-height: 300px;
+		overflow-y: auto;
+	}
 }

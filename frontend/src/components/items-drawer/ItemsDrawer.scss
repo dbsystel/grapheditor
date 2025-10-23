@@ -14,10 +14,6 @@
 		transform: none !important;
 		position: relative;
 		height: 100%;
-
-		.db-drawer-header {
-			padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md) !important;
-		}
 	}
 }
 
@@ -58,6 +54,7 @@
 	> .db-drawer-content {
 		overflow: auto;
 		height: 100%;
+		padding: var(--db-spacing-fixed-md) !important;
 	}
 
 	.db-section {

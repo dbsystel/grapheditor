@@ -60,9 +60,9 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 			</div>
 
 			<div className="header__search-line">
-				{isFullTextOrCypherQuery && <GlobalSearch ref={globalSearchRef} />}
+				{isFullTextOrCypherQuery && <GlobalSearch searchFunctionRef={globalSearchRef} />}
 				{isPerspective && <PerspectiveFinder />}
-				{isParaQueries && <ParaQueries ref={globalSearchRef} />}
+				{isParaQueries && <ParaQueries searchFunctionRef={globalSearchRef} />}
 			</div>
 		</DBSection>
 	);

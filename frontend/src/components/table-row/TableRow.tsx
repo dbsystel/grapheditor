@@ -8,8 +8,10 @@ import { TableRowProps } from './TableRow.interfaces';
  * until a proper design for this component is done. Therefore, some elements/functions
  * are very similar and repeated.
  */
-export const TableRow = ({ children, id, className, testId, ...rest }: TableRowProps) => {
-	const rootElementClassName = clsx('table-row', className);
+export const TableRow = ({ children, id, className, variant, testId, ...rest }: TableRowProps) => {
+	const rootElementClassName = clsx('table-row', className, {
+		'table-row--hoverable-row': variant === 'hoverable'
+	});
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId} role="row" {...rest}>

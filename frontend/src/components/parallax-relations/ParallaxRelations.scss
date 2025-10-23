@@ -1,0 +1,26 @@
+.parallax-relations {
+	width: 100%;
+	margin: var(--db-spacing-fixed-md) 0;
+
+	.table-cell {
+		padding-top: var(--db-spacing-fixed-xs);
+		padding-bottom: var(--db-spacing-fixed-xs);
+		vertical-align: middle;
+
+		[data-icon]:is(span) {
+			vertical-align: middle;
+		}
+
+		&:nth-child(1),
+		&:nth-child(2),
+		&:nth-child(3) {
+			width: 50px;
+		}
+
+		&:nth-child(1) {
+			input {
+				margin: 0;
+			}
+		}
+	}
+}

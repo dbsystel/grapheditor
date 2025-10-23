@@ -29,6 +29,7 @@ import { metaForMetaApi } from 'src/utils/api/metaForMeta';
 import { relationsApi } from 'src/utils/api/relations';
 import { GraphEditorType } from 'src/utils/constants';
 import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
+import { idFormatter } from 'src/utils/idFormatter';
 import { EditMode, SingleRelationProps } from './SingleRelation.interfaces';
 
 /**
@@ -158,7 +159,8 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 					<p className="single-item__title-title">
 						{relation.title}
 						<DBTooltip placement="bottom-end">
-							{t('single-relation-relation')} {relation.title}
+							{t('single-relation-relation')}{' '}
+							{idFormatter.parseIdToName(relation.title)}
 						</DBTooltip>
 					</p>
 

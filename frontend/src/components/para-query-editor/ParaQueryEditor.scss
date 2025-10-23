@@ -1,0 +1,19 @@
+.para-query-editor {
+	display: flex;
+	align-items: flex-end;
+	flex-wrap: wrap;
+	padding: var(--db-spacing-fixed-md);
+	background-color: #ffffff;
+	white-space: pre;
+	border-radius: var(--db-border-radius-xs);
+
+	label {
+		max-inline-size: none;
+	}
+
+	input {
+		&:focus {
+			outline-offset: 0 !important;
+		}
+	}
+}

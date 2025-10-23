@@ -332,40 +332,39 @@ const Tag = ({
 		setRef(element);
 	}, []);
 
+	const onRemove = () => {
+		if (editLabels) {
+			onLabelChange(
+				label,
+				false,
+				value.filter((v) => v.id !== label.id)
+			);
+		}
+	};
+
+	const onCheckboxClick = () => {
+		onTagSelect(label.id);
+	};
+
 	return (
-		<>
-			<DBTag
-				className={rootElementClassName}
-				showCheckState={false}
-				data-density="functional"
-				onMouseEnter={() => onMouseEnter(label)}
-				onMouseLeave={onMouseLeave}
-				ref={onRefChange}
-				behavior={editLabels ? 'removable' : undefined}
-				/* TODO https://github.com/db-ux-design-system/core-web/issues/3837
-				   check and fix the warning shown in the browser console
-				   (Warning: Unknown event handler property `onRemove`. It will be ignored.)
-				*/
-				onRemove={
-					editLabels
-						? () =>
-								onLabelChange(
-									label,
-									false,
-									value.filter((v) => v.id !== label.id)
-								)
-						: undefined
-				}
-				emphasis={isSelected ? 'strong' : undefined}
-			>
-				<DBCheckbox onClick={() => onTagSelect(label.id)} checked={isSelected}>
-					{shouldRenderWarningIcon && <DBIcon icon="exclamation_mark_circle" />}
+		<DBTag
+			className={rootElementClassName}
+			showCheckState={false}
+			data-density="functional"
+			onMouseEnter={() => onMouseEnter(label)}
+			onMouseLeave={onMouseLeave}
+			ref={onRefChange}
+			behavior={editLabels ? 'removable' : undefined}
+			onRemove={onRemove}
+			emphasis={isSelected ? 'strong' : undefined}
+		>
+			<DBCheckbox onClick={onCheckboxClick} checked={isSelected}>
+				{shouldRenderWarningIcon && <DBIcon icon="exclamation_mark_circle" />}
 
-					{label.title}
+				{idFormatter.parseIdToName(label.title)}
 
-					{tooltipLabel && <ItemOverviewTooltip item={tooltipLabel} tooltipRef={ref} />}
-				</DBCheckbox>
-			</DBTag>
-		</>
+				{tooltipLabel && <ItemOverviewTooltip item={tooltipLabel} tooltipRef={ref} />}
+			</DBCheckbox>
+		</DBTag>
 	);
 };

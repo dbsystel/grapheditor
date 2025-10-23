@@ -1,4 +1,5 @@
 import './ItemOverviewTag.scss';
+import { DBTag, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useCallback, useRef, useState } from 'react';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
@@ -9,7 +10,6 @@ import { useItemsStore } from 'src/stores/items';
 import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { idFormatter } from 'src/utils/idFormatter';
 import { ItemOverviewTagProps } from './ItemOverviewTag.interfaces';
-import { DBTag, DBTooltip } from '@db-ux/react-core-components';
 
 /**
  * This component is similar to ItemInfo component. We added it because it renders another level of information.

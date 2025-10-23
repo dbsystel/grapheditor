@@ -1,6 +1,6 @@
 import './NetworkGraph.scss';
 import clsx from 'clsx';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { LoadGraph } from 'src/components/network-graph/LoadGraph';
 import { NetworkGraphSearch } from 'src/components/network-graph/modules/search/NetworkGraphSearch';
 import { NetworkGraphContainer } from 'src/components/network-graph/NetworkGraphContainer';
@@ -17,7 +17,10 @@ import { NetworkGraphQuickZoomFactor } from 'src/components/network-graph/plugin
 import { NetworkGraphRelationClick } from 'src/components/network-graph/plugins/relation-click/NetworkGraphRelationClick';
 import { NetworkGraphScale } from 'src/components/network-graph/plugins/scale/NetworkGraphScale';
 import { NetworkGraphSelectionTool } from 'src/components/network-graph/plugins/selection-tool/NetworkGraphSelectionTool';
+import i18n from 'src/i18n';
 import { useGraphStore } from 'src/stores/graph';
+import { useNotificationsStore } from 'src/stores/notifications';
+import { checkBrowserRenderingCapabilities } from 'src/utils/helpers/general';
 import { NetworkGraphProps } from './NetworkGraph.interfaces';
 
 /**
@@ -40,6 +43,8 @@ import { NetworkGraphProps } from './NetworkGraph.interfaces';
  * NOTE: lasso example (can be used instead of the rectangle selection)
  * https://codepen.io/cranes/pen/GvobwB.
  */
+let renderingCapabilitiesWarningShown = false;
+
 export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	const isLoading = useGraphStore((store) => store.isLoading);
 	const rootElementClassName = clsx(
@@ -73,6 +78,26 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 			observerRef.current.observe(element);
 		} else {
 			observerRef.current.disconnect();
+		}
+	}, []);
+
+	useEffect(() => {
+		const renderingCapabilities = checkBrowserRenderingCapabilities();
+
+		if (renderingCapabilities.softwareRendering && !renderingCapabilitiesWarningShown) {
+			renderingCapabilitiesWarningShown = true;
+
+			useNotificationsStore.getState().addNotification({
+				title: i18n.t(
+					'notifications_warning_rendering_capabilities_software_rendering_fallback_used_title'
+				),
+				description: i18n.t(
+					'notifications_warning_rendering_capabilities_software_rendering_fallback_used_description'
+				),
+				type: 'warning',
+				autoCloseAfterMilliseconds: 0,
+				isClosable: true
+			});
 		}
 	}, []);
 

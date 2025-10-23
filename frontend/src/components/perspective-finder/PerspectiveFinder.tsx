@@ -14,7 +14,7 @@ import { PerspectiveFinderProps } from './PerspectiveFinder.interfaces';
 
 export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderProps) => {
 	const { t } = useTranslation();
-	const rootElementClassName = clsx('action-menu__perspective-finder', className);
+	const rootElementClassName = clsx('perspective-finder', className);
 	const [perspectiveOptions, setPerspectiveOptions] = useState<Array<CustomSelectOptionType>>([]);
 	const perspectiveId = useGraphStore((store) => store.perspectiveId);
 	const setPerspectiveId = useGraphStore((store) => store.setPerspectiveId);

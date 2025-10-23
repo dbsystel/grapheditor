@@ -30,6 +30,7 @@
 		position: relative;
 		display: flex;
 		justify-content: space-between;
+		align-items: start;
 
 		&--checkbox {
 			&:before {
@@ -78,6 +79,15 @@
 
 	&__list-item-title {
 		display: block;
+	}
+
+	&__list-item-description {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	&__badges {

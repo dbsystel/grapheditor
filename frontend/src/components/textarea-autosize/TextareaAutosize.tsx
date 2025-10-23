@@ -143,7 +143,7 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 				ref={onRootElementRefChange}
 			>
 				<div className="textarea-autosize__content">
-					<div className="textarea-autosize__row-numbers db-bg-color-basic-level-3">
+					<div className="textarea-autosize__row-numbers db-bg-color-basic-level-4">
 						{lineNumbers.map((lineNumber, index) => {
 							const renderValue = lineNumber > 0 ? lineNumber : '\u00A0';
 							const key = lineNumber + '' + index;

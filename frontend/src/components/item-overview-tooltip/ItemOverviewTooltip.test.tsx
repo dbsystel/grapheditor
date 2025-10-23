@@ -19,11 +19,13 @@ describe('Components - ItemOverviewTooltip', () => {
 		expect(screen.getByText(node.id)).toBeInTheDocument();
 		expect(screen.getByText(i18n.t('single_view_description'))).toBeInTheDocument();
 		expect(screen.getByText(i18n.t('item_overview_tooltip_labels'))).toBeInTheDocument();
-		expect(screen.getByText(i18n.t('item_overview_tooltip_property_title'))).toBeInTheDocument();
+		expect(
+			screen.getByText(i18n.t('item_overview_tooltip_property_title'))
+		).toBeInTheDocument();
 
-		  node.labels.forEach((label) => {
-		  	expect(screen.getByText(idFormatter.parseIdToName(label))).toBeInTheDocument();
-		  });
+		node.labels.forEach((label) => {
+			expect(screen.getByText(idFormatter.parseIdToName(label))).toBeInTheDocument();
+		});
 
 		expect(buttons).toHaveLength(6);
 		expect(modal).toBeInTheDocument();

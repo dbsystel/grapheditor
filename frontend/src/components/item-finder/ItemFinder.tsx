@@ -1,13 +1,14 @@
-import 'src/components/item-finder/ItemFinder.scss';
 import { DBBadge, DBInfotext, DBInput } from '@db-ux/react-core-components';
 import { ChangeEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { KeyboardEvent, MouseEvent, useEffect, useRef, useState } from 'react';
+import 'src/components/item-finder/ItemFinder.scss';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { Node } from 'src/models/node';
 import { isObject, isString } from 'src/utils/helpers/general';
 import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
+import { idFormatter } from 'src/utils/idFormatter';
 import { ItemFinderProps } from './ItemFinder.interfaces';
 
 /**
@@ -245,7 +246,7 @@ export const ItemFinder = <T extends Node>({
 										onClick={() => onChangeHandler(option)}
 									>
 										{isOptionString ? (
-											<span>{option}</span>
+											<span>{idFormatter.parseIdToName(option)}</span>
 										) : (
 											<span
 												onMouseEnter={(event) =>
@@ -254,10 +255,13 @@ export const ItemFinder = <T extends Node>({
 												onMouseLeave={mouseLeaveHandler}
 											>
 												<span className="item-finder__list-item-title">
-													<strong>{option.title}</strong>{' '}
-													<i>(ID: {option.id})</i>
+													<strong>
+														{idFormatter.parseIdToName(option.title)}
+													</strong>
 												</span>
-												<span>{option.description}</span>
+												<span className="item-finder__list-item-description">
+													{option.description}
+												</span>
 
 												{renderTooltip && (
 													<ItemOverviewTooltip
@@ -294,7 +298,7 @@ export const ItemFinder = <T extends Node>({
 								semantic="successful"
 								onClick={() => onChangeHandler(badge)}
 							>
-								{isString(badge) ? badge : badge.title}
+								{idFormatter.parseIdToName(isString(badge) ? badge : badge.title)}
 								<span data-icon="bin" />
 							</DBBadge>
 						);

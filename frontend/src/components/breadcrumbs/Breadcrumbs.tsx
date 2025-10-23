@@ -1,6 +1,7 @@
 import './Breadcrumbs.scss';
 import clsx from 'clsx';
 import { Fragment, MouseEvent, useEffect, useState } from 'react';
+import { idFormatter } from 'src/utils/idFormatter';
 import { Breadcrumb, BreadcrumbsProps } from './Breadcrumbs.interfaces';
 
 const breadcrumbDelimiter = (
@@ -28,7 +29,7 @@ export const Breadcrumbs = ({
 	const getBreadcrumbComponent = (breadcrumb: Breadcrumb, index: number) => {
 		const breadcrumbProps = {
 			className: 'breadcrumbs__item',
-			title: breadcrumb.title,
+			title: idFormatter.parseIdToName(breadcrumb.title || ''),
 			onClick: (event: MouseEvent<HTMLSpanElement>) => {
 				setLocalActiveBreadcrumbIndex(index);
 
@@ -46,7 +47,7 @@ export const Breadcrumbs = ({
 
 		return (
 			<>
-				<span {...breadcrumbProps}>{breadcrumb.text}</span>
+				<span {...breadcrumbProps}>{idFormatter.parseIdToName(breadcrumb.text)}</span>
 				{renderDelimiter && breadcrumbDelimiter}
 			</>
 		);

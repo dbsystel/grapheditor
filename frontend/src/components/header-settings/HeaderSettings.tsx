@@ -1,3 +1,4 @@
+import './HeaderSettings.scss';
 import { DBCheckbox, DBDivider, DBIcon, DBLink, DBSelect } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent } from 'react';
@@ -8,7 +9,6 @@ import { MenuButtonOption } from 'src/components/menu-button/MenuButton.interfac
 import { useSettingsStore } from 'src/stores/settings';
 import { isAppSupportedLanguage, setApplicationTheme } from 'src/utils/helpers/general';
 import { HeaderSettingsProps } from './HeaderSettings.interfaces';
-import './HeaderSettings.scss';
 
 export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) => {
 	const { t, i18n } = useTranslation();

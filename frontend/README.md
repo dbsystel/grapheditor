@@ -4,44 +4,49 @@ This is the GUI for the GraphEditor project. It supports users to work with diff
 
 ## Table of contents
 
--   [Overview](#overview)
-    -   [The challenge](#the-challenge)
-    -   [Network graph](#network-graph)
-      -   [Event manager](#event-manager)
--   [Our process](#our-process)
-    -   [Built with](#built-with)
-    -   [Requirements](#requirements)
-    -   [Development](#development)
-      -   [HTTP Requests](#http-requests)
-      -   [Global State Management](#global-state-management)
-      -   [Theming](#theming)
-      -   [Icon Fonts](#icon-fonts)
-      -   [Applications' focus and blur management](#applications-focus-and-blur-management)
-	  -   [React Compiler](#react-compiler)
-      -   [Error Handling](#error-handling)
-      -   [SBOM and Licenses](#sbom-and-licenses)
-    -   [Testing](#testing)
--   [Authors](#authors)
--   [TODOs](#todos)
+- [Overview](#overview)
+    - [The challenge](#the-challenge)
+    - [Network graph](#network-graph)
+    - [Event manager](#event-manager)
+- [Our process](#our-process)
+    - [Built with](#built-with)
+    - [Requirements](#requirements)
+    - [Development](#development)
+    - [HTTP Requests](#http-requests)
+    - [Global State Management](#global-state-management)
+    - [Theming](#theming)
+    - [Icon Fonts](#icon-fonts)
+    - [Applications' focus and blur management](#applications-focus-and-blur-management)
+    - [React Compiler](#react-compiler)
+    - [Error Handling](#error-handling)
+    - [SBOM and Licenses](#sbom-and-licenses)
+    - [Testing](#testing)
+- [Authors](#authors)
+- [TODOs](#todos)
 
 ## Overview
 
 ### The challenge
+
 Build out the project to the designs provided.
 
 ### Network graph
+
 Our (WebGL) graph provides multiple GUI functionalities such as dragging a node, selecting multiple nodes, etc..., which are all
 described below. Please note, currently most of the graph GUI functionalities are not optimized for touch devices.
 
 #### Select node(s)
+
 To select nodes, please hold down the Shift key on your keyboard, click on the graph, and start moving your mouse to select multiple
 nodes.
 
 #### Move node(s)
+
 If you already selected nodes, simply click and drag one of the selected nodes. If there are no previously selected nodes, simply
 click and drag a node you want to move.
 
 #### Auto-connect node
+
 By holding down Ctrl (Strg) + left-click on a node and moving your mouse, you can quickly create a node, which will be connected
 to the node you clicked on. On the left side of your screen you can choose which labels to assign to new nodes (default: none).
 
@@ -58,13 +63,16 @@ that your mouse is hovering the newly created node. There are some technical sol
 are safe enough to be implemented, and moving your mouse isn't that troublesome.
 
 #### Quick-node
+
 In order to quickly create a non-connected empty node using our GUI, please hold down Ctrl (Strg) and do left-click on canvas
 (not node or relation). On the left side of your screen you can choose which labels to assign to new nodes (default: none).
 
 #### Move camera
+
 To move camera around, simply do a left-click on graph (not nodes or relations) and move your mouse.
 
 #### Node and label scaling
+
 Both node and relation labels are auto-scaling with the graph, meaning, when you zoom in or zoom out, those labels will auto-scale with
 the graph. This enables more fluid user experience, rather than rendering labels with a constant size, regardless of your current
 zoom level.
@@ -85,6 +93,7 @@ zoom factor value. Close to the slider you will also see a reset button which wi
 value.
 
 ### Event manager
+
 In order to simplify and enable single-flow of events executed, an event state manager based on the FSM (Finite State Machine) pattern
 is implemented.
 
@@ -130,20 +139,20 @@ digraph G {
 
 ### Built with
 
--   HTML5
--   SCSS
--   Typescript
--   Internationalization Library [react-i18next](https://react.i18next.com/)
--   [React](https://reactjs.org/)
--   [Vite](https://vitejs.dev/)
--   [Vitest](https://vitest.dev/)
--   UX/UI library [DB UI MONO Library](https://db-ui.github.io/mono/version/v0.0.59/)
--   Form validation [React Hook Form](https://react-hook-form.com/)
+- HTML5
+- SCSS
+- Typescript
+- Internationalization Library [react-i18next](https://react.i18next.com/)
+- [React](https://reactjs.org/)
+- [Vite](https://vitejs.dev/)
+- [Vitest](https://vitest.dev/)
+- UX/UI library [DB UI MONO Library](https://db-ui.github.io/mono/version/v0.0.59/)
+- Form validation [React Hook Form](https://react-hook-form.com/)
 
 ### Requirements
 
--   Node must be installed (version: >=20.18.0)
--   Docker must be installed (recommended version: >= 24.0.0)
+- Node must be installed (version: >=20.18.0)
+- Docker must be installed (recommended version: >= 24.0.0)
 
 ## Development
 
@@ -152,23 +161,24 @@ In order to start local frontend development, we need to do a couple of things.
 1. **create frontend/.env file**
     - Copy `frontend/.env.dist` to `frontend/.env`
 
-2. **run `npm i`**
+2. **run `npm run setup`**
+
+To reliably protect our project from supply chain attacks via npm, please always use "npm run setup" instead of "npm install" <br>
+– this ensures that only reviewed and explicitly allowed installation scripts are executed, while all others are automatically blocked. <br>
+This prevents malicious code scripts from being silently installed without restricting normal development.
 
 3. **run Docker (local backend server)**:
     - Go to the root directory and run `docker-compose up backend neo4j-enterprise` to start local backend server. It is possible you are not
       required to pass username and password in Neo4J browser GUI in order to connect to the neo4j database, but if you are, please
       check the backend documentation and/or its environment files
 
-4.**run frontend**:
-    - `npm run dev` in this directory to start the project locally. For other commands please refer to the _package.json_ file.
+4.**run frontend**: - `npm run dev` in this directory to start the project locally. For other commands please refer to the _package.json_ file.
 
-5.**mock data**:
-    - If you need mock data to explore the project, please visit http://localhost:4999/swagger. Under the headline "Dev tools" you can
-      find `/dev/reset` and `/dev/osm_data` endpoints. For a simple set of data, you can use the `/dev/reset` endpoint, for a more
-      complex set of data please use the `/dev/osm_data` endpoint.
+5.**mock data**: - If you need mock data to explore the project, please visit http://localhost:4999/swagger. Under the headline "Dev tools" you can
+find `/dev/reset` and `/dev/osm_data` endpoints. For a simple set of data, you can use the `/dev/reset` endpoint, for a more
+complex set of data please use the `/dev/osm_data` endpoint.
 
 If you successfully followed this short tutorial, you should see our homepage in your browser.
-
 
 ### HTTP Requests
 
@@ -181,28 +191,29 @@ specifically for React components, offering a seamless way to manage asynchronou
 
 Scenarios for employing custom hooks:
 
-- __Loading State Management__: If the requirement is to monitor the loading state of an HTTP request distinctly, custom hooks provide <br>
- built-in state management
-- __Automatic Execution on Component Mount__: To initiate HTTP requests automatically upon component initialization without manually <br>
- injecting additional useEffect hooks into the component logic, custom hooks offer an elegant solution
+- **Loading State Management**: If the requirement is to monitor the loading state of an HTTP request distinctly, custom hooks provide <br>
+  built-in state management
+- **Automatic Execution on Component Mount**: To initiate HTTP requests automatically upon component initialization without manually <br>
+  injecting additional useEffect hooks into the component logic, custom hooks offer an elegant solution
 
 Scenarios for utilizing API objects:
 
-- __Complex Logic Execution__: When your implementation involves comprehensive logic with multiple sequential API calls interspersed <br>
- with variable manipulations and function executions, API objects provide structural robustness
-- __Technical Constraints__: React hooks are subject to specific invocation constraints, being callable only within other hooks or <br>
- functional components. API objects circumvent these restrictions, allowing greater flexibility in execution design
-- __Asynchronous Operations__: For scenarios requiring intricate asynchronous operations using async/await syntax, API objects offer <br>
- a superior handling mechanism
+- **Complex Logic Execution**: When your implementation involves comprehensive logic with multiple sequential API calls interspersed <br>
+  with variable manipulations and function executions, API objects provide structural robustness
+- **Technical Constraints**: React hooks are subject to specific invocation constraints, being callable only within other hooks or <br>
+  functional components. API objects circumvent these restrictions, allowing greater flexibility in execution design
+- **Asynchronous Operations**: For scenarios requiring intricate asynchronous operations using async/await syntax, API objects offer <br>
+  a superior handling mechanism
 
 General Guidance: While API objects are generally the recommended approach due to their flexibility and support for complex operations, <br>
 custom API hooks remain a viable option for specific use cases, especially when component-centric concerns are predominant.
 
 Important Considerations: Direct utilization of API functions from frontend/src/utils/fetch is discouraged for several reasons:
-- __Code Clarity__: To maintain a clean and uncluttered codebase, avoiding direct fetch operations can minimize extraneous details
-- __Unified Communication__: By adhering to the established API objects and custom hooks, we leverage extension patterns that ensure consistent <br>
- communication protocols with the backend
-- __Contextual Consistency__: Uniformly applied methodologies across different contexts enhance code maintainability and readability
+
+- **Code Clarity**: To maintain a clean and uncluttered codebase, avoiding direct fetch operations can minimize extraneous details
+- **Unified Communication**: By adhering to the established API objects and custom hooks, we leverage extension patterns that ensure consistent <br>
+  communication protocols with the backend
+- **Contextual Consistency**: Uniformly applied methodologies across different contexts enhance code maintainability and readability
 
 ### Global State Management
 
@@ -260,11 +271,12 @@ The cause for this was located in the MainVisual's "executeSearch" function, spe
 
 In order to unify error handling and prepare it for a logging service such as Sentry.js, we are observing errors at one place only.<br>
 You can find relevant code inside the `src/main.tsx` file. At the moment, we are observing 2 groups of errors:<br>
+
 - React errors:
-  - errors during render, gives as a possibility to reload affected blocks/components
+    - errors during render, gives as a possibility to reload affected blocks/components
 - JS errors:
-  - observe non-React related errors (thrown Errors, failed Promises and similar)
-  <br>
+    - observe non-React related errors (thrown Errors, failed Promises and similar)
+      <br>
 
 For more information about observing React errors, please visit https://react.dev/reference/react-dom/client/createRoot#parameters.
 
@@ -273,25 +285,27 @@ Promise-based errors should be thrown via `Promise.reject` or, if you are manual
 `new Promise((resolve, reject) => { ...reject(...) })`.
 
 - Promise.reject - try and throw new error via the `reject` method
-  ```js
-    Promise.reject(new Error('My error message'))
 
-    OR
+    ```js
+      Promise.reject(new Error('My error message'))
 
-    new Promise((resolve, reject) => {
-      ...
-      reject(new Error('My error message'));
-    })
-  ```
+      OR
+
+      new Promise((resolve, reject) => {
+        ...
+        reject(new Error('My error message'));
+      })
+    ```
+
 - Try/catch - try and throw new error via the catch block
-  ```js
-    try {
-      ...
-    } catch (error) => {
-      ...
-      throw new Error(parseError(error));
-    }
-  ```
+    ```js
+      try {
+        ...
+      } catch (error) => {
+        ...
+        throw new Error(parseError(error));
+      }
+    ```
 
 The Error object expects a string, so if you are working with caught errors, you can use our `parseError` function to process the <br>
 caught error and return a string from it. Please always create an Error object instance when manually dealing with errors. This will <br>
@@ -327,7 +341,6 @@ If we come to a point where we explicitly want to control the order of CSS files
 If we do that, don't forget to remove component's SCSS file from the component definition file, otherwise we will have duplicate CSS
 definitions.
 
-
 ### WebGL
 
 WebGL uses the GPU (graphics processing unit) to render 3D graphics and animations in web browsers. In order for some parts of
@@ -338,8 +351,8 @@ browser if it is not already enabled.
 
 Team GraphEditor. Responsible frontend developers:
 
--   Mihajlo Lazar (mihajlo.lazar@deutschebahn.com)
--   Stefan Seliger (stefan.seliger@deutschebahn.com)
+- Mihajlo Lazar (mihajlo.lazar@deutschebahn.com)
+- Stefan Seliger (stefan.seliger@deutschebahn.com)
 
 ## TODOs
 

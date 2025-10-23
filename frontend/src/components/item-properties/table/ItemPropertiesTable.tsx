@@ -112,7 +112,7 @@ export const ItemPropertiesTable = ({
 							key={index + property.key}
 							onMouseEnter={onMouseEnter}
 							onMouseLeave={onMouseLeave}
-							className="table-row--hoverable-row"
+							variant="hoverable"
 						>
 							<TableCell width="full" className="item-properties-table__cell">
 								<ItemInfo item={propertyNode} />

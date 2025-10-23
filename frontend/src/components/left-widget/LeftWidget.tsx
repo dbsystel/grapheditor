@@ -1,3 +1,4 @@
+import './LeftWidget.scss';
 import {
 	DBAccordion,
 	DBAccordionItem,
@@ -12,7 +13,6 @@ import { LeftWidgetNetworkGraphSettings } from 'src/components/left-widget/netwo
 import { LeftWidgetNewItemSettings } from 'src/components/left-widget/new-item-settings/LeftWidgetNewItemSettings';
 import { ParallaxFilters } from 'src/components/parallax-filters/ParallaxFilters';
 import { LeftWidgetProps } from './LeftWidget.interfaces';
-import './LeftWidget.scss';
 import { LeftWidgetPresentation } from './presentation/LeftWidgetPresentation';
 
 export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {

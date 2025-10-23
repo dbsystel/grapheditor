@@ -8,6 +8,7 @@ import { useContextMenuStore } from 'src/stores/context-menu';
 import { useDrawerStore } from 'src/stores/drawer';
 import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { isNode } from 'src/utils/helpers/nodes';
+import { idFormatter } from 'src/utils/idFormatter';
 import { ItemInfoProps } from './ItemInfo.interfaces';
 
 /**
@@ -98,7 +99,7 @@ export const ItemInfo = ({
 				onMouseLeave={onMouseLeave}
 				onContextMenu={onContextMenu}
 			>
-				{item.title}
+				{idFormatter.parseIdToName(item.title)}
 
 				{renderTooltip && <ItemOverviewTooltip item={item} tooltipRef={ref} />}
 			</DBButton>

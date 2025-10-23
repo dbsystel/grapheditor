@@ -1,3 +1,3 @@
 import { GlobalComponentProps } from 'src/types/components';
 
-export type ParallaxNextStepsProps = GlobalComponentProps & {};
+export type ParallaxNextStepsProps = GlobalComponentProps;

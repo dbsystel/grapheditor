@@ -7,7 +7,7 @@ COPY frontend .
 
 RUN apt update
 RUN apt install -y xdg-utils
-RUN npm install
+RUN npm run setup
 
 EXPOSE 8080
 

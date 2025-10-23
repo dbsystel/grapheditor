@@ -39,28 +39,33 @@ export const EditSaveButtons = ({
 			<p>{headline}</p>
 
 			<div className="edit-save-buttons__buttons">
-			{isEditable ? (!isEditMode ? (
-					<DBButton onClick={toggleEdit} variant="ghost" size="small" icon="pen">
-						{t('edit_save_buttons_edit')}
-					</DBButton>
-				) : (
-					<div className="edit-save-buttons__edit-buttons">
-						<DBButton onClick={undoChanges} variant="ghost" size="small" icon="cross">
-							{t('edit_save_buttons_cancel')}
+				{isEditable &&
+					(!isEditMode ? (
+						<DBButton onClick={toggleEdit} variant="ghost" size="small" icon="pen">
+							{t('edit_save_buttons_edit')}
 						</DBButton>
+					) : (
+						<div className="edit-save-buttons__edit-buttons">
+							<DBButton
+								onClick={undoChanges}
+								variant="ghost"
+								size="small"
+								icon="cross"
+							>
+								{t('edit_save_buttons_cancel')}
+							</DBButton>
 
-						<DBButton
-							onClick={saveChanges}
-							variant="brand"
-							size="small"
-							icon="check"
-							className="edit-save-buttons__save-button"
-						>
-							{t('edit_save_buttons_save')}
-						</DBButton>
-					</div>
-				)) : ''}	
-				
+							<DBButton
+								onClick={saveChanges}
+								variant="brand"
+								size="small"
+								icon="check"
+								className="edit-save-buttons__save-button"
+							>
+								{t('edit_save_buttons_save')}
+							</DBButton>
+						</div>
+					))}
 			</div>
 		</div>
 	);

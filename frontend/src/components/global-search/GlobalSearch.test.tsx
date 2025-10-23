@@ -33,7 +33,7 @@ describe('Components - GlobalSearch', () => {
 	test('Render component', () => {
 		const { container } = render(
 			<MemoryRouter>
-				<GlobalSearch ref={globalSearchRef} />
+				<GlobalSearch searchFunctionRef={globalSearchRef} />
 			</MemoryRouter>
 		);
 
@@ -51,7 +51,7 @@ describe('Components - GlobalSearch', () => {
 
 		const { getByRole } = render(
 			<MemoryRouter>
-				<GlobalSearch ref={globalSearchRef} />
+				<GlobalSearch searchFunctionRef={globalSearchRef} />
 			</MemoryRouter>
 		);
 
@@ -87,7 +87,7 @@ describe('Components - GlobalSearch', () => {
 
 			const { getByRole } = render(
 				<MemoryRouter>
-					<GlobalSearch ref={globalSearchRef} />
+					<GlobalSearch searchFunctionRef={globalSearchRef} />
 				</MemoryRouter>
 			);
 

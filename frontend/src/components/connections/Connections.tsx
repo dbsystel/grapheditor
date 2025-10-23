@@ -14,6 +14,7 @@ import { Relation } from 'src/models/relation';
 import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
 import { processNodeConnections, sortNodeConnections } from 'src/utils/helpers/nodes';
+import { idFormatter } from 'src/utils/idFormatter';
 import { ConnectionObject, ConnectionsBoxProps, ConnectionsProps } from './Connections.interfaces';
 import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelation';
 
@@ -21,12 +22,6 @@ import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelati
  * This component contains a list of relations between nodes.
  * Depending on from which startpoint it has been rendered.
  */
-
-function getDirectionIcon(sourceNode: Node, targetNode: Node, direction:string ): string{
-	return sourceNode.id == targetNode.id ? "undo": 
-	"";
-}
-
 export const Connections = ({ node, id, className, testId }: ConnectionsProps) => {
 	const [connectionBoxData, setConnectionBoxData] = useState<Array<ConnectionObject>>([]);
 	const [newConnectionBoxData, setNewConnectionBoxData] = useState<Array<ConnectionObject>>([]);
@@ -141,13 +136,14 @@ const ConnectionsBox = ({
 				const targetNode = dataItem.target;
 
 				return (
-					<TableRow key={index} className="table-row--hoverable-row">
+					<TableRow key={index} variant="hoverable">
 						<TableCell className="connections__cell connections__icon-only">
 							<div className="connections__node-icon">
 								<DBButton variant="ghost" size="small" noText>
 									<DBIcon icon="box" />
 									<DBTooltip placement="right">
-										{t('single-node-node')} {node.title}
+										{t('single-node-node')}{' '}
+										{idFormatter.parseIdToName(node.title)}
 									</DBTooltip>
 								</DBButton>
 							</div>
@@ -156,7 +152,9 @@ const ConnectionsBox = ({
 						<TableCell className="connections__cell connections__icon-only">
 							{direction === 'outgoing' && <div data-icon="arrow_right"></div>}
 							{direction === 'incoming' && <div data-icon="arrow_left"></div>}
-							{sourceNode?.semanticId === targetNode?.semanticId && <div data-icon="undo"></div>}
+							{sourceNode?.semanticId === targetNode?.semanticId && (
+								<div data-icon="undo"></div>
+							)}
 						</TableCell>
 
 						<TableCell className="connections__cell connections__relation-name">

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.10.3
+
+- Improved nodefinder widget
+- Improved title display for nodes everywhere
+
 ## 2025.10.2
 
 - MVP of Parameterized Queries (ParaQueries)

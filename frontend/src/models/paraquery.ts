@@ -8,8 +8,8 @@ export type ParaQuery = {
 };
 
 export type ParaQueryParameter = {
-	default_value: string;
+	default_value?: string;
 	help_text: string;
 	type: 'string';
-	suggestions: Array<NodeLabelId>;
+	suggestions?: Array<NodeLabelId>;
 };

@@ -7,7 +7,7 @@ markdown
 python-dotenv
 pyparsing
 pytest
-pylint
+pylint==3.3.8
 git-pylint-commit-hook
 requests
 RestrictedPython

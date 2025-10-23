@@ -1,14 +1,12 @@
-// Despite having a databaseName argument, a installFunction or
-// installProcedure call affects all databases. Unfortunately that isn't
-// a documented behaviour, but is the current state as of Neo4j 5.26.
-// Instantiating the same functions/procedures for multiple databases
-// seems to cause problems, like warnings that some function/procedure is
-// defined twice, or weird java error messages probably caused by triggers
-// when manipulating nodes/relations. Therefore we install functions/procedures
-// only once for the 'neo4j' database.
+// Set of functions and procedures used to improve fulltext search.
+// Change the first line to determine on which databases you want to
+// install the functions/procedures.
+// Run this script on any database except `system`. The reason is that
+// one can't execute UNWIND commands on `system`. Alternatively
+// we could use `:param` to define dbName, but then we couldn't
+// install triggers to many databases at once.
 
-// Run this script on the `system` database.
-
+UNWIND ['neo4j'] AS dbName
 CALL apoc.systemdb.execute(
   [
     "CALL apoc.custom.installFunction(
@@ -19,7 +17,7 @@ CALL apoc.systemdb.execute(
                          \"RETURN toLower(toString($x)) AS ans\", {x: $elem})
            YIELD value
        RETURN value.ans',
-       'neo4j',
+       $dbName,
        false,
        'Return string with all characters converted to lower case.
         If $elem is an array, convert its strings to lowercase as well.'
@@ -29,7 +27,7 @@ CALL apoc.systemdb.execute(
       'RETURN REDUCE(result = \\'\\',
               prop IN [p IN keys($elem) WHERE p <> \"_ft__tech_\" | p]
               | result + custom.lowercase(prop) + \":\" + custom.lowercase($elem[prop]) + \"; \") AS answer',
-      'neo4j',
+      $dbName,
       false,
       'Join all properties of element (a Node or a Relationship) into a
        single string containing their names and values.'
@@ -39,7 +37,7 @@ CALL apoc.systemdb.execute(
       'RETURN REDUCE(result = \\'\\',
                      label IN [l IN labels($node) WHERE l <> \"___tech_\" | l]
                      | result + custom.lowercase(label) + \"; \") AS answer',
-      'neo4j',
+      $dbName,
       false,
       'Join all labels into a single string.'
     )",
@@ -50,7 +48,7 @@ CALL apoc.systemdb.execute(
        CALL apoc.create.addLabels($node, [\"___tech_\"]) YIELD node AS n
        SET n.`_ft__tech_` = propsText + labelsText + \"id:\" + elementid(n)
        RETURN n AS node',
-      'neo4j',
+      $dbName,
       'WRITE',
       'Add ___tech_ label to node and generate its _ft__tech_ property.'
     )",
@@ -59,7 +57,7 @@ CALL apoc.systemdb.execute(
       'WITH custom.joinPropertiesText($rel) AS propsText
        SET $rel.`_ft__tech_` = propsText + type($rel) + \"; id:\" + elementid($rel)
        RETURN $rel AS rel',
-      'neo4j',
+      $dbName,
       'WRITE',
       'Generate _ft__tech_ property of rel.'
     )",
@@ -67,11 +65,11 @@ CALL apoc.systemdb.execute(
         'createRelTypeIndex(relType :: STRING) :: (answer::ANY)',
         'CALL apoc.cypher.runSchema(\"CREATE TEXT INDEX \" + $relType + \"Index IF NOT EXISTS FOR ()-[r:\" + $relType + \"]->() ON (r.`_ft__tech_`)\", {}) YIELD value
            RETURN true AS answer',
-        'neo4j',
+        $dbName,
         'SCHEMA',
         'Create index on relation type if it does not exist.'
     )"
   ],
-  {}
+  {dbName: dbName}
 ) YIELD row
 RETURN row;

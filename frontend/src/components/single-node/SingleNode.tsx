@@ -1,8 +1,9 @@
-import './SingleNode.scss';
 import 'src/assets/scss/single-item.scss';
+import './SingleNode.scss';
 import {
 	DBAccordion,
 	DBAccordionItem,
+	DBButton,
 	DBIcon,
 	DBInfotext,
 	DBSection,
@@ -21,12 +22,14 @@ import { ItemPropertiesHandle } from 'src/components/item-properties/ItemPropert
 import { LoadPerspective } from 'src/components/load-perspective/LoadPerspective';
 import { Loading } from 'src/components/loading/Loading';
 import { MenuButton } from 'src/components/menu-button/MenuButton';
+import { fitGraphToViewport } from 'src/components/network-graph/helpers';
 import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder';
 import { NodeLabelsItemFinderHandle } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder.interfaces';
 import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
 import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
 import { ItemPropertyWithKey } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
+import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { metaForMetaApi } from 'src/utils/api/metaForMeta';
 import { nodesApi } from 'src/utils/api/nodes';
@@ -34,6 +37,7 @@ import { GraphEditorType } from 'src/utils/constants';
 import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
 import { getItemDBId, getItemMissingPropertiesForMeta } from 'src/utils/helpers/items';
 import { areNodesSameById, isNodePerspective, isPseudoNode } from 'src/utils/helpers/nodes';
+import { idFormatter } from 'src/utils/idFormatter';
 import { EditMode, SingleNodeProps } from './SingleNode.interfaces';
 
 /**
@@ -42,6 +46,7 @@ import { EditMode, SingleNodeProps } from './SingleNode.interfaces';
 export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => {
 	const { t } = useTranslation();
 	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
+	const sigma = useGraphStore((store) => store.sigma);
 	const [selectedLabelIds, setSelectedLabelIds] = useState<Array<NodeId>>([]);
 	const [labelsMeta, setLabelsMeta] = useState<MetaForMeta | null>(null);
 	const [isLabelsMetaLoading, setIsLabelsMetaLoading] = useState(false);
@@ -60,6 +65,10 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 		getNodeLabelsNodes();
 		getMetaForMeta();
 	}, [node]);
+
+	const onCenterInGraphClick = () => {
+		fitGraphToViewport(sigma, [node.id]);
+	};
 
 	const getNodeLabelsNodes = () => {
 		getNodesAsync(node.labels).then((labels) => {
@@ -207,8 +216,8 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 
 					<p className="single-item__title-title">
 						{node.title}{' '}
-						<DBTooltip placement="bottom-end" color="red" >
-							{t('single-node-node')} {node.title}
+						<DBTooltip placement="bottom-end" color="red">
+							{t('single-node-node')} {idFormatter.parseIdToName(node.title)}
 						</DBTooltip>
 					</p>
 
@@ -223,6 +232,17 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 							}
 						]}
 					/>
+
+					<DBButton
+						icon="start"
+						variant="ghost"
+						noText
+						size="small"
+						onClick={onCenterInGraphClick}
+						type="button"
+					>
+						<DBTooltip>{t('single-node-center-in-graph')}</DBTooltip>
+					</DBButton>
 				</div>
 
 				<LoadPerspectiveButton />

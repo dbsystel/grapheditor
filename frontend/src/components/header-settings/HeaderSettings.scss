@@ -3,6 +3,7 @@
 
 	.db-popover-content {
 		width: 250px;
+		z-index: 10000;
 
 		.db-card {
 			padding: var(--db-spacing-fixed-lg);

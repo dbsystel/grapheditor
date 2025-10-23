@@ -71,6 +71,7 @@ type SearchStore = {
 	setPresentation: (presentation: string) => void;
 	setAlgorithm: (algorithm: LayoutModuleType) => void;
 	setStyle: (style: string) => void;
+	// TODO move to search API
 	executeSearch: () => Promise<void>;
 	setSearchValue: (searchValue: string) => void;
 	getDefaultSearchValue: (type: SearchStoreSearchType) => string;

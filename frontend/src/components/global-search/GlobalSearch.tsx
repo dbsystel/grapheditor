@@ -21,7 +21,7 @@ import { GlobalSearchProps } from './GlobalSearch.interfaces';
  * It expects Cypher Query string as input.
  */
 
-export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) => {
+export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: GlobalSearchProps) => {
 	// this could also be a hook, since renderings will be consistent
 	const type = useSearchStore.getState().type;
 
@@ -95,7 +95,7 @@ export const GlobalSearch = ({ id, className, testId, ref }: GlobalSearchProps) 
 		});
 	};
 
-	ref.current = { triggerSearch: triggerSearch };
+	searchFunctionRef.current = { triggerSearch: triggerSearch };
 
 	const getValue = () => {
 		return getSelectedSearchState().value;

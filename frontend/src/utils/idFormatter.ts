@@ -25,10 +25,13 @@ class IdFormatter {
 	}
 
 	/**
-	 * Method to take a string ID and return a name.
-	 * E.g. parseIdToName("MetaProperty::name__dummy_") will return "name".
+	 * Method to take a string (object's title or ID usually) and return a name.
+	 * E.g. parseIdToName("MetaProperty::name__dummy_") will return "name__dummy".
+	 * Initially, to include the namespace a flag was provided, but it was in team internally
+	 * decided to always include the namespace. It was also decided to always use this method when
+	 * rendering object's title or ID.
 	 */
-	parseIdToName(id: string, includeNamespace?: boolean) {
+	parseIdToName(id: string) {
 		const splitBySeparator = id.split(this.separator);
 		const stringAfterSeparator = splitBySeparator.at(1);
 
@@ -37,11 +40,7 @@ class IdFormatter {
 			return id;
 		}
 
-		if (includeNamespace) {
-			return stringAfterSeparator;
-		}
-
-		return stringAfterSeparator.split('__').at(0) || id;
+		return stringAfterSeparator;
 	}
 
 	/**

@@ -1,12 +1,10 @@
-.action-menu {
-	&__perspective-finder {
-		width: 50%;
+.perspective-finder {
+	width: 50%;
 
-		.db-custom-select {
-			// check if still relevant after https://github.com/db-ux-design-system/core-web/issues/4320 is done
-			[data-semantic='warning'] {
-				display: none;
-			}
+	.db-custom-select {
+		// check if still relevant after https://github.com/db-ux-design-system/core-web/issues/4320 is done
+		[data-semantic='warning'] {
+			display: none;
 		}
 	}
 }
