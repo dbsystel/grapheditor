@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025.10.4
+## 2025.11.1
 
 - Context menu with many new features
 - Bugfix when duplicating tabs in browser

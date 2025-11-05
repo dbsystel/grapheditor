@@ -17,7 +17,11 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 	const language = useSettingsStore((store) => store.language);
 	const setLanguage = useSettingsStore((store) => store.setLanguage);
 	const theme = useSettingsStore((store) => store.theme);
-	const rootElementClassName = clsx('header-settings', className);
+	const rootElementClassName = clsx(
+		'header-settings',
+		className,
+		'menu-button--ignore-position-fix'
+	);
 	const themeOptions = [
 		{ value: 'light', label: t('theme_light'), icon: 'sun' },
 		{ value: 'dark', label: t('theme_dark'), icon: 'moon' }

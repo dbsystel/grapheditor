@@ -5,7 +5,9 @@
 		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
 	}
 
-	&:not(.header-settings) {
+	// sometimes the original position calculations are correct, ignore following fix
+	// if that is the case
+	&:not(.menu-button--ignore-position-fix) {
 		.db-popover-content {
 			z-index: 9999;
 

@@ -244,7 +244,8 @@ export const GrassfileManager = ({ id, className, testId }: GrassfileManagerProp
 				/>
 				<Loading isLoading={isLoading} renderChildrenWhileLoading={false}>
 					<MenuButton
-						optionsPlacement="bottom-start"
+						className="menu-button--ignore-position-fix"
+						optionsPlacement="bottom-end"
 						buttonSize="medium"
 						options={menuOptions}
 					/>
