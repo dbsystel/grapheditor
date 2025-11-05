@@ -23,3 +23,9 @@ export type ParallaxFilters = {
 	properties: Record<string, string>;
 	labels: NodeLabels;
 };
+
+export type ParallaxSteps = Array<{
+	filters: ParallaxFilters;
+	incomingRelationTypes: Array<string>;
+	outgoingRelationTypes: Array<string>;
+}>;

@@ -44,6 +44,9 @@ export const endpoints = {
 	getNodesBulkPatchPath: () => {
 		return '/v1/nodes/bulk_patch';
 	},
+	getNodesBulkPostPath: () => {
+		return '/v1/nodes/bulk_post';
+	},
 	getNodeConnectionsPath: ({ nodeId }: { nodeId: string }) => {
 		return `/v1/nodes/${encodeURIComponent(nodeId)}/relations`;
 	},
@@ -79,8 +82,14 @@ export const endpoints = {
 	getRelationsTypesDefaultPath: () => {
 		return '/v1/relations/types/default';
 	},
+	getRelationsBulkFetchPath: () => {
+		return '/v1/relations/bulk_fetch';
+	},
 	getRelationsBulkPatchPath: () => {
 		return '/v1/relations/bulk_patch';
+	},
+	getRelationsBulkPostPath: () => {
+		return '/v1/relations/bulk_post';
 	},
 	getRelationsPropertiesPath: () => {
 		return '/v1/relations/properties';

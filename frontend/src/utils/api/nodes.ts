@@ -12,6 +12,7 @@ import { patchNode } from 'src/utils/fetch/patchNode';
 import { patchNodes } from 'src/utils/fetch/patchNodes';
 import { postNode } from 'src/utils/fetch/postNode';
 import { postNodeConnections } from 'src/utils/fetch/postNodeConnections';
+import { postNodes } from 'src/utils/fetch/postNodes';
 import { postNodesBulkFetch } from 'src/utils/fetch/postNodesBulkFetch';
 import { postNodesLabelsDefault } from 'src/utils/fetch/postNodesLabelsDefault';
 import { postPerspective } from 'src/utils/fetch/postPerspective';
@@ -37,6 +38,7 @@ export const nodesApi = {
 	patchNodes: patchNodes,
 	patchNodesAndUpdateApplication: patchNodesAndUpdateApplication,
 	postNode: postNode,
+	postNodes: postNodes,
 	postNodeConnections: postNodeConnections,
 	postNodesBulkFetch: postNodesBulkFetch,
 	postNodesLabelsDefault: postNodesLabelsDefault,

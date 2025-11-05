@@ -1,20 +1,14 @@
-import { AddRelationAction } from 'src/components/context-menu/actions/add-relation';
-import { applyLayoutToFollowingNodesAction } from 'src/components/context-menu/actions/apply-layout-to-following-nodes';
-import { collapseNode } from 'src/components/context-menu/actions/collapse-node';
-import { copyAction } from 'src/components/context-menu/actions/copy';
-import { deleteNodesAction } from 'src/components/context-menu/actions/delete-nodes';
-import { deleteRelationsAction } from 'src/components/context-menu/actions/delete-relations';
-import { expandNodeAction } from 'src/components/context-menu/actions/expand-node';
-import { exportNodesAndRelationsAsImageAction } from 'src/components/context-menu/actions/export-nodes-and-relations-as-image';
-import { hideNodesAction } from 'src/components/context-menu/actions/hide-nodes';
-import { hideRelationsAction } from 'src/components/context-menu/actions/hide-relations';
-import { loadPerspectiveNodeAction } from 'src/components/context-menu/actions/load-perspective-node';
-import { pasteAction } from 'src/components/context-menu/actions/paste';
+import { MouseEvent } from 'react';
+import { SigmaEdgeEventPayload, SigmaNodeEventPayload, SigmaStageEventPayload } from 'sigma/types';
 import {
 	ContextMenuAction,
 	ContextMenuOption
 } from 'src/components/context-menu/ContextMenu.interfaces';
-import i18n from 'src/i18n';
+import { graphCanvasOptions } from 'src/components/context-menu/options/graph-canvas';
+import { graphMultiselectOptions } from 'src/components/context-menu/options/graph-multiselect';
+import { graphNodeOptions } from 'src/components/context-menu/options/graph-node';
+import { graphRelationOptions } from 'src/components/context-menu/options/graph-relation';
+import { nodeOptions } from 'src/components/context-menu/options/node';
 import { NodeConnection, NodeId } from 'src/models/node';
 import { RelationId } from 'src/models/relation';
 import { create } from 'zustand';
@@ -26,36 +20,55 @@ type ContextMenuType =
 	| 'graph-multiselect'
 	| 'graph-canvas'
 	| '';
+
 type ExpandedNodeData = {
 	neighbors: Array<NodeConnection>;
 	expandedNodes: ExpandedNodes;
 };
+
 type NodeAndRelationIds = {
 	nodeIds: Array<NodeId>;
 	relationIds: Array<RelationId>;
 };
+
 export type ExpandedNodes = Map<NodeId, ExpandedNodeData>;
 
-type ContextMenuStore = {
+type ContextMenuEventType<T = ContextMenuType> = T extends 'node'
+	? MouseEvent
+	: T extends 'graph-node'
+		? SigmaNodeEventPayload
+		: T extends 'graph-relation'
+			? SigmaEdgeEventPayload
+			: T extends 'graph-multiselect'
+				? SigmaNodeEventPayload | SigmaEdgeEventPayload
+				: T extends 'graph-canvas'
+					? SigmaStageEventPayload
+					: null;
+
+type ContextMenuStore<T = ContextMenuType> = {
 	isOpen: boolean;
 	setIsOpen: (isOpen: boolean) => void;
-	type: ContextMenuType;
+	type: T;
 	nodeIds: Array<NodeId>;
 	relationIds: Array<RelationId>;
 	x: number;
 	y: number;
+	event: ContextMenuEventType<T>;
+	// TODO consider Map instead of Record to preserve order of options
 	getOptions: () => Partial<Record<ContextMenuAction, ContextMenuOption>>;
 	open: ({
 		x,
 		y,
 		type,
+		event,
 		nodeIds,
 		relationIds,
 		onClose
 	}: {
 		x?: number;
 		y?: number;
-		type: ContextMenuType;
+		type: T;
+		event: ContextMenuEventType<T>;
 		nodeIds?: Array<NodeId>;
 		relationIds?: Array<RelationId>;
 		onClose?: (() => void) | null;
@@ -65,13 +78,16 @@ type ContextMenuStore = {
 	reset: () => void;
 	resetButExclude: (excludeKeys: Array<keyof InitialState>) => void;
 	// TODO consider splitting into smaller sub-stores
-	// type "graph-node" data
+	//  type "graph-node" data
 	expandedNodes: ExpandedNodes;
 	addExpandedNode: (nodeId: NodeId, neighbors: Array<NodeConnection>) => void;
 	removeExpandedNode: (nodeId: NodeId) => void;
 	getExpandedNodeData: (nodeId: NodeId) => ExpandedNodeData | null;
 	getExpandedNodeNodeAndRelationIds: (nodeId: NodeId) => NodeAndRelationIds;
 	isNodeExpanded: (nodeId: NodeId) => boolean;
+	// to be used when an action needs to perform async work (e.g. performing data fetch and similar)
+	isActionLoading: boolean;
+	setIsActionLoading: (isActionLoading: boolean) => void;
 };
 
 type InitialState = Omit<
@@ -87,18 +103,21 @@ type InitialState = Omit<
 	| 'getExpandedNodeData'
 	| 'getExpandedNodeNodeAndRelationIds'
 	| 'isNodeExpanded'
+	| 'setIsActionLoading'
 >;
 
 const getInitialState: () => InitialState = () => {
 	return {
 		isOpen: false,
 		type: '',
+		event: null,
 		nodeIds: [],
 		relationIds: [],
 		x: 0,
 		y: 0,
 		onClose: null,
-		expandedNodes: new Map()
+		expandedNodes: new Map(),
+		isActionLoading: false
 	};
 };
 
@@ -113,210 +132,40 @@ export const useContextMenuStore = create<ContextMenuStore>()((set, get) => {
 		},
 		getOptions: () => {
 			const type = get().type;
-			const nodeId = get().nodeIds.at(0);
-			const nodeIds = get().nodeIds;
-			const relationIds = get().relationIds;
-			const t = i18n.t;
 
-			if (type === 'node' && nodeId) {
-				return {
-					copy: {
-						label: t('context_menu_copy'),
-						onClick: () => {
-							copyAction([nodeId], []);
-						}
-					},
-					paste: {
-						label: t('context_menu_paste'),
-						onClick: () => {
-							pasteAction(nodeId);
-						}
-					},
-					delete: {
-						label: t('context_menu_delete'),
-						onClick: () => {
-							deleteNodesAction([nodeId]);
-						}
-					}
-				};
+			if (type === 'node') {
+				return nodeOptions();
 			} else if (type === 'graph-relation') {
-				return {
-					hide: {
-						label: 'Relation context menu placeholder'
-					}
-				};
+				return graphRelationOptions();
 			} else if (type === 'graph-canvas') {
-				return {
-					add_node: {
-						label: 'Canvas context menu placeholder'
-					}
-				};
+				return graphCanvasOptions();
 			} else if (type === 'graph-multiselect') {
-				return {
-					hide: {
-						label: t('context_menu_hide'),
-						onClick: () => {
-							hideNodesAction(nodeIds);
-						}
-					},
-					hide_relations: {
-						label: t('context_menu_hide_relations'),
-						onClick: () => {
-							hideRelationsAction(relationIds);
-						},
-						shouldRender: () => relationIds.length > 0
-					},
-					delete: {
-						label: t('context_menu_delete'),
-						onClick: () => {
-							deleteNodesAction(nodeIds);
-						}
-					},
-					delete_relations: {
-						label: t('context_menu_delete_relations'),
-						onClick: () => {
-							deleteRelationsAction(relationIds);
-						},
-						shouldRender: () => relationIds.length > 0
-					},
-					copy: {
-						label: t('context_menu_copy'),
-						onClick: () => {
-							copyAction(nodeIds, relationIds);
-						}
-					},
-					copy_nodes: {
-						label: t('context_menu_copy_nodes'),
-						onClick: () => {
-							copyAction(nodeIds, []);
-						}
-					},
-					add_to_perspective: {
-						label: t('context_menu_add_to_perspective') + ' (TBD)'
-					},
-					add_labels: {
-						label: t('context_menu_add_labels') + ' (TBD)'
-					},
-					add_properties: {
-						label: t('context_menu_add_properties') + ' (TBD)'
-					},
-					apply_layout: {
-						label: t('context_menu_apply_layout') + ' (TBD)'
-					},
-					save_as_perspective: {
-						label: t('context_menu_save_as_perspective') + ' (TBD)'
-					},
-					export: {
-						label: 'WIP -' + t('context_menu_export'),
-						options: [
-							{
-								label: 'PNG',
-								onClick: () => {
-									exportNodesAndRelationsAsImageAction(nodeIds, 'image/png');
-								}
-							},
-							{
-								label: 'JPEG',
-								onClick: () => {
-									exportNodesAndRelationsAsImageAction(nodeIds, 'image/jpeg');
-								}
-							},
-							{
-								label: 'SVG (TBD)'
-							}
-						]
-					}
-				};
-			} else if (type === 'graph-node' && nodeId) {
-				return {
-					copy: {
-						label: t('context_menu_copy'),
-						onClick: () => {
-							copyAction([nodeId], []);
-						}
-					},
-					paste: {
-						label: t('context_menu_paste'),
-						onClick: () => {
-							pasteAction(nodeId, true);
-						}
-					},
-					delete: {
-						label: t('context_menu_delete'),
-						onClick: () => {
-							deleteNodesAction([nodeId]);
-						}
-					},
-					hide: {
-						label: t('context_menu_hide'),
-						onClick: () => {
-							hideNodesAction([nodeId]);
-						}
-					},
-					expand: {
-						label: t('context_menu_expand'),
-						onClick: () => {
-							expandNodeAction(nodeId);
-						},
-						shouldRender: () => {
-							return !get().isNodeExpanded(nodeId);
-						}
-					},
-					collapse: {
-						label: t('context_menu_collapse'),
-						onClick: () => {
-							collapseNode(nodeId);
-						},
-						shouldRender: () => {
-							return get().isNodeExpanded(nodeId);
-						}
-					},
-					load_perspective: {
-						label: t('context_menu_perspective_load'),
-						onClick: () => {
-							loadPerspectiveNodeAction(nodeId);
-						}
-					},
-					add_relation: {
-						label: t('context_menu_add_relation'),
-						subMenuRenderer: (goBack) => (
-							<AddRelationAction nodeId={nodeId} goBack={goBack} />
-						)
-					},
-					apply_layout_to_following_nodes: {
-						label: t('context_menu_apply_layout'),
-						options: [
-							{
-								label: t('context_menu_apply_layout_horizontal'),
-								onClick: () => {
-									applyLayoutToFollowingNodesAction(nodeId, 'horizontal');
-								}
-							},
-							{
-								label: t('context_menu_apply_layout_vertical'),
-								onClick: () => {
-									applyLayoutToFollowingNodesAction(nodeId, 'vertical');
-								}
-							}
-						]
-					}
-				};
+				return graphMultiselectOptions();
+			} else if (type === 'graph-node') {
+				return graphNodeOptions();
 			}
 
 			return {};
 		},
 		open: (data) => {
-			set({ ...data, isOpen: true });
+			const nodeIds = data.nodeIds || [];
+			const relationIds = data.relationIds || [];
+
+			set({ ...data, isOpen: true, nodeIds: nodeIds, relationIds: relationIds });
 		},
 		close: () => {
 			set({
 				isOpen: false,
 				type: '',
+				event: null,
 				nodeIds: [],
 				relationIds: [],
 				x: 0,
 				y: 0,
-				onClose: null
+				onClose: null,
+				// TODO discuss if we should prevent closing the context menu if "isActionLoading"
+				//  is set to "true"
+				isActionLoading: false
 			});
 		},
 		addExpandedNode: (nodeId, neighbors) => {
@@ -429,6 +278,11 @@ export const useContextMenuStore = create<ContextMenuStore>()((set, get) => {
 			}
 
 			return nodeAndRelationIds;
+		},
+		setIsActionLoading: (isActionLoading) => {
+			set({
+				isActionLoading: isActionLoading
+			});
 		},
 		reset: () => {
 			set(getInitialState());

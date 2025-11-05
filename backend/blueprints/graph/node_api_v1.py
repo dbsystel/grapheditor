@@ -24,7 +24,10 @@ class Nodes(MethodView):
 
         Returns the newly created node
         """
-        return current_app.graph_db.create_node(node_data)
+        new_nodes = current_app.graph_db.create_nodes([node_data])
+        if not new_nodes:
+            abort_with_json(500, "Couldn't create node.")
+        return next(iter(new_nodes.values()))
 
     @blp.arguments(node_model.NodeQuery, as_kwargs=True, location="query")
     @blp.response(
@@ -114,6 +117,19 @@ class NodesBulkPatch(MethodView):
         return dict(
             nodes=result
         )
+
+
+@blp.route("/bulk_post")
+class NodesBulkPost(MethodView):
+    @blp.arguments(
+        node_model.NodeBulkPostSchema, as_kwargs=True, location="json"
+    )
+    @blp.response(200, node_model.NodeBulkPostResponseSchema)
+    @require_tab_id()
+    def post(self, nodes):
+        return {
+            "nodes": current_app.graph_db.create_nodes(nodes)
+        }
 
 
 @blp.route("/<nid>")
@@ -225,7 +241,7 @@ class NodeRelations(MethodView):
 @blp.route("/labels")
 class NodeLabels(MethodView):
     @blp.response(
-        200, node_model.NodeLabels, example=node_model.node_labels_example
+        200, node_model.NodeLabelsSchema, example=node_model.node_labels_example
     )
     @require_tab_id()
     def get(self):
@@ -273,7 +289,7 @@ class NodeDefaultLabels(MethodView):
 class NodeProperties(MethodView):
     @blp.response(
         200,
-        node_model.NodeProperties,
+        node_model.NodePropertiesSchema,
         example=node_model.node_properties_example,
     )
     @require_tab_id()

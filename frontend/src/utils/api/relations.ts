@@ -9,6 +9,8 @@ import { patchRelation } from 'src/utils/fetch/patchRelation';
 import { patchRelations } from 'src/utils/fetch/patchRelations';
 import { postRelation } from 'src/utils/fetch/postRelation';
 import { postRelationDefaultTypeNode } from 'src/utils/fetch/postRelationDefaultTypeNode';
+import { postRelations } from 'src/utils/fetch/postRelations';
+import { postRelationsBulkFetch } from 'src/utils/fetch/postRelationsBulkFetch';
 import { postRelationsByNodeIds } from 'src/utils/fetch/postRelationsByNodeIds';
 import {
 	deleteRelationsAndUpdateApplication,
@@ -28,6 +30,8 @@ export const relationsApi = {
 	patchRelations: patchRelations,
 	patchRelationsAndUpdateApplication: patchRelationsAndUpdateApplication,
 	postRelation: postRelation,
+	postRelations: postRelations,
 	postRelationDefaultTypeNode: postRelationDefaultTypeNode,
-	postRelationsByNodeIds: postRelationsByNodeIds
+	postRelationsByNodeIds: postRelationsByNodeIds,
+	postRelationsBulkFetch: postRelationsBulkFetch
 };

@@ -24,29 +24,13 @@ describe('Components - CreatePerspectiveDialog', () => {
 			<CreatePerspectiveDialog closeFunction={() => {}} testId="create-perspective-save" />
 		);
 
-		const headline = screen.getByTestId('header_create_new_perspective_title');
-		const closeButton = screen.getByTestId('close_button');
 		const perspectiveTitleInput = screen.getByTestId('create_perspective_title_input');
 		const saveButton = screen.getByRole('button', {
 			name: i18n.t('header_create_new_perspective_save_button')
 		});
 
-		expect(headline).toBeInTheDocument();
-		expect(closeButton).toBeInTheDocument();
 		expect(perspectiveTitleInput).toBeInTheDocument();
 		expect(saveButton).toBeInTheDocument();
-	});
-
-	it('close component', async () => {
-		const onClose = vi.fn();
-
-		const screen = render(<CreatePerspectiveDialog closeFunction={onClose} />);
-
-		const closeButton = screen.getByTestId('close_button');
-
-		expect(closeButton).toBeInTheDocument();
-		await userEvent.click(closeButton);
-		expect(onClose).toHaveBeenCalled();
 	});
 
 	// it('Create Perspective', async () => {

@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { TextareaAutosize } from 'src/components/textarea-autosize/TextareaAutosize';
 import { useGraphStore } from 'src/stores/graph';
 import { SearchStoreSearchType, useSearchStore } from 'src/stores/search';
+import { searchApi } from 'src/utils/api/search';
 import {
 	GLOBAL_SEARCH_PARAMETER_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
@@ -35,7 +36,6 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 	const setQuery = useSearchStore((store) => store.setQuery);
 	const searchValue = useSearchStore((store) => store.searchValue);
 	const setSearchValue = useSearchStore((store) => store.setSearchValue);
-	const executeSearch = useSearchStore((store) => store.executeSearch);
 	const addHistoryEntry = useSearchStore((store) => store.addHistoryEntry);
 	const exportSelectedHistory = useSearchStore((store) => store.exportSelectedHistory);
 	const clearSelectedHistory = useSearchStore((store) => store.clearSelectedHistory);
@@ -86,7 +86,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 		setQuery(searchQuery);
 		clearPerspective();
 		addHistoryEntry(type, searchQuery);
-		executeSearch();
+		searchApi.executeSearch();
 
 		setSearchParameters({
 			...Object.fromEntries(searchParams),

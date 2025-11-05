@@ -3,11 +3,13 @@ import { getStyleReset } from 'src/utils/fetch/getStyleReset';
 import { getStyles } from 'src/utils/fetch/getStyles';
 import { postStyleCurrent } from 'src/utils/fetch/postStyleCurrent';
 import { postStyleUpload } from 'src/utils/fetch/postStyleUpload';
+import { deleteStyle } from '../fetch/deleteStyle';
 
 export const stylesApi = {
 	getStyleCurrent: getStyleCurrent,
 	getStyleReset: getStyleReset,
 	getStyles: getStyles,
 	postStyleCurrent: postStyleCurrent,
-	postStyleUpload: postStyleUpload
+	postStyleUpload: postStyleUpload,
+	deleteStyle: deleteStyle
 };

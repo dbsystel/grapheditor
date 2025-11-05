@@ -23,13 +23,14 @@ import { RelationTypeChangerHandle } from 'src/components/relation-type-changer/
 import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
 import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
 import { MetaForMeta, Node } from 'src/models/node';
-import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { metaForMetaApi } from 'src/utils/api/metaForMeta';
+import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
 import { GraphEditorType } from 'src/utils/constants';
 import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
-import { idFormatter } from 'src/utils/idFormatter';
+import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
+import { formatItemId, idFormatter } from 'src/utils/idFormatter';
 import { EditMode, SingleRelationProps } from './SingleRelation.interfaces';
 
 /**
@@ -45,7 +46,6 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 	const [unsavedChangesData, setUnsavedChangesData] = useState<UnsavedChangedModalProps | null>(
 		null
 	);
-	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const rootElementClassName = clsx('single-relation single-item', className);
 	const relationTypeHandleRef = useRef<RelationTypeChangerHandle>(null);
@@ -55,11 +55,15 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 		(async () => {
 			setIsLoadingSourceAndTargetNodes(true);
 
-			const nodes = await getNodesAsync([relation.source_id, relation.target_id]);
+			const nodes = await nodesApi.postNodesBulkFetch({
+				nodeIds: [relation.source_id, relation.target_id]
+			});
+			const sourceNode = getNodeByIdFromArrayOfNodes(nodes, relation.source_id);
+			const targetNode = getNodeByIdFromArrayOfNodes(nodes, relation.target_id);
 
 			getMetaForMeta();
 
-			if (nodes[0] && nodes[1]) {
+			if (sourceNode && targetNode) {
 				setSourceAndTargetNodes(nodes);
 			} else {
 				addNotification({
@@ -180,18 +184,19 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 
 				<div className="single-item__header-id">
 					<p className="single-item__header-headline">ID</p>
-					<p className="single-item__header-content">{relation.id}</p>
+					<p className="single-item__header-content">
+						{formatItemId(relation.id)}
+						<DBTooltip
+							id={relation.id}
+							placement="bottom-end"
+							width="auto"
+							showArrow={false}
+						>
+							{relation.id}
+						</DBTooltip>
+					</p>
 
 					<CopyToClipboard text={relation.id} />
-
-					<DBTooltip
-						id={relation.id}
-						placement="bottom-end"
-						width="fixed"
-						showArrow={false}
-					>
-						{relation.id}
-					</DBTooltip>
 				</div>
 			</div>
 

@@ -9,6 +9,7 @@ import { NodeId } from 'src/models/node';
 import { ParaQuery } from 'src/models/paraquery';
 import { useGraphStore } from 'src/stores/graph';
 import { useSearchStore } from 'src/stores/search';
+import { searchApi } from 'src/utils/api/search';
 import { useGetParaQueries } from 'src/utils/hooks/useGetParaQueries';
 import { ParaQueriesProps } from './ParaQueries.interfaces';
 
@@ -65,9 +66,11 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 	searchFunctionRef.current.triggerSearch = () => {
 		if (selectedParaQuery) {
 			useGraphStore.getState().clearPerspective();
+
 			useSearchStore.getState().setQuery(selectedParaQuery.cypher);
 			useSearchStore.getState().setCypherQueryParameters(parametersRef.current);
-			useSearchStore.getState().executeSearch();
+
+			searchApi.executeSearch();
 		}
 	};
 

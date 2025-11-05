@@ -74,6 +74,14 @@ export const areNodesSameById = (nodeA: Node, nodeB: Node) => {
 	return false;
 };
 
+export const getNodeByIdFromArrayOfNodes = (nodes: Array<Node>, id: NodeId) => {
+	return nodes.find((node) => node.id === id);
+};
+
+export const getNodesByIdFromArrayOfNodes = (nodes: Array<Node>, ids: Array<NodeId>) => {
+	return nodes.filter((node) => ids.includes(node.id));
+};
+
 export const isNodePerspective = (node: Node) => {
 	return node.labels.includes(
 		`${GraphEditorTypeSimplified.META_LABEL}${idFormatter.separator}Perspective`
@@ -88,6 +96,10 @@ export const getNodeMetaPropertyType = (node: Node): ItemPropertyType | undefine
 
 export const getNodeSemanticIdOrId = (node: Node) => {
 	return node.semanticId || node.id;
+};
+
+export const getNodeDbOrId = (node: Node) => {
+	return node.dbId || node.id;
 };
 
 export const nodeContainsSearchTerm = (
@@ -167,6 +179,7 @@ export const processPerspective = (perspective: Perspective) => {
 export const processNodeConnections = (node: Node, connections: Array<NodeConnection>) => {
 	const relations: Array<Relation> = [];
 	const connectionsArray: Array<ConnectionObject> = [];
+	const nodeId = getNodeDbOrId(node);
 
 	/*
 		Note: Self referencing nodes will return 2 the same relations as neighbors
@@ -188,7 +201,7 @@ export const processNodeConnections = (node: Node, connections: Array<NodeConnec
 	});
 
 	relations.forEach((relation) => {
-		if (relation.source_id === node.id) {
+		if (relation.source_id === nodeId) {
 			const targetNode = nodeMap.get(relation.target_id);
 			if (targetNode) {
 				const connection: ConnectionObject = {
@@ -197,7 +210,7 @@ export const processNodeConnections = (node: Node, connections: Array<NodeConnec
 				};
 				connectionsArray.push(connection);
 			}
-		} else if (relation.target_id === node.id) {
+		} else if (relation.target_id === nodeId) {
 			const sourceNode = nodeMap.get(relation.source_id);
 			if (sourceNode) {
 				const connection: ConnectionObject = {
@@ -224,12 +237,13 @@ export const sortNodeConnections = (
 	const newRelationsOutgoing: Array<ConnectionObject> = [];
 	const relationsIncoming: Array<ConnectionObject> = [];
 	const relationsOutgoing: Array<ConnectionObject> = [];
+	const nodeId = getNodeDbOrId(node);
 
 	newConnections.forEach((connection) => {
 		if (connection.relation) {
-			if (connection.relation.source_id === node.id) {
+			if (connection.relation.source_id === nodeId) {
 				newRelationsOutgoing.push(connection);
-			} else if (connection.relation.target_id === node.id) {
+			} else if (connection.relation.target_id === nodeId) {
 				newRelationsIncoming.push(connection);
 			}
 		}
@@ -237,9 +251,9 @@ export const sortNodeConnections = (
 
 	connections.forEach((connection) => {
 		if (connection.relation) {
-			if (connection.relation.source_id === node.id) {
+			if (connection.relation.source_id === nodeId) {
 				relationsOutgoing.push(connection);
-			} else if (connection.relation.target_id === node.id) {
+			} else if (connection.relation.target_id === nodeId) {
 				relationsIncoming.push(connection);
 			}
 		}
@@ -270,12 +284,7 @@ export async function deleteNodesAndUpdateApplication(nodeIds: Array<NodeId>) {
 		const nodesDeletionResponse = await deleteNodes({ nodeIds: nodeIds });
 		const isDeletionSuccessful = nodesDeletionResponse.data.num_deleted === nodeIds.length;
 
-		nodeIds.forEach((nodeId) => {
-			itemsStore.removeNode(nodeId, true);
-		});
-
-		// re-render components subscribed to the items store nodes and relations changes
-		itemsStore.refreshNodesAndRelations();
+		itemsStore.removeNodes(nodeIds);
 
 		// TODO check if data.num_deleted === 0
 		if (isDeletionSuccessful) {
@@ -311,11 +320,7 @@ export async function patchNodesAndUpdateApplication(nodes: Array<PatchNode>) {
 			? 'notifications_success_node_update'
 			: 'notifications_success_nodes_update';
 
-	serverNodes.forEach((node) => {
-		itemsStore.setNode(node, true);
-	});
-
-	itemsStore.refreshNodes();
+	itemsStore.setNodes(serverNodes);
 
 	if (isPatchSuccessful) {
 		addNotification({

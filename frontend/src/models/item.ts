@@ -1,13 +1,15 @@
-import { Node } from 'src/models/node';
-import { Relation } from 'src/models/relation';
+import { Node, NodeId } from 'src/models/node';
+import { Relation, RelationId } from 'src/models/relation';
 
 export type Item = Node | Relation;
+export type ItemId = NodeId | RelationId;
 
 export type ItemProperty = {
-	value: string | Array<string> | boolean | number;
+	value: ItemPropertyValue;
 	edit: boolean;
 	type: ItemPropertyType;
 };
+export type ItemPropertyValue = string | Array<string> | boolean | number;
 export type ItemPropertyWithKey = ItemProperty & { key: ItemPropertyKey };
 export type ItemPropertyKey = string;
 

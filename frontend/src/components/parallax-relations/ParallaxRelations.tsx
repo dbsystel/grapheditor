@@ -2,7 +2,7 @@ import './ParallaxRelations.scss';
 import { DBCheckbox, DBIcon } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent } from 'react';
-import { ItemOverviewButton } from 'src/components/item-overview-button/ItemOverviewButton';
+import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { Table } from 'src/components/table/Table';
 import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
@@ -11,6 +11,7 @@ import { ParallaxRelationsProps, ParallaxRelationsRowProps } from './ParallaxRel
 
 export const ParallaxRelations = ({
 	nextStepRelations,
+	relationsTypeNodes,
 	onRelationChange,
 	selectedRelations,
 	id,
@@ -19,36 +20,65 @@ export const ParallaxRelations = ({
 }: ParallaxRelationsProps) => {
 	const rootElementClassName = clsx('parallax-relations', className);
 
+	if (!relationsTypeNodes.size) {
+		return null;
+	}
+
 	return (
 		<Table id={id} className={rootElementClassName} testId={testId}>
 			<TableBody className={className}>
-				{nextStepRelations.incomingRelationTypes.map((relationType, index) => (
-					<RelationRow
-						key={`incoming-${index}`}
-						relationType={relationType}
-						type="incomingRelationTypes"
-						onChange={onRelationChange}
-						isSelected={selectedRelations.incomingRelationTypes.includes(relationType)}
-					/>
-				))}
+				{nextStepRelations.incomingRelationTypes.map((relationType, index) => {
+					const relationTypeNode = relationsTypeNodes.get(relationType);
 
-				{nextStepRelations.outgoingRelationTypes.map((relationType, index) => (
-					<RelationRow
-						key={`outgoing-${index}`}
-						relationType={relationType}
-						type="outgoingRelationTypes"
-						onChange={onRelationChange}
-						isSelected={selectedRelations.outgoingRelationTypes.includes(relationType)}
-					/>
-				))}
+					if (!relationTypeNode) {
+						return null;
+					}
+
+					return (
+						<RelationRow
+							key={`incoming-${index}`}
+							relationTypeNode={relationTypeNode}
+							type="incomingRelationTypes"
+							onChange={onRelationChange}
+							isSelected={selectedRelations.incomingRelationTypes.includes(
+								relationType
+							)}
+						/>
+					);
+				})}
+
+				{nextStepRelations.outgoingRelationTypes.map((relationType, index) => {
+					const relationTypeNode = relationsTypeNodes.get(relationType);
+
+					if (!relationTypeNode) {
+						return null;
+					}
+
+					return (
+						<RelationRow
+							key={`outgoing-${index}`}
+							relationTypeNode={relationTypeNode}
+							type="outgoingRelationTypes"
+							onChange={onRelationChange}
+							isSelected={selectedRelations.outgoingRelationTypes.includes(
+								relationType
+							)}
+						/>
+					);
+				})}
 			</TableBody>
 		</Table>
 	);
 };
 
-const RelationRow = ({ relationType, type, onChange, isSelected }: ParallaxRelationsRowProps) => {
+const RelationRow = ({
+	relationTypeNode,
+	type,
+	onChange,
+	isSelected
+}: ParallaxRelationsRowProps) => {
 	const localOnChange = (event: ChangeEvent<HTMLInputElement>) => {
-		onChange(relationType, type, event.target.checked);
+		onChange(relationTypeNode.id, type, event.target.checked);
 	};
 
 	return (
@@ -66,7 +96,7 @@ const RelationRow = ({ relationType, type, onChange, isSelected }: ParallaxRelat
 			</TableCell>
 
 			<TableCell>
-				<ItemOverviewButton nodeId={relationType} />
+				<ItemInfo item={relationTypeNode} />
 			</TableCell>
 		</TableRow>
 	);

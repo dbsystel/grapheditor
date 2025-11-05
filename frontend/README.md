@@ -363,3 +363,4 @@ Team GraphEditor. Responsible frontend developers:
 5. The `useTranslation` renders twice on first component re-render, investigate
 6. Consider increasing Error.stackTraceLimit to infinity (default is 10).
 7. Change API functions keys to more meaningful names (e.g. instead of "postNode" use something like "createCode")
+8. Consider using the `exactOptionalPropertyTypes` TS option (https://devblogs.microsoft.com/typescript/announcing-typescript-4-4/#exact-optional-property-types-(--exactoptionalpropertytypes))

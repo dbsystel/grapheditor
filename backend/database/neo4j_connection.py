@@ -25,34 +25,66 @@ class Neo4jConnection:
     def __init__(self, *, host, username, password, database=None):
         self.host = host
         self.username = username
-        self.ft_support = False
         self.database = database
         self._driver = self._setup_driver(host, username, password)
 
     def has_ft(self):
-        """Return if fulltext triggers are installed and running.
+        """Return if grapheditor functions/procedures are installed and running.
 
-        Assumes once a trigger is installed, it will not be
-        deinstalled. In other words, once initialized, the database
-        stays so.
+        This is reserved for testing and dev purposes. has_ft() may return
+        true, even though the functions/procedures are not yet available, for
+        instance if a different database has them.
         """
-        if getattr(g, "skip_ft", False):
+
+        # Running has_ft with admin_tx in /dev/reset caused a problem
+        # where the checks for completion of installation steps never returned
+        # true. The problem is because the install functions run with self.tx,
+        # and one cannot see if they succeded from within self.admin_tx.
+        val = False
+        show_procedures_result = self.run("""
+            SHOW PROCEDURES YIELD name
+            RETURN 'custom.setNodeFt' in collect(name)
+            """)
+        val = show_procedures_result.single().value()
+        current_app.logger.debug(f"SHOW PROCEDURES returned {val}")
+        if not val:
             return False
 
-        if self.ft_support:
-            return True
-        result = self.admin_tx.run(
-            """CALL apoc.custom.list() YIELD name
+        # "SHOW PROCEDURES" lists procedures installed on ANY database.
+        # "apoc.custom.list()", on the other hand, lists a procedure if its
+        # installation was requested for the current database, but it may be
+        # listed before being actually available. So a more robust way is
+        # executing both.
+
+        # As noticed above, it may happen that a function/procedure is installed
+        # on another database, leading to has_ft returning true before the
+        # function/procedure is available on the current database.
+
+        # A robust way of checking would be to execute some function and catch
+        # any exception. Unfortunately that conflicts with our
+        # neo4j_exception_handler (see main.py), which is fired up as soon an
+        # exception is thrown. Sacrificing it only for test/dev purposes would
+        # be a bad idea, so we live with the restrictions of has_ft and avoid
+        # using it for driving our GUI.
+        custom_list_result = self.run("""
+            CALL apoc.custom.list() YIELD name
             RETURN 'setNodeFt' in collect(name)
+        """)
+        val = custom_list_result.single().value()
+
+        return bool(val)
+
+    def has_iga_triggers(self):
+        """Return whether IGA triggers are installed.
+        Used for controlling reset process. Don't call this from a regular
+        user session.
+        """
+        result = self.run(
+            """CALL apoc.trigger.list() YIELD name
+            RETURN "addFulltextOnCreateNode" in collect(name)
             """
         )
-        val = result.single().value()
-
-        # without a commit neo4j errors out with
-        # "Tried to execute Administration command after executing Read query"
-        if val:
-            self.ft_support = True
-        return val
+        return result.single().value()
 
     def is_valid(self):
         """Test if connection of Neo4j database works."""
@@ -128,8 +160,8 @@ class Neo4jConnection:
                 current_app.logger.error(
                     f"Error using database {self.database}. "
                 )
-                if "login" in session and g.tab_id in session["login"]:
-                    session["login"][g.tab_id]["selected_database"] = None
+                if "login_data" in session and g.tab_id in session["login_data"]:
+                    session["login_data"][g.tab_id]["selected_database"] = None
                     self.database = None
                 raise
             raise
@@ -278,10 +310,7 @@ def neo4j_connect():
 
 def fetch_connection_by_id(tab_id):
     """Given a tab id, return a corresponding Neo4jConnection instance."""
-    if "login_data" not in session:
-        session["login_data"] = {}
-
-    if tab_id not in session["login_data"]:
+    if "login_data" not in session or tab_id not in session["login_data"]:
         # we allow reusing connection from a previously used tab ID, so that
         # the user doesn't have to relog on each tab
         if "last_tab_id" in session:
@@ -289,11 +318,13 @@ def fetch_connection_by_id(tab_id):
                 "Reusing login credentials from last tab ID"
             )
             last_tab_id = session["last_tab_id"]
+            if last_tab_id not in session["login_data"]:
+                abort_with_json(401, "No connection data for last_tab_id in session.")
             # for now we don't persist connections per se, only login info.
             # Connections are reused anyway (see _setup_driver).
-            session["login_data"][tab_id] = dict(
-                session["login_data"][last_tab_id]
-            )
+            if "login_data" not in session:
+                session["login_data"] = dict()
+            session["login_data"][tab_id] = dict(session["login_data"][last_tab_id])
             select_style(get_selected_style(tab_id=last_tab_id), tab_id=tab_id)
         else:
             abort_with_json(401, "missing last_tab_id in session")

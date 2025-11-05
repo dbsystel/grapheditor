@@ -17,8 +17,10 @@ class GraphDatabase(ABC):
     # ====================== Node related =====================================
 
     @abstractmethod
-    def create_node(self, node_data):
-        """Create node from a dictionary with labels and properties."""
+    def create_nodes(self, node_data_list):
+        """Create multiple nodes at once.
+        For now this method transforms node data contained in its input.
+        """
         pass
 
     @abstractmethod
@@ -34,6 +36,13 @@ class GraphDatabase(ABC):
         If an ID is not found and replace_by_pseudo_node is True, the ID is
         mapped to a pseudo-node. Otherwise map it to None.
         """
+        pass
+
+    @abstractmethod
+    def get_nodes_by_names(self, names, filters=None):
+        """Fetch multiple nodes by name__tech_.
+        Return a map of name to the corresponding node.
+        If a name is not found, leave it out of the map."""
         pass
 
     @abstractmethod
@@ -135,8 +144,10 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def create_relation(self, relation_data):
-        """Create a new relation from a dict with type and properties"""
+    def create_relations(self, relation_data_list):
+        """Create multiple nodes at once.
+        For now this method transforms node data contained in its input.
+        """
         pass
 
     @abstractmethod

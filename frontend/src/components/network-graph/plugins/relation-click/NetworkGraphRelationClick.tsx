@@ -11,7 +11,7 @@ export const NetworkGraphRelationClick = () => {
 	const { highlightRelation, unHighlightRelations, unHighlightNodes } = useGraphStore(
 		(store) => store
 	);
-	const getRelation = useItemsStore((store) => store.getRelation);
+	const getStoreRelation = useItemsStore((store) => store.getStoreRelation);
 
 	useEffect(() => {
 		// open relation details on relation click
@@ -23,13 +23,13 @@ export const NetworkGraphRelationClick = () => {
 	}, []);
 
 	function enableRelationDetailsOnClick(eventPayload: SigmaEdgeEventPayload) {
-		const relation = getRelation(eventPayload.edge);
+		const relation = getStoreRelation(eventPayload.edge);
 
 		if (relation) {
 			highlightRelation(eventPayload.edge);
 
 			setEntry({
-				itemId: relation.id,
+				item: relation,
 				itemType: 'relation',
 				onMount: () => localHighlightRelation(eventPayload.edge),
 				onDrawerClose: unHighlightRelations

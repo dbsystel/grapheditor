@@ -72,7 +72,7 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 					key="header-settings__language_selection"
 					value={language}
 					onChange={onLanguageChange}
-					options={[{ value: 'de' }, { value: 'en' }]}
+					options={[{ value: 'de' }, { value: 'en' }, { value: 'cimode' }]}
 					label={t('language_selection_title')}
 				/>
 			),

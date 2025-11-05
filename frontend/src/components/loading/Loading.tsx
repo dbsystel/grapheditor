@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { Children, cloneElement, isValidElement } from 'react';
 import { LoadingProps } from './Loading.interfaces';
 
-const loadingStyleClassName = 'loading--semi-transparent';
+const loadingStyleClassName = 'loading--is-loading';
 
 /**
  * Simple "loading" component.

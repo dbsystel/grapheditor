@@ -1,18 +1,16 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+	applySelectedAlgorithm,
 	fitGraphToViewport,
 	hideGraphContainer,
+	indexAndRefreshGraph,
 	onNodesRemove,
 	onNodesUpdate,
 	onRelationsRemove,
 	onRelationsUpdate,
 	showGraphContainer
 } from 'src/components/network-graph/helpers';
-import { assignForceLayout } from 'src/components/network-graph/layouts/force';
-import { assignForceAtlas2Layout } from 'src/components/network-graph/layouts/forceAtlas2';
-import { assignNoverlapLayout } from 'src/components/network-graph/layouts/noverlap';
-import { assignRandomLayout } from 'src/components/network-graph/layouts/random';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -20,11 +18,7 @@ import { useSearchStore } from 'src/stores/search';
 import { useSettingsStore } from 'src/stores/settings';
 import {
 	GRAPH_DEFAULT_LABEL_DARK_COLOR,
-	GRAPH_DEFAULT_LABEL_LIGHT_COLOR,
-	GRAPH_LAYOUT_FORCE,
-	GRAPH_LAYOUT_FORCE_ATLAS_2,
-	GRAPH_LAYOUT_NOVERLAP,
-	GRAPH_LAYOUT_RANDOM
+	GRAPH_DEFAULT_LABEL_LIGHT_COLOR
 } from 'src/utils/constants';
 import { isNonPseudoNode } from 'src/utils/helpers/nodes';
 
@@ -33,8 +27,6 @@ export const LoadGraph = () => {
 	const {
 		unHighlightNodes,
 		unHighlightRelations,
-		adaptRelationsTypeAndCurvature,
-		indexParallelRelations,
 		addNode,
 		addRelation,
 		setIsGraphRendered,
@@ -48,7 +40,7 @@ export const LoadGraph = () => {
 		nodes,
 		relations
 	} = useItemsStore((store) => store);
-	const { algorithm } = useSearchStore((store) => store);
+	const algorithm = useSearchStore((store) => store.algorithm);
 	const theme = useSettingsStore((store) => store.theme);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const { t } = useTranslation();
@@ -127,30 +119,9 @@ export const LoadGraph = () => {
 			}
 		});
 
-		// prepare relation parallel edges indexation
-		indexParallelRelations();
-		// render curved relations (if necessary)
-		adaptRelationsTypeAndCurvature();
+		indexAndRefreshGraph();
 
-		// this is currently the only way that re-renders sigma properly when
-		// there is a layout or nodes/relations change (clearing/refreshing
-		// /rendering sigma/sigma graph didn't work, not sure why)
-		sigma.setCustomBBox(null);
-		sigma.refresh({ skipIndexation: true });
-
-		let needToSubscribeToAfterRender = true;
-
-		if (algorithm === GRAPH_LAYOUT_FORCE_ATLAS_2) {
-			assignForceAtlas2Layout();
-		} else if (algorithm === GRAPH_LAYOUT_FORCE) {
-			assignForceLayout();
-		} else if (algorithm === GRAPH_LAYOUT_NOVERLAP) {
-			assignNoverlapLayout();
-		} else if (algorithm === GRAPH_LAYOUT_RANDOM) {
-			assignRandomLayout();
-		} else {
-			needToSubscribeToAfterRender = false;
-		}
+		const needToSubscribeToAfterRender = applySelectedAlgorithm();
 
 		if (needToSubscribeToAfterRender) {
 			sigma.once('afterRender', fitGraph);

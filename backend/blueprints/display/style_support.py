@@ -3,10 +3,12 @@
 import math
 import random
 import os
+import hashlib
 import re
 import ast
 import textwrap
 import pyparsing as pp
+
 from RestrictedPython import (
     compile_restricted,
     safe_builtins,
@@ -64,6 +66,17 @@ RULE_PAT = pp.Group(
 
 RULES_PAT = pp.OneOrMore(RULE_PAT)
 
+
+def get_luminance(hex_color):
+    if hex_color.startswith("#"):
+        hex_color = hex_color[1:]
+
+    hex_red = int(hex_color[0:2], base=16)
+    hex_green = int(hex_color[2:4], base=16)
+    hex_blue = int(hex_color[4:6], base=16)
+
+    return hex_red * 0.2126 + hex_green * 0.7152 + hex_blue * 0.0722
+
 # a dict with functions and variables available for using in _safe_eval
 globals_dict = dict(
     __builtins__=dict(
@@ -74,6 +87,8 @@ globals_dict = dict(
         type=type,
         random=random,
         re=re,
+        hashlib=hashlib,
+        get_luminance = get_luminance
     )
     | safe_builtins
     | limited_builtins

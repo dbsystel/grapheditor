@@ -5,13 +5,8 @@ import clsx from 'clsx';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DatabaseInfo } from 'src/models/database';
-import { useClipboardStore } from 'src/stores/clipboard';
-import { useContextMenuStore } from 'src/stores/context-menu';
-import { useDrawerStore } from 'src/stores/drawer';
-import { useGraphStore } from 'src/stores/graph';
-import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { useSearchStore } from 'src/stores/search';
+import { resetApplicationStates } from 'src/utils/helpers/general';
 import { useGetDatabaseCurrent } from 'src/utils/hooks/useGetDatabaseCurrent';
 import { useGetDatabases } from 'src/utils/hooks/useGetDatabases';
 import { usePostDatabaseCurrent } from 'src/utils/hooks/usePostDatabaseCurrent';
@@ -43,14 +38,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 	const { reFetch, isLoading: isPostDatabaseCurrentLoading } = usePostDatabaseCurrent({
 		name: '',
 		onSuccess: () => {
-			// TODO check if other properties should be reset in search store,
-			//  and if a "reset" method like in stores below would be useful
-			useSearchStore.getState().setResult([], '');
-			useClipboardStore.getState().reset();
-			useContextMenuStore.getState().reset();
-			useDrawerStore.getState().reset();
-			useGraphStore.getState().reset();
-			useItemsStore.getState().reset();
+			resetApplicationStates();
 
 			addNotification({
 				title: t('notifications_success_user_database_change'),

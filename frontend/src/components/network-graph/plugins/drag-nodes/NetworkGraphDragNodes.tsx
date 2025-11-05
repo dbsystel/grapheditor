@@ -32,17 +32,18 @@ export const NetworkGraphDragNodes = () => {
 		const currentPosition = sigma.viewportToGraph(event);
 
 		useGraphStore.getState().highlightedNodeIds.forEach((nodeId) => {
-			graph.updateNodeAttribute(nodeId, 'x', (currentX) => {
-				return (currentX || 0) + (currentPosition.x - previousPosition.x);
-			});
-			graph.updateNodeAttribute(nodeId, 'y', (currentY) => {
-				return (currentY || 0) + (currentPosition.y - previousPosition.y);
+			const currentX = graph.getNodeAttribute(nodeId, 'x');
+			const currentY = graph.getNodeAttribute(nodeId, 'y');
+
+			useGraphStore.getState().setNodePosition(nodeId, {
+				x: (currentX || 0) + (currentPosition.x - previousPosition.x),
+				y: (currentY || 0) + (currentPosition.y - previousPosition.y)
 			});
 
 			delayedCallback(() => {
 				setNodePosition(
+					nodeId,
 					{
-						id: nodeId,
 						x: graph.getNodeAttribute(nodeId, 'x'),
 						y: graph.getNodeAttribute(nodeId, 'y')
 					},

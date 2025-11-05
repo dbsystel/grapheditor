@@ -1,4 +1,11 @@
 import { AxiosError } from 'axios';
+import { useClipboardStore } from 'src/stores/clipboard';
+import { useContextMenuStore } from 'src/stores/context-menu';
+import { useDrawerStore } from 'src/stores/drawer';
+import { useGraphStore } from 'src/stores/graph';
+import { useItemsStore } from 'src/stores/items';
+import { useParallaxStore } from 'src/stores/parallax';
+import { useSearchStore } from 'src/stores/search';
 import { AppLanguage, AppTheme, useSettingsStore } from 'src/stores/settings';
 import { APP_LANGUAGES } from 'src/utils/constants';
 
@@ -59,7 +66,7 @@ export const isProduction = () => {
 	return import.meta.env.PROD;
 };
 
-export const objectContainsKey = (object: Record<string, unknown>, key: string) => {
+export const objectHasOwnProperty = (object: Record<string, unknown>, key: string) => {
 	return Object.prototype.hasOwnProperty.call(object, key);
 };
 
@@ -225,4 +232,14 @@ export const downloadFile = (options: DownloadFileOptions) => {
 		anchorElement.click();
 		anchorElement.remove();
 	}
+};
+
+export const resetApplicationStates = () => {
+	useSearchStore.getState().setResult(null, '');
+	useClipboardStore.getState().reset();
+	useContextMenuStore.getState().reset();
+	useDrawerStore.getState().reset();
+	useGraphStore.getState().reset();
+	useItemsStore.getState().reset();
+	useParallaxStore.getState().reset();
 };

@@ -27,19 +27,23 @@ export const NetworkGraphNodeRelationMouseover = () => {
 		StateManager.getInstance().on('NODE_TOOLTIP', onItemTooltip);
 		StateManager.getInstance().on('NODE_LEAVE', onLeaveItem);
 		StateManager.getInstance().on('NODE_CLICK', resetTooltipRender);
+		StateManager.getInstance().on('NODE_CONTEXT_MENU', resetTooltipRender);
 
 		StateManager.getInstance().on('RELATION_TOOLTIP', onItemTooltip);
 		StateManager.getInstance().on('RELATION_LEAVE', onLeaveItem);
 		StateManager.getInstance().on('RELATION_CLICK', resetTooltipRender);
+		StateManager.getInstance().on('RELATION_CONTEXT_MENU', resetTooltipRender);
 
 		return () => {
 			StateManager.getInstance().off('NODE_TOOLTIP', onItemTooltip);
 			StateManager.getInstance().off('NODE_LEAVE', onLeaveItem);
-			StateManager.getInstance().off('NODE_CLICK', onLeaveItem);
+			StateManager.getInstance().off('NODE_CLICK', resetTooltipRender);
+			StateManager.getInstance().off('NODE_CONTEXT_MENU', resetTooltipRender);
 
 			StateManager.getInstance().off('RELATION_TOOLTIP', onItemTooltip);
 			StateManager.getInstance().off('RELATION_LEAVE', onLeaveItem);
 			StateManager.getInstance().off('RELATION_CLICK', resetTooltipRender);
+			StateManager.getInstance().off('RELATION_CONTEXT_MENU', resetTooltipRender);
 		};
 	}, []);
 

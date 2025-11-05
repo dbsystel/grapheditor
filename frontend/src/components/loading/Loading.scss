@@ -1,7 +1,21 @@
 .loading {
-	&--semi-transparent {
-		opacity: 0.25 !important;
+	&--is-loading {
 		pointer-events: none !important;
 		user-select: none !important;
+		animation: pulse 2s infinite;
+	}
+}
+
+@keyframes pulse {
+	0% {
+		opacity: 0.75;
+	}
+
+	50% {
+		opacity: 0.25;
+	}
+
+	100% {
+		opacity: 0.75;
 	}
 }

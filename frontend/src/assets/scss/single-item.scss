@@ -16,22 +16,6 @@
 		min-width: 0;
 		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
 
-		&:hover {
-			> .db-button {
-				visibility: visible;
-				opacity: 1;
-				transition: opacity 0.5s ease;
-			}
-		}
-
-		> .db-button {
-			visibility: hidden;
-			opacity: 0;
-			transition:
-				visibility 0s,
-				opacity 0.5s ease;
-		}
-
 		p {
 			margin: var(--db-spacing-fixed-3xs);
 		}
@@ -44,9 +28,19 @@
 
 	&__header-content {
 		font: var(--db-type-body-md);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
+		> .db-tooltip {
+			position: absolute !important;
+			max-width: 300px !important;
+			inset-inline: auto !important;
+			inset-block: auto !important;
+			transform: translate(0, 100%) !important;
+		}
 	}
 
 	&__title {
@@ -85,6 +79,10 @@
 			bottom: -5px;
 			left: 0;
 		}
+	}
+
+	&__description {
+		word-break: break-word;
 	}
 
 	.db-accordion {

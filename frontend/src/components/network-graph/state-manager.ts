@@ -2,8 +2,8 @@ import {
 	CameraState,
 	MouseCoords,
 	SigmaEdgeEventPayload,
-	SigmaEventPayload,
 	SigmaNodeEventPayload,
+	SigmaStageEventPayload,
 	WheelCoords
 } from 'sigma/types';
 import { NodeId } from 'src/models/node';
@@ -40,7 +40,7 @@ type PayloadType<T extends StateManagerStateKeys> = T extends
 			: T extends 'NODE_DRAG'
 				? MouseCoords & { nodeId: NodeId }
 				: T extends 'NODE_QUICK' | 'STAGE_CONTEXT_MENU'
-					? SigmaEventPayload
+					? SigmaStageEventPayload
 					: T extends 'CAMERA_UPDATE'
 						? CameraState
 						: T extends 'SCALE' | 'ZOOM_FACTOR'

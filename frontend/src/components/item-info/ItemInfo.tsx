@@ -43,9 +43,9 @@ export const ItemInfo = ({
 
 	const onClick = () => {
 		if (isInsideItemsDrawer) {
-			addEntry({ itemId: item.id });
+			addEntry({ item: item });
 		} else {
-			setEntry({ itemId: item.id });
+			setEntry({ item: item });
 		}
 	};
 
@@ -78,6 +78,7 @@ export const ItemInfo = ({
 			event.preventDefault();
 			useContextMenuStore.getState().open({
 				type: 'node',
+				event: event,
 				nodeIds: [item.id],
 				x: event.clientX,
 				y: event.clientY

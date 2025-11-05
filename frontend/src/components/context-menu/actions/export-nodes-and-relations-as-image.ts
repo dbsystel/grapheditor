@@ -6,11 +6,11 @@ import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { downloadFile, getFormattedCurrentDateTime, parseError } from 'src/utils/helpers/general';
 
-export const exportNodesAndRelationsAsImageAction = async (
+export const exportNodesAndTheirRelationsAsImageAction = async (
 	nodeIds: Array<NodeId>,
 	mimeType: string
 ) => {
-	const className = 'context-menu-modal--export';
+	const className = 'context-menu--export';
 	const screenshotPadding = 10; //px
 	const sigma = useGraphStore.getState().sigma;
 

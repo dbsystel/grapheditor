@@ -1,0 +1,11 @@
+.grassfile_manager {
+	&__style-upload-input {
+		margin-bottom: var(--db-spacing-fixed-md);
+	}
+
+	&__style-upload-buttons {
+		display: flex;
+		justify-content: flex-end;
+		column-gap: var(--db-spacing-fixed-sm);
+	}
+}

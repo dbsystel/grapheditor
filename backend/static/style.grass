@@ -1,8 +1,24 @@
 node {
-  color: #e0b6b6;
+  color*: """
+    labellist = list(o.labels)
+    if "___tech_" not in labellist: # new nodes don't have the tech label immediately
+      labellist.append("___tech_")
+    node_labelstring = " ".join(sorted(labellist))
+    hash = hashlib.md5(node_labelstring.encode('utf-8')).hexdigest()[:6]
+    components = [int(hash[i-2:i],16)/255 for i in [2,4,6]]
+    pastel_factor  = 0.5 # use 0 to turn of pastel colors, 1 to completely pastelize it
+    components = [int(round((component+pastel_factor)/(1+pastel_factor)*255,0)) for component in components]
+    node_color = "#"+ ("".join(f'{component:02x}' for component in components))
+    node_color
+  """;
+
   border-color: #818185;
   border-width: 1px;
-  text-color-internal: #000000;
+  text-color-internal*: """
+    luminance = get_luminance(node_color)
+    luminance < 170 and "white" or "black"
+  """;
+
   caption*: """
     filtered_labels = sorted([l for l in [l.split("::")[-1] for l in o.labels] if l not in ['___tech_']])
 
@@ -60,6 +76,12 @@ node.MetaProperty__tech_ {
 
 node.Namespace__tech_ {
   color: #d8d8d8;
+  border-color: #000000;
+  text-color-internal: #000000;
+}
+
+node.UnitDef__tech_ {
+  color: #cebbd4;
   border-color: #000000;
   text-color-internal: #000000;
 }

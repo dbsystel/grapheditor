@@ -1,0 +1,9 @@
+.grassfile_manager {
+	display: flex;
+	align-items: end;
+	gap: var(--db-spacing-fixed-sm);
+
+	.db-select {
+		inline-size: 90%;
+	}
+}

@@ -1,7 +1,5 @@
-import './CreatePerspectiveDialog.scss';
-import { DBButton, DBCard, DBIcon, DBInput, DBTextarea } from '@db-ux/react-core-components';
+import { DBButton, DBInput, DBTextarea } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { createPortal } from 'react-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
@@ -12,6 +10,8 @@ import {
 	CreatePerspectiveDialogForm,
 	CreatePerspectiveDialogProps
 } from './CreatePerspectiveDialog.interfaces';
+import './CreatePerspectiveDialog.scss';
+import { Modal } from 'src/components/modal/Modal';
 
 export const CreatePerspectiveDialog = ({
 	onSuccess,
@@ -90,92 +90,73 @@ export const CreatePerspectiveDialog = ({
 		}
 	};
 
-	return createPortal(
-		<dialog className={rootElementClassName} id={id} data-testid={testId} open={true}>
-			<DBCard className="create-perspective-dialog__modal">
-				<div className="create-perspective-dialog__modal-headline">
-					<h3 data-testid="header_create_new_perspective_title">
-						{t('header_create_new_perspective_title')}
-					</h3>
-					<DBButton
-						onClick={closeFunction}
-						noText
-						variant="ghost"
-						icon="cross"
-						data-testid="close_button"
+	return (
+		<Modal
+			isOpen={true}
+			headline={t('header_create_new_perspective_title')}
+			description={t('header_create_new_perspective_description')}
+			onClose={closeFunction}
+		>
+			<form onSubmit={handleSubmit(createPerspective)} className={rootElementClassName}>
+				<div className="create-perspective-dialog__input">
+					<Controller
+						control={control}
+						name="name"
+						rules={validationRules}
+						render={({ field: { value, onBlur, onChange }, fieldState: { error } }) => (
+							<DBInput
+								required
+								label={t('header_create_new_perspective_label_title')}
+								placeholder={t('header_create_new_perspective_placeholder_title')}
+								onBlur={onBlur}
+								onChange={onChange}
+								disabled={isLoading}
+								invalidMessage={error?.message || undefined}
+								validation={error ? 'invalid' : undefined}
+								value={value}
+								data-testid="create_perspective_title_input"
+							/>
+						)}
+					/>
+
+					<Controller
+						control={control}
+						name="description"
+						render={({ field: { value, onBlur, onChange } }) => (
+							<DBTextarea
+								label={t('header_create_new_perspective_label_description')}
+								placeholder={t(
+									'header_create_new_perspective_placeholder_description'
+								)}
+								onBlur={onBlur}
+								value={value}
+								onChange={onChange}
+								disabled={isLoading}
+							/>
+						)}
 					/>
 				</div>
-				<div className="create-perspective-dialog__modal-info">
-					<DBIcon icon="information_circle" />
-					<p>{t('header_create_new_perspective_description')}</p>
+				<div className="create-perspective-dialog__buttons">
+					<DBButton
+						onClick={closeFunction}
+						variant="ghost"
+						disabled={isLoading}
+						icon="cross"
+					>
+						{t('header_create_new_perspective_stop_button')}
+					</DBButton>
+					<DBButton
+						type="submit"
+						id={id}
+						data-testid={testId}
+						disabled={isLoading}
+						icon="check"
+						variant="brand"
+					>
+						{t('header_create_new_perspective_save_button')}
+					</DBButton>
 				</div>
-				<form onSubmit={handleSubmit(createPerspective)}>
-					<div className="create-perspective-dialog__input">
-						<Controller
-							control={control}
-							name="name"
-							rules={validationRules}
-							render={({
-								field: { value, onBlur, onChange },
-								fieldState: { error }
-							}) => (
-								<DBInput
-									required
-									label={t('header_create_new_perspective_label_title')}
-									placeholder={t(
-										'header_create_new_perspective_placeholder_title'
-									)}
-									onBlur={onBlur}
-									onChange={onChange}
-									disabled={isLoading}
-									invalidMessage={error?.message || undefined}
-									validation={error ? 'invalid' : undefined}
-									value={value}
-									data-testid="create_perspective_title_input"
-								/>
-							)}
-						/>
-
-						<Controller
-							control={control}
-							name="description"
-							render={({ field: { value, onBlur, onChange } }) => (
-								<DBTextarea
-									label={t('header_create_new_perspective_label_description')}
-									placeholder={t(
-										'header_create_new_perspective_placeholder_description'
-									)}
-									onBlur={onBlur}
-									value={value}
-									onChange={onChange}
-									disabled={isLoading}
-								/>
-							)}
-						/>
-					</div>
-					<div className="create-perspective-dialog__buttons">
-						<DBButton
-							onClick={closeFunction}
-							variant="ghost"
-							disabled={isLoading}
-							icon="cross"
-						>
-							{t('header_create_new_perspective_stop_button')}
-						</DBButton>
-						<DBButton
-							type="submit"
-							id={id}
-							data-testid={testId}
-							disabled={isLoading}
-							icon="check"
-							variant="brand"
-						>
-							{t('header_create_new_perspective_save_button')}
-						</DBButton>
-					</div>
-				</form>
-			</DBCard>
-		</dialog>,
-		document.body
+			</form>
+		</Modal>
 	);
 };

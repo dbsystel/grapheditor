@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { Node } from 'src/models/node';
-import { useItemsStore } from 'src/stores/items';
 import { nodesApi } from 'src/utils/api/nodes';
 import { GraphEditorTypeSimplified, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import {
@@ -31,7 +30,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const [labelInputValue, setLabelInputValue] = useState('');
 	// all labels (used for filtering options for the ItemFinder component)
 	const allLabels = useRef<Array<Node>>([]);
-	const setNode = useItemsStore((store) => store.setNode);
 	const rootElementClassName = clsx('node-labels-item-finder', className);
 	const label = props.label || t('create_node_label');
 	const [tooltipLabel, setTooltipLabel] = useState<Node | null>(null);
@@ -55,10 +53,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const { isLoading: isLabelsLoading, reFetch: reFetchLabels } = useGetNodesLabelsNodes({
 		executeImmediately: false,
 		onSuccess: (data) => {
-			data.forEach((node) => {
-				setNode(node, true);
-			});
-
 			allLabels.current = data;
 			setLabelOptions(data);
 		}

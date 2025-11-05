@@ -3,7 +3,7 @@ import { DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { objectContainsKey } from 'src/utils/helpers/general';
+import { objectHasOwnProperty } from 'src/utils/helpers/general';
 import { ParaQueryEditorProps } from './ParaQueryEditor.interfaces';
 
 /**
@@ -48,11 +48,11 @@ export const ParaQueryEditor = ({
 	}, [paraQuery]);
 
 	const renderParameter = (parameterKey: string) => {
-		const parameter = objectContainsKey(paraQuery.parameters, parameterKey || '')
+		const parameter = objectHasOwnProperty(paraQuery.parameters, parameterKey || '')
 			? paraQuery.parameters[parameterKey || '']
 			: null;
 
-		if (!parameter || parameter.type !== 'string') {
+		if (!parameter || parameter.type.toLowerCase() !== 'string') {
 			return '';
 		}
 

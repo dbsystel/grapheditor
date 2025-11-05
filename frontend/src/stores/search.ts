@@ -1,7 +1,5 @@
-import { isAxiosError } from 'axios';
 import i18n from 'src/i18n';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
-import { searchApi } from 'src/utils/api/search';
 import {
 	APP_STORAGE_KEY_PREFIX,
 	GLOBAL_SEARCH_ALGORITHM_KEY,
@@ -18,8 +16,7 @@ import {
 	GRAPH_LAYOUT_FORCE_ATLAS_2,
 	GRAPH_PRESENTATION_GRAPH
 } from 'src/utils/constants';
-import { clone, downloadFile, parseError } from 'src/utils/helpers/general';
-import { buildSimpleSearchResult } from 'src/utils/helpers/search';
+import { clone, downloadFile } from 'src/utils/helpers/general';
 import { create } from 'zustand';
 import { createJSONStorage, persist, subscribeWithSelector } from 'zustand/middleware';
 
@@ -36,6 +33,7 @@ export type SearchResultType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES
 	| '';
 
 export type SearchStoreResult = {
@@ -71,8 +69,6 @@ type SearchStore = {
 	setPresentation: (presentation: string) => void;
 	setAlgorithm: (algorithm: LayoutModuleType) => void;
 	setStyle: (style: string) => void;
-	// TODO move to search API
-	executeSearch: () => Promise<void>;
 	setSearchValue: (searchValue: string) => void;
 	getDefaultSearchValue: (type: SearchStoreSearchType) => string;
 	setResetStyles: (value: boolean) => void;
@@ -157,59 +153,6 @@ export const useSearchStore = create<SearchStore>()(
 					}),
 				setIsResultProcessed: (processed) => {
 					set({ isResultProcessed: processed });
-				},
-				executeSearch: async () => {
-					const query = get().query;
-					const cypherQueryParameters = get().cypherQueryParameters;
-					const type = get().type;
-					let searchResultType: SearchResultType = '';
-
-					if (!query.trim()) {
-						return;
-					}
-
-					get().setResult(null, '');
-					get().setIsLoading(true);
-
-					let responseResult: CypherQuerySearchResult = [];
-
-					try {
-						// if cypher query search
-						if (
-							type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
-							type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES
-						) {
-							const response = await searchApi.postCypherQuerySearch({
-								queryText: query || '',
-								parameters: cypherQueryParameters
-							});
-
-							responseResult = response.data.result;
-							searchResultType = GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY;
-						}
-						// if regular, full-text search
-						else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
-							const responses = await searchApi.getFullTextSearch({
-								searchTerm: query || ''
-							});
-							// make full-text search results format consistent with the cypher query
-							// results format, so we can reuse existing components
-							responseResult = buildSimpleSearchResult(
-								responses[0].data, // nodes API response
-								responses[1].data // relations API response
-							);
-							searchResultType = GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT;
-						}
-					} catch (error) {
-						if (isAxiosError(error)) {
-							Promise.reject(error);
-						} else {
-							throw new Error(parseError(error));
-						}
-					} finally {
-						get().setIsLoading(false);
-						get().setResult(responseResult, searchResultType);
-					}
 				},
 				setSearchValue: (searchValue) => set({ searchValue: searchValue }),
 				getDefaultSearchValue: (type) => {

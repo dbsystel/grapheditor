@@ -1,3 +1,4 @@
+import './MainVisual.scss';
 import { DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { lazy, Suspense, useMemo, useRef } from 'react';
@@ -12,7 +13,6 @@ import {
 	GRAPH_PRESENTATION_RESULT_TABLE
 } from 'src/utils/constants';
 import { MainVisualProps } from './MainVisual.interfaces';
-import './MainVisual.scss';
 
 const NetworkGraph = lazy(() =>
 	import('src/components/network-graph/NetworkGraph').then((module) => {

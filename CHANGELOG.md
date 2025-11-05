@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.10.4
+
+- Context menu with many new features
+- Bugfix when duplicating tabs in browser
+- Improved handling of .grass files
+- Improved security
+
 ## 2025.10.3
 
 - Improved nodefinder widget

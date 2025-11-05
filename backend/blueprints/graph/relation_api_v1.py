@@ -31,7 +31,10 @@ class Relations(MethodView):
 
         Returns the newly created relation
         """
-        return current_app.graph_db.create_relation(relation_data)
+        new_rels = current_app.graph_db.create_relations([relation_data])
+        if not new_rels:
+            abort_with_json(500, "Couldn't create relation.")
+        return next(iter(new_rels.values()))
 
     @blp.arguments(
         relation_model.RelationQuery, as_kwargs=True, location="query"
@@ -126,6 +129,19 @@ class RelationsBulkPatch(MethodView):
         return dict(
             relations=result
         )
+
+
+@blp.route("/bulk_post")
+class RelationsBulkPost(MethodView):
+    @blp.arguments(
+        relation_model.RelationBulkPostSchema, as_kwargs=True, location="json"
+    )
+    @blp.response(200, relation_model.RelationBulkPostResponseSchema)
+    @require_tab_id()
+    def post(self, relations):
+        return {
+            "relations": current_app.graph_db.create_relations(relations)
+        }
 
 
 @blp.route("/<rid>")

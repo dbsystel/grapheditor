@@ -1,5 +1,6 @@
 import './ContextMenu.scss';
 import { DBButton } from '@db-ux/react-core-components';
+import clsx from 'clsx';
 import { CSSProperties, Fragment, ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loading } from 'src/components/loading/Loading';
@@ -8,19 +9,19 @@ import { StateManager } from 'src/components/network-graph/state-manager';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
 import { usePostContextMenuActions } from 'src/utils/hooks/usePostContextMenuActions';
-import { ContextMenuOption, ContextMenuState } from './ContextMenu.interfaces';
+import { ContextMenuOption, ContextMenuProps, ContextMenuState } from './ContextMenu.interfaces';
 import { filterContextMenuOptions } from './helpers';
 
-export const ContextMenu = () => {
+export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 	const { t } = useTranslation();
-	const { isOpen, x, y, nodeIds, relationIds, getOptions, close, onClose } = useContextMenuStore(
-		(store) => store
-	);
+	const { isOpen, x, y, nodeIds, relationIds, getOptions, close, onClose, isActionLoading } =
+		useContextMenuStore((store) => store);
 	const [contextMenuCustomContent, setContextMenuCustomContent] = useState<ReactNode>(null);
 	const [contextMenuOptions, setContextMenuOptions] = useState<ContextMenuState>({
 		internal: {},
 		fromServer: []
 	});
+	const rootElementClassName = clsx('context-menu', className);
 
 	const { reFetch, isLoading } = usePostContextMenuActions(
 		{
@@ -84,16 +85,25 @@ export const ContextMenu = () => {
 	}
 
 	return (
-		<Modal isOpen={true} className="context-menu-modal">
-			<div
-				className="context-menu-modal__content"
-				style={contextMenuStyle}
-				ref={refContextMenu}
-			>
-				<Loading isLoading={isLoading} renderChildrenWhileLoading={false}>
-					{contextMenuCustomContent}
+		<Modal
+			isOpen={true}
+			shouldUseBackdrop={false}
+			shouldDisplayAsModal={false}
+			id={id}
+			className={rootElementClassName}
+			data-testid={testId}
+		>
+			<div className="context-menu__content" style={contextMenuStyle} ref={refContextMenu}>
+				<Loading
+					key={1}
+					isLoading={isLoading || isActionLoading}
+					renderChildrenWhileLoading={true}
+					// contextMenuCustomContent content is a function, therefore no className can be added to it
+					wrapChildren={isActionLoading}
+				>
+					{!!contextMenuCustomContent && contextMenuCustomContent}
 					{!contextMenuCustomContent && (
-						<ul className="context-menu-modal__list">
+						<ul className="context-menu__list">
 							{filteredOptions.length === 0 && (
 								<p>{t('context_menu_no_options_to_render')}</p>
 							)}
@@ -102,7 +112,7 @@ export const ContextMenu = () => {
 								return (
 									<li key={index}>
 										<DBButton
-											className="context-menu-modal__button"
+											className="context-menu__button"
 											variant="ghost"
 											size="small"
 											onClick={() => {
@@ -129,12 +139,12 @@ const renderOptions = (options?: Array<ContextMenuOption> | undefined) => {
 	}
 
 	return (
-		<div className="context-menu-modal__list-options">
+		<div className="context-menu__list-options">
 			{options.map((option, index) => {
 				return (
 					<Fragment key={option.label + index}>
 						<DBButton
-							className="context-menu-modal__button"
+							className="context-menu__button"
 							variant="ghost"
 							size="small"
 							onClick={option.onClick}

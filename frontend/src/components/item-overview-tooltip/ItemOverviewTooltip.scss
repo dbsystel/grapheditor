@@ -9,10 +9,6 @@
 		font-weight: normal;
 	}
 
-	&__item-overview-tooltip-description {
-		font-size: 1.4em;
-	}
-
 	&__item-overview-tooltip-labels,
 	&__item-overview-tooltip-type {
 		margin: 15px 0;
@@ -21,8 +17,8 @@
 	&__item-overview-tooltip-label-names {
 		display: flex;
 		gap: 4px;
-	}	
-	
+	}
+
 	&__item-overview-tooltip-title {
 		display: flex;
 		align-items: center;

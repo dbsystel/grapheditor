@@ -1,7 +1,22 @@
-.context-menu__sub-menu {
-	min-width: 300px;
-	margin: 0 15px 5px 5px;
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
+.context-menu {
+	&__sub-menu {
+		min-width: 300px;
+		margin: 0 5px 5px 5px;
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+
+	 	label {
+			max-inline-size: none;
+		}
+
+		.db-card {
+			width: 100%;
+		}
+	}
+
+	&__add-labels-action {
+		min-width: auto;
+		width: 350px;
+	}
 }

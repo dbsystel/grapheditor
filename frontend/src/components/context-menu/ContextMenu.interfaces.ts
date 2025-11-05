@@ -1,5 +1,8 @@
 import { JSX } from 'react';
+import { GlobalComponentProps } from 'src/types/components';
 import { ContextMenuActionType } from 'src/utils/fetch/postContextMenuActions';
+
+export type ContextMenuProps = GlobalComponentProps;
 
 export type ContextMenuOption = {
 	label: string;
@@ -10,12 +13,14 @@ export type ContextMenuOption = {
 };
 
 export type ContextMenuAction =
+	| 'show'
 	| 'hide'
 	| 'delete'
 	| 'expand'
 	| 'collapse'
 	| 'copy'
 	| 'paste'
+	| 'paste_properties'
 	| 'add_relation'
 	| 'apply_layout_to_following_nodes'
 	| 'load_perspective'
@@ -24,6 +29,7 @@ export type ContextMenuAction =
 	| 'copy_nodes'
 	| 'apply_layout'
 	| 'add_labels'
+	| 'remove_labels'
 	| 'add_properties'
 	| 'export'
 	| 'save_as_perspective'

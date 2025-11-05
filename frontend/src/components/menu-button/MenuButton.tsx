@@ -28,6 +28,12 @@ export const MenuButton = ({
 	});
 	const buttonIcon = icon || 'more_vertical';
 
+	const handleOptionClick = (option: MenuButtonOption) => {
+		option.onClick?.();
+
+		setIsMenuOpen(false);
+	};
+
 	return (
 		<DBPopover
 			id={id}
@@ -45,13 +51,12 @@ export const MenuButton = ({
 					size={buttonSize}
 					noText
 					variant="ghost"
-					onClick={() => {
-						setIsMenuOpen(!isMenuOpen);
-					}}
+					onClick={() => setIsMenuOpen(!isMenuOpen)}
+					disabled={false}
 				/>
 			}
 		>
-			<OptionsContent options={options} />
+			<OptionsContent options={options} onOptionClick={handleOptionClick} />
 		</DBPopover>
 	);
 };
@@ -121,7 +126,7 @@ const MenuButtonWithSubMenu = ({
 	}
 };
 
-const OptionsContent = ({ options }: MenuButtonOptionsContentProps) => {
+const OptionsContent = ({ options, onOptionClick }: MenuButtonOptionsContentProps) => {
 	return (
 		<DBCard spacing="none">
 			{options.map((option, index) => {
@@ -138,7 +143,7 @@ const OptionsContent = ({ options }: MenuButtonOptionsContentProps) => {
 							type="button"
 							size={option.buttonSize}
 							variant="ghost"
-							onClick={option.onClick}
+							onClick={() => onOptionClick?.(option)}
 							disabled={option.isDisabled}
 							key={index.toString()}
 						>

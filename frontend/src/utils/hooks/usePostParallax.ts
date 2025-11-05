@@ -1,10 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
 import { parallaxApi } from 'src/utils/api/parallax';
-import {
-	postParallax,
-	PostParallaxParameters,
-	PostParallaxResponse
-} from 'src/utils/fetch/postParallax';
+import { PostParallaxParameters, PostParallaxResponse } from 'src/utils/fetch/postParallax';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UsePostParallaxParameters = {

@@ -22,5 +22,6 @@ export const postNodesBulkFetch = async ({ nodeIds }: PostNodesBulkFetchParamete
 		PostNodesBulkFetchAxiosParameters
 	>(endpoints.getNodesBulkFetchPath(), { ids: nodeIds });
 
+	// TODO return fetch, don't adapt data format
 	return Object.values(response.data.nodes);
 };

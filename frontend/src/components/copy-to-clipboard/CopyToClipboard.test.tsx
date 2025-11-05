@@ -32,7 +32,9 @@ describe('Components - CopyToClipboard', () => {
 
 		expect(clipboard).toEqual({
 			nodes: [testNode],
-			relations: [testRelation]
+			relations: [testRelation],
+			graphNodes: [],
+			graphRelations: []
 		});
 	});
 

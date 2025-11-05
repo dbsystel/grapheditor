@@ -167,6 +167,32 @@ def test_post_relation():
     )
 
 
+def test_post_relation_invalid_nodes():
+    "Both source and target node must exist, otherwise return 400."
+    bob_id = fetch_sample_node_id(client, "bob")
+    response = client.post(
+        BASE_URL + "/api/v1/relations",
+        headers=HEADERS,
+        json={
+            "source_id": "i_dont_exist",
+            "target_id": bob_id,
+            "type": "MetaRelation::likes",
+        }
+    )
+    assert response.status_code != 200
+
+    response = client.post(
+        BASE_URL + "/api/v1/relations",
+        headers=HEADERS,
+        json={
+            "source_id": bob_id,
+            "target_id": "i_dont_exist",
+            "type": "MetaRelation::likes",
+        }
+    )
+    assert response.status_code != 200
+
+
 def test_post_relation_type_only():
     source_id = fetch_sample_node_id(client, "bob")
     target_id = create_sample_node(client, "xena")["id"]
@@ -672,6 +698,75 @@ def test_bulk_patch_nodes():
     assert likes['properties']['MetaProperty::description__tech_']['value'] == new_likes_desc
 
 
+def test_bulk_post_nodes():
+    "Test creating multiple nodes at once."
+    sample_uuid = "5b660fd5-b295-4efb-86b5-b24dadd4df03"
+    nodes_list = [
+        {
+            "labels": ["MetaLabel::Person__dummy_",
+                       "MetaLabel::Worker__dummy_"],
+            "properties": {
+                "MetaProperty::name__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "Homer"
+                },
+                "MetaProperty::_uuid__tech_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": sample_uuid
+                }
+            }
+        },
+        {
+            "labels": ["MetaLabel::Person__dummy_"],
+            "properties": {
+                "MetaProperty::name__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "Bart",
+                },
+                "MetaProperty::hair_color__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "blond"
+                }
+            }
+        }
+    ]
+    response = client.post(
+        BASE_URL + "/api/v1/nodes/bulk_post",
+        headers=HEADERS,
+        json={
+            "nodes": nodes_list
+        }
+    )
+    assert response.status_code == 200
+    assert "nodes" in response.json
+    new_nodes = response.json["nodes"].values()
+    assert len(new_nodes) == 2
+    homer = next(n for n in new_nodes
+                 if n["properties"]["MetaProperty::name__dummy_"]["value"] == "Homer")
+    assert "MetaProperty::hair_color__dummy_" not in homer["properties"]
+    assert homer["properties"]["MetaProperty::_uuid__tech_"] != sample_uuid
+
+    bart = next(n for n in new_nodes
+                if n["properties"]["MetaProperty::name__dummy_"]["value"] == "Bart")
+    assert bart["properties"]["MetaProperty::hair_color__dummy_"]["value"] == "blond"
+
+    # empty list doesn't crash
+    response = client.post(
+        BASE_URL + "/api/v1/nodes/bulk_post",
+        headers=HEADERS,
+        json={
+            "nodes": []
+        }
+    )
+    assert response.status_code == 200
+    assert "nodes" in response.json
+    assert response.json["nodes"] == {}
+
+
 def test_bulk_delete_nodes():
     homer = create_sample_node(client, "Homer")["id"]
     montgomery = create_sample_node(client, "Montgomery")["id"]
@@ -857,6 +952,82 @@ def test_bulk_delete_relations():
         headers=HEADERS,
     )
     assert response.status_code == 404
+
+
+def test_bulk_post_relations():
+    "Test creating multiple relations at once."
+    homer = create_sample_node(client, "Homer")
+    montgomery = create_sample_node(client, "Montgomery")
+    sample_uuid = "5b660fd5-b295-4efb-86b5-b24dadd4df03"
+    rel_list = [
+        {
+            "properties": {
+                "MetaProperty::since__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "80s"
+                },
+                "MetaProperty::_uuid__tech_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": sample_uuid
+                }
+            },
+            "source_id": homer["id"],
+            "target_id": montgomery["id"],
+            "type": "MetaRelation::works_for__dummy_"
+        },
+        {
+            "source_id": montgomery["id"],
+            "target_id": homer["id"],
+            "type": "MetaRelation::exploits__dummy_"
+        }
+    ]
+    response = client.post(
+        BASE_URL + "/api/v1/relations/bulk_post",
+        headers=HEADERS,
+        json={
+            "relations": rel_list
+        }
+    )
+    assert response.status_code == 200
+    assert "relations" in response.json
+    new_rels = response.json["relations"].values()
+    assert len(new_rels) == 2
+    works_for_rel = next(r for r in new_rels
+                         if r["source_id"] == homer["id"])
+    assert works_for_rel["properties"]["MetaProperty::since__dummy_"]["value"] == "80s"
+    assert works_for_rel["type"] == "MetaRelation::works_for__dummy_"
+    # the backend must return a different uuid
+    assert works_for_rel["properties"]["MetaProperty::_uuid__tech_"] != sample_uuid
+
+    exploits_rel = next(r for r in new_rels
+                        if r["source_id"] == montgomery["id"])
+    assert exploits_rel["type"] == "MetaRelation::exploits__dummy_"
+
+    # empty list doesn't crash
+    response = client.post(
+        BASE_URL + "/api/v1/relations/bulk_post",
+        headers=HEADERS,
+        json={
+            "relations": []
+        }
+    )
+    assert response.status_code == 200
+    assert "relations" in response.json
+    assert response.json["relations"] == {}
+
+    # posting an invalid relation aborts request.
+    # We reuse rel_list and set an invalid source_id.
+    rel_list[1]["source_id"] = "invalid:id"
+    response = client.post(
+        BASE_URL + "/api/v1/relations/bulk_post",
+        headers=HEADERS,
+        json={
+            "relations": rel_list
+        }
+    )
+    assert response.status_code == 400
 
 
 def test_default_labels():
@@ -1476,6 +1647,20 @@ def test_style_current_empty():
     assert response.status_code == 200
     assert response.json["filename"] == ""
 
+def test_style_default():
+    response = client.get(
+        BASE_URL + "/api/v1/styles/reset",
+        headers=HEADERS,
+    )
+
+    response = client.get(
+        BASE_URL + "/api/v1/nodes?text=bob",
+        headers=HEADERS,
+    )
+
+    color = response.json[0]["style"]["color"]
+    assert len(color) == 7
+    assert color.startswith('#')
 
 def test_style_upload():
     response = client.get(
@@ -2218,12 +2403,41 @@ def test_paraquery():
                 "type__tech_",
                 "user_text__tech_"]).issubset(property_name_suggestions)
 
+    parameters =  {
+        "label": "Person__dummy_",
+        "propertyName": "name__dummy_",
+        "propertyValue": "Alice",
+    }
     # the cypher query is valid and can be executed.
     response = client.post(
-        BASE_URL + "/api/v1/query/cypher",
+        BASE_URL + "/api/v1/paraquery",
         headers=HEADERS,
         json={
-            "querytext": paraquery["cypher"],
+            "name": "Query by label and property",
+            "parameters": parameters
+        }
+    )
+    assert response.status_code == 200
+    row = dict(response.json["result"][0])
+    assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
+
+    response = client.post(
+        BASE_URL + "/api/v1/paraquery",
+        headers=HEADERS,
+        json={
+            "id": paraquery_id,
+            "parameters": parameters
+        }
+    )
+    assert response.status_code == 200
+    row = dict(response.json["result"][0])
+    assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
+
+    response = client.post(
+        BASE_URL + "/api/v1/paraquery",
+        headers=HEADERS,
+        json={
+            "uuid": paraquery["uuid"],
             "parameters": {
                 "label": "Person__dummy_",
                 "propertyName": "name__dummy_",
@@ -2233,6 +2447,65 @@ def test_paraquery():
     )
     row = dict(response.json["result"][0])
     assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
+
+def test_parameter_selection():
+    """Test parameter selection corner cases.
+    Happy path is tested in test_paraquery.
+    """
+    # Remove null results from suggestion list. Respect Cypher ordering.
+    # We change an existing parameter to avoid having to create the whole
+    # paraquery subgraph.
+    parameter_node = fetch_sample_node(client, text="parameter_label")
+    response = client.patch(
+        BASE_URL + f"/api/v1/nodes/{parameter_node['id']}",
+        headers=HEADERS,
+        json={
+            "properties": {
+                "MetaProperty::selection__tech_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "unwind ['b', 'a', null] as l return l",
+                },
+            }
+        }
+    )
+    assert response.status_code == 200
+
+    paraquery_id = fetch_sample_node_id(client, "Query by label")
+    response = client.get(
+        BASE_URL + "/api/v1/paraquery",
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    paraquery = response.json["paraqueries"][paraquery_id]
+    suggestions = paraquery["parameters"]["label"]["suggestions"]
+    # ordering is not changed. No None in results.
+    assert suggestions == ["b", "a"]
+
+    # no crash if suggestion list is empty
+    response = client.patch(
+        BASE_URL + f"/api/v1/nodes/{parameter_node['id']}",
+        headers=HEADERS,
+        json={
+            "properties": {
+                "MetaProperty::selection__tech_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "unwind [] as x return x",
+                },
+            }
+        }
+    )
+    assert response.status_code == 200
+    response = client.get(
+        BASE_URL + "/api/v1/paraquery",
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    paraquery = response.json["paraqueries"][paraquery_id]
+    suggestions = paraquery["parameters"]["label"]["suggestions"]
+    # ordering is not changed. No None in results.
+    assert suggestions == []
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
+import 'src/components/item-finder/ItemFinder.scss';
 import { DBBadge, DBInfotext, DBInput } from '@db-ux/react-core-components';
 import { ChangeEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { KeyboardEvent, MouseEvent, useEffect, useRef, useState } from 'react';
-import 'src/components/item-finder/ItemFinder.scss';
 import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
 import { Node } from 'src/models/node';
+import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { isObject, isString } from 'src/utils/helpers/general';
 import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
@@ -53,6 +54,7 @@ export const ItemFinder = <T extends Node>({
 	);
 	const [selectedItemTooltipId, setSelectedItemTooltipId] = useState<string | null>(null);
 	const tooltipRef = useRef<HTMLElement | null>(null);
+	const tooltipTimeoutRef = useRef(0);
 	const delayedCallback = useDebounce(searchTimeoutMilliseconds);
 	const inputFocusEventTriggered = useRef(false);
 	const ref = useOutsideClick<HTMLDivElement>({
@@ -188,11 +190,16 @@ export const ItemFinder = <T extends Node>({
 
 	const mouseEnterHandler = (event: MouseEvent<HTMLSpanElement>, option: T) => {
 		tooltipRef.current = event.currentTarget;
-		setSelectedItemTooltipId(option.id);
+
+		tooltipTimeoutRef.current = window.setTimeout(() => {
+			setSelectedItemTooltipId(option.id);
+		}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
 	};
 
 	const mouseLeaveHandler = () => {
 		tooltipRef.current = null;
+
+		window.clearTimeout(tooltipTimeoutRef.current);
 		setSelectedItemTooltipId(null);
 	};
 

@@ -15,11 +15,12 @@ export const NetworkGraphNodeContextMenu = () => {
 			const highlightedNodeIds = useGraphStore.getState().highlightedNodeIds;
 			const { x, y } = getMouseViewportCoordinates(event);
 
-			if (highlightedNodeIds.size > 1) {
+			if (highlightedNodeIds.size > 1 && node && highlightedNodeIds.has(node.id)) {
 				const highlightedRelationIds = useGraphStore.getState().highlightedRelationIds;
 
 				useContextMenuStore.getState().open({
 					type: 'graph-multiselect',
+					event: event,
 					nodeIds: highlightedNodeIds.values().toArray(),
 					relationIds: highlightedRelationIds.values().toArray(),
 					x: x,
@@ -28,6 +29,7 @@ export const NetworkGraphNodeContextMenu = () => {
 			} else if (node) {
 				useContextMenuStore.getState().open({
 					type: 'graph-node',
+					event: event,
 					nodeIds: [node.id],
 					x: x,
 					y: y

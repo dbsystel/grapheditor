@@ -14,6 +14,7 @@ import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
+import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
 import { AddRelationFormProps } from './AddRelationForm.interfaces';
 
 export const AddRelationForm = ({
@@ -34,7 +35,6 @@ export const AddRelationForm = ({
 		addNode: addGraphNode
 	} = useGraphStore((store) => store);
 	const setRelation = useItemsStore((store) => store.setRelation);
-	const getNodeAsync = useItemsStore((store) => store.getNodeAsync);
 	const [isSourceNodeDisabled, setIsSourceNodeDisabled] = useState<boolean>(true);
 	const form = useForm<{
 		sourceNode: Node | null;
@@ -110,8 +110,20 @@ export const AddRelationForm = ({
 				})
 				.then(async (data) => {
 					const relation = data.data;
-					const sourceNode = await getNodeAsync(relation.source_id, true);
-					const targetNode = await getNodeAsync(relation.target_id, true);
+					const nodes = await nodesApi.postNodesBulkFetch({
+						nodeIds: [relation.source_id, relation.target_id]
+					});
+					const sourceNode = getNodeByIdFromArrayOfNodes(nodes, relation.source_id);
+					const targetNode = getNodeByIdFromArrayOfNodes(nodes, relation.target_id);
+
+					if (!sourceNode || !targetNode) {
+						addNotification({
+							title: t('notifications_failure_relation_fetch'),
+							type: 'critical'
+						});
+
+						return;
+					}
 
 					if (onSave) {
 						onSave(sourceNode, targetNode, relation);
@@ -119,7 +131,7 @@ export const AddRelationForm = ({
 
 					addGraphNode(sourceNode);
 					addGraphNode(targetNode);
-					setRelation(relation, true);
+					setRelation(relation);
 					addGraphRelation(relation);
 					indexParallelRelations();
 					adaptRelationTypeAndCurvature(relation.id);

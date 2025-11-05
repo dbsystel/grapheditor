@@ -28,7 +28,7 @@ export const CopyToClipboard = ({
 		if (text) {
 			copyTextToClipboard(text);
 		} else if (nodes || relations) {
-			writeToClipboard(nodes || [], relations || []);
+			writeToClipboard({ nodes: nodes, relations: relations });
 		}
 		setCopyConfirmationText(t('clipboard_items_copied'));
 	};

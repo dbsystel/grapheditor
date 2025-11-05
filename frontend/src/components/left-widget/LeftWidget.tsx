@@ -17,7 +17,7 @@ import { LeftWidgetPresentation } from './presentation/LeftWidgetPresentation';
 
 export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 	const { t } = useTranslation();
-	const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+	const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
 	const rootElementClassName = clsx('left-widget', className, {
 		'left-widget--collapsed': isCollapsed
 	});

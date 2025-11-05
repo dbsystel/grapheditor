@@ -55,7 +55,7 @@ class RelationPostSchema(RelationBaseSchema):
     properties = fields.Dict(
         keys=fields.Str(),
         values=fields.Nested(PropertySchema()),
-        required=True,
+        required=False,
     )
     source_id = fields.Str(
         metadata={"description": "id of the source node"}, required=True
@@ -105,6 +105,19 @@ class RelationBulkFetchResponseSchema(Schema):
 
 class RelationBulkPatchSchema(Schema):
     patches = fields.List(fields.Nested(RelationBaseSchema()))
+
+
+class RelationBulkPostSchema(Schema):
+    relations = fields.List(fields.Nested(RelationPostSchema()))
+
+
+class RelationBulkPostResponseSchema(Schema):
+    relations = fields.Dict(
+        keys = fields.Str(metadata={
+            "description": "IDs of new relations."
+        }),
+        values = fields.Nested(RelationSchema())
+    )
 
 
 class NodeRelationsQuerySchema(Schema):

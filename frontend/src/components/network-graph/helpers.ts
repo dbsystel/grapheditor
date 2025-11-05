@@ -1,10 +1,17 @@
 import seedrandom from 'seedrandom';
 import { MouseCoords, SigmaEventPayload, SigmaNodeEventPayload } from 'sigma/types';
+import { assignForceLayout } from 'src/components/network-graph/layouts/force';
+import { assignForceAtlas2Layout } from 'src/components/network-graph/layouts/forceAtlas2';
+import { assignNoverlapLayout } from 'src/components/network-graph/layouts/noverlap';
+import { assignRandomLayout } from 'src/components/network-graph/layouts/random';
 import { GraphEditorSigma } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { Point } from 'src/models/graph';
 import { Node, NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
+import { useItemsStore } from 'src/stores/items';
+import { useSearchStore } from 'src/stores/search';
+import { nodesApi } from 'src/utils/api/nodes';
 import {
 	GRAPH_DEFAULT_EDGE_COLOR,
 	GRAPH_DEFAULT_EDGE_LABEL_BACKGROUND_COLOR,
@@ -18,7 +25,11 @@ import {
 	GRAPH_DEFAULT_NODE_LABEL_COLOR,
 	GRAPH_DEFAULT_NODE_SCALE_FACTOR,
 	GRAPH_DEFAULT_NODE_SIZE,
-	GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM
+	GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM,
+	GRAPH_LAYOUT_FORCE,
+	GRAPH_LAYOUT_FORCE_ATLAS_2,
+	GRAPH_LAYOUT_NOVERLAP,
+	GRAPH_LAYOUT_RANDOM
 } from 'src/utils/constants';
 
 // disabling and enabling camera didn't work ¯\_(ツ)_/¯
@@ -367,4 +378,113 @@ export const onRelationsRemove = (relations: Array<Relation>) => {
 	relations.forEach((relation) => {
 		useGraphStore.getState().removeRelation(relation.id);
 	});
+};
+
+export const addNewGraphNode = (event: SigmaEventPayload, onSuccess?: () => void) => {
+	const { defaultNodeLabels, sigma } = useGraphStore.getState();
+
+	useGraphStore.getState().setIsLoading(true);
+
+	const eventCoordinates = sigma.viewportToGraph(event.event);
+
+	nodesApi
+		.postNode({
+			labels: defaultNodeLabels ? defaultNodeLabels.map((label) => label.id) : [],
+			properties: {}
+		})
+		.then((response) => {
+			const updatedNode = {
+				...response.data,
+				style: {
+					...response.data.style,
+					x: eventCoordinates.x.toString(),
+					y: eventCoordinates.y.toString()
+				}
+			};
+
+			useItemsStore.getState().setNode(updatedNode);
+			useGraphStore.getState().addNode(updatedNode);
+
+			if (onSuccess) {
+				onSuccess();
+			}
+		})
+		.finally(() => {
+			useGraphStore.getState().setIsLoading(false);
+		});
+};
+
+export const applySelectedAlgorithm = () => {
+	const algorithm = useSearchStore.getState().algorithm;
+	const algorithmApplied = [
+		GRAPH_LAYOUT_FORCE_ATLAS_2,
+		GRAPH_LAYOUT_FORCE,
+		GRAPH_LAYOUT_NOVERLAP,
+		GRAPH_LAYOUT_RANDOM
+	].includes(algorithm);
+
+	if (algorithm === GRAPH_LAYOUT_FORCE_ATLAS_2) {
+		assignForceAtlas2Layout();
+	} else if (algorithm === GRAPH_LAYOUT_FORCE) {
+		assignForceLayout();
+	} else if (algorithm === GRAPH_LAYOUT_NOVERLAP) {
+		assignNoverlapLayout();
+	} else if (algorithm === GRAPH_LAYOUT_RANDOM) {
+		assignRandomLayout();
+	}
+
+	return algorithmApplied;
+};
+
+export const indexAndRefreshGraph = () => {
+	// prepare relation parallel edges indexation
+	useGraphStore.getState().indexParallelRelations();
+	// render curved relations (if necessary)
+	useGraphStore.getState().adaptRelationsTypeAndCurvature();
+
+	// this is currently the only way that re-renders sigma properly when
+	// there is a layout or nodes/relations change (clearing/refreshing
+	// /rendering sigma/sigma graph didn't work, not sure why)
+	useGraphStore.getState().sigma.setCustomBBox(null);
+	useGraphStore.getState().sigma.refresh({ skipIndexation: true });
+};
+
+export const calculateBoundingBoxCenterByCoordinates = (points: Array<Point>) => {
+	let minX = Infinity;
+	let maxX = -Infinity;
+	let minY = Infinity;
+	let maxY = -Infinity;
+
+	points.forEach((point) => {
+		const x = point.x;
+		const y = point.y;
+
+		minX = Math.min(minX, x);
+		maxX = Math.max(maxX, x);
+		minY = Math.min(minY, y);
+		maxY = Math.max(maxY, y);
+	});
+
+	if (minX === Infinity || maxX === -Infinity || minY === Infinity || maxY === -Infinity) {
+		return {
+			x: 0,
+			y: 0
+		};
+	}
+
+	return {
+		x: (minX + maxX) / 2,
+		y: (minY + maxY) / 2
+	};
+};
+
+export const getCoordinatesPointRelativeToTargetPoint = (
+	current: Point,
+	source: Point,
+	target: Point
+) => {
+	return {
+		x: target.x + (current.x - source.x),
+		y: target.y + (current.y - source.y)
+	};
 };

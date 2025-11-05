@@ -1,11 +1,11 @@
 import { AxiosResponse } from 'axios';
-import { FormItemPostProperties } from 'src/models/general';
+import { ItemProperties } from 'src/models/item';
 import { Relation, RelationId, RelationType } from 'src/models/relation';
 import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PostRelationParameters = {
-	properties: FormItemPostProperties;
+	properties: ItemProperties;
 	sourceId: RelationId;
 	targetId: RelationId;
 	type: RelationType;

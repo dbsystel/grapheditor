@@ -30,15 +30,16 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 		getActiveEntry,
 		setActiveEntryIndex,
 		reset,
-		removeEntryByItemId
+		removeEntryByItemId,
+		updateEntriesByItems
 	} = useDrawerStore((store) => store);
-	const getStoreItem = useItemsStore((store) => store.getStoreItem);
-	const getStoreNode = useItemsStore((store) => store.getStoreNode);
-	const getStoreRelation = useItemsStore((store) => store.getStoreRelation);
+	// const getStoreItem = useItemsStore((store) => store.getStoreItem);
+	// const getStoreNode = useItemsStore((store) => store.getStoreNode);
+	// const getStoreRelation = useItemsStore((store) => store.getStoreRelation);
 	const addEventListener = useItemsStore((store) => store.addEventListener);
 	const removeEventListener = useItemsStore((store) => store.removeEventListener);
-	useItemsStore((store) => store.nodes);
-	useItemsStore((store) => store.relations);
+	// useItemsStore((store) => store.nodes);
+	// useItemsStore((store) => store.relations);
 	const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 	// consider memo
 	const activeDrawerEntry = getActiveEntry();
@@ -55,12 +56,20 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 			});
 		};
 
+		const onItemsUpdate = (items: Array<Item>) => {
+			updateEntriesByItems(items);
+		};
+
+		addEventListener('onNodesUpdate', onItemsUpdate);
+		addEventListener('onRelationsUpdate', onItemsUpdate);
 		addEventListener('onNodesRemove', onItemsRemove);
 		addEventListener('onRelationsRemove', onItemsRemove);
 
 		return () => {
 			removeEventListener('onNodesRemove', onItemsRemove);
 			removeEventListener('onRelationsRemove', onItemsRemove);
+			removeEventListener('onNodesUpdate', onItemsUpdate);
+			removeEventListener('onRelationsUpdate', onItemsUpdate);
 		};
 	}, []);
 
@@ -77,33 +86,34 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 	};
 
 	if (activeDrawerEntry) {
-		if (activeDrawerEntry.itemType === 'node') {
-			activeItem = getStoreNode(activeDrawerEntry.itemId);
-		} else if (activeDrawerEntry.itemType === 'relation') {
-			activeItem = getStoreRelation(activeDrawerEntry.itemId);
-		} else {
-			activeItem = getStoreItem(activeDrawerEntry.itemId);
-		}
+		activeItem = activeDrawerEntry.item;
+		// if (activeDrawerEntry.itemType === 'node') {
+		// 	activeItem = getStoreNode(activeDrawerEntry.itemId);
+		// } else if (activeDrawerEntry.itemType === 'relation') {
+		// 	activeItem = getStoreRelation(activeDrawerEntry.itemId);
+		// } else {
+		// 	activeItem = getStoreItem(activeDrawerEntry.itemId);
+		// }
 	}
 
 	// prepare breadcrumbs
 	const breadcrumbItems: Array<Breadcrumb> = entries.map((storeItem, index) => {
-		let storeItemItem: Node | Relation | undefined;
-
-		switch (storeItem.itemType) {
-			case 'node':
-				storeItemItem = getStoreNode(storeItem.itemId);
-				break;
-			case 'relation':
-				storeItemItem = getStoreRelation(storeItem.itemId);
-				break;
-			default:
-				storeItemItem = getStoreItem(storeItem.itemId);
-		}
+		// let storeItemItem: Node | Relation | undefined;
+		//
+		// switch (storeItem.itemType) {
+		// 	case 'node':
+		// 		storeItemItem = getStoreNode(storeItem.item.id);
+		// 		break;
+		// 	case 'relation':
+		// 		storeItemItem = getStoreRelation(storeItem.itemId);
+		// 		break;
+		// 	default:
+		// 		storeItemItem = getStoreItem(storeItem.itemId);
+		// }
 
 		return {
-			text: storeItemItem?.title || '',
-			title: storeItemItem?.id,
+			text: storeItem.item.title,
+			title: storeItem.item.id,
 			onClick: () => {
 				setActiveEntryIndex(index);
 			}

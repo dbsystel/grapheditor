@@ -1,4 +1,4 @@
-.context-menu-modal {
+.context-menu {
 	.modal__content {
 		background-color: transparent;
 		border: none;
@@ -11,6 +11,19 @@
 		border: 1px solid var(--db-neutral-border);
 		border-radius: var(--db-border-radius-md);
 		box-shadow: 0 0 6px 0 rgba(0,0,0, 0.5);
+		max-block-size: 400px;
+		max-inline-size: 400px;
+		display: flex;
+
+		&:empty {
+			display: none;
+		}
+	}
+
+	&__expanded-content {
+		inline-size: 100%;
+		block-size: 100%;
+		overflow: auto;
 	}
 
 	&__list {
@@ -31,5 +44,19 @@
 
 	&--export {
 		cursor: none!important;
+	}
+
+	.table {
+		font-size: 0.75rem;
+		min-width: 100%;
+	}
+
+	.table-cell {
+		padding-left: 5px;
+		padding-right: 5px;
+	}
+
+	.item-properties-tabs__add-new-property {
+		padding-inline: 0;
 	}
 }

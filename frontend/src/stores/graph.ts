@@ -51,7 +51,11 @@ type GraphStore = {
 	adaptRelationTypeAndCurvature: (relationId: RelationId, attributes?: Attributes) => void;
 	indexParallelRelations: () => void;
 	addNode: (node: Node | { id: NodeId; attributes?: GraphEditorSigmaNodeAttributes }) => void;
+	addNodes: (
+		nodes: Array<Node | { id: NodeId; attributes?: GraphEditorSigmaNodeAttributes }>
+	) => void;
 	removeNode: (nodeId: NodeId) => void;
+	setNodePosition: (nodeId: NodeId, coordinates: { x: number; y: number; z?: number }) => void;
 	addRelation: (
 		relation:
 			| Relation
@@ -84,6 +88,8 @@ type GraphStore = {
 	nodeSizeFactor: number;
 	getNodeSizeFactor: () => number;
 	setNodeSizeFactor: (newNodeSizeFactor: number) => void;
+	isRenderingCapabilitiesWarningShown: boolean;
+	setIsRenderingCapabilitiesWarningShown: (isRenderingCapabilitiesWarningShown: boolean) => void;
 };
 
 type InitialState = Omit<
@@ -108,7 +114,9 @@ type InitialState = Omit<
 	| 'adaptRelationTypeAndCurvature'
 	| 'indexParallelRelations'
 	| 'addNode'
+	| 'addNodes'
 	| 'removeNode'
+	| 'setNodePosition'
 	| 'addRelation'
 	| 'addRelations'
 	| 'removeRelation'
@@ -117,6 +125,7 @@ type InitialState = Omit<
 	| 'reset'
 	| 'getNodeSizeFactor'
 	| 'setNodeSizeFactor'
+	| 'setIsRenderingCapabilitiesWarningShown'
 >;
 
 const getInitialState: () => InitialState = () => {
@@ -151,7 +160,8 @@ const getInitialState: () => InitialState = () => {
 		zoomFactorMax: 3,
 		zoomFactorIncrementBy: 0.1,
 		zoomFactor: GRAPH_DEFAULT_ZOOMING_RATIO,
-		nodeSizeFactor: 1
+		nodeSizeFactor: 1,
+		isRenderingCapabilitiesWarningShown: false
 	};
 };
 
@@ -334,12 +344,31 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 				sigma.getGraph().addNode(node.id, node.attributes);
 			}
 		},
+		// much bulk, very wow
+		addNodes: (nodes) => {
+			nodes.forEach((node) => {
+				get().addNode(node);
+			});
+		},
 		removeNode: (nodeId) => {
 			get().unHighlightNode(nodeId);
 
 			if (get().sigma.getGraph().hasNode(nodeId)) {
 				get().sigma.getGraph().dropNode(nodeId);
 			}
+		},
+		setNodePosition: (nodeId, coordinates) => {
+			const graph = get().sigma.getGraph();
+			const localCoordinates: Record<string, number> = {
+				x: coordinates.x,
+				y: coordinates.y
+			};
+
+			if (coordinates.z !== undefined) {
+				localCoordinates.z = coordinates.z;
+			}
+
+			graph.mergeNodeAttributes(nodeId, coordinates);
 		},
 		addRelation: (relation) => {
 			const sigma = get().sigma;
@@ -377,6 +406,7 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 					);
 			}
 		},
+		// much bulk, very wow
 		addRelations: (relations) => {
 			relations.forEach((relation) => {
 				get().addRelation(relation);
@@ -415,6 +445,9 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 			}
 
 			set({ nodeSizeFactor: fixedSizeFactor });
+		},
+		setIsRenderingCapabilitiesWarningShown: (isRenderingCapabilitiesWarningShown) => {
+			set({ isRenderingCapabilitiesWarningShown: isRenderingCapabilitiesWarningShown });
 		}
 	};
 });

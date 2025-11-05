@@ -1,10 +1,11 @@
-import { ItemTypeNode, ItemTypeRelation } from 'src/models/item';
+import { Item, ItemId, ItemTypeNode, ItemTypeRelation } from 'src/models/item';
 import { NodeId } from 'src/models/node';
 import { RelationId } from 'src/models/relation';
 import { create } from 'zustand';
 
 export type DrawerStoreEntry = {
-	itemId: NodeId | RelationId;
+	item: Item;
+	//itemId: NodeId | RelationId;
 	// properly address objects in case node and relation IDs have overlaps (it looks like this is
 	// possible ¯\_(ツ)_/¯)
 	itemType?: ItemTypeNode | ItemTypeRelation;
@@ -16,6 +17,7 @@ export type DrawerStoreEntry = {
 type DrawerStore = {
 	entries: Array<DrawerStoreEntry>;
 	activeEntryIndex: number;
+	updateEntriesByItems: (newItems: Array<Item>) => void;
 	setEntry: (storeItem: DrawerStoreEntry) => void;
 	addEntry: (storeItem: DrawerStoreEntry) => void;
 	getActiveEntry: () => DrawerStoreEntry | undefined;
@@ -30,6 +32,7 @@ type InitialState = Omit<
 	DrawerStore,
 	| 'setEntry'
 	| 'addEntry'
+	| 'updateEntriesByItems'
 	| 'getActiveEntry'
 	| 'setActiveEntryIndex'
 	| 'removeEntryByIndex'
@@ -96,13 +99,32 @@ export const useDrawerStore = create<DrawerStore>()((set, get) => {
 			const entries = get().entries;
 
 			for (let i = 0, l = entries.length; i < l; i++) {
-				if (entries[i].itemId === itemId) {
+				if (entries[i].item.id === itemId) {
 					entryIndex = i;
 					break;
 				}
 			}
 
 			get().removeEntryByIndex(entryIndex);
+		},
+		updateEntriesByItems: (newItems) => {
+			const newItemsRecord = newItems.reduce<Record<ItemId, Item>>(
+				(accumulator, currentValue) => {
+					accumulator[currentValue.id] = currentValue;
+
+					return accumulator;
+				},
+				{}
+			);
+			const entries = get().entries;
+
+			entries.forEach((entry) => {
+				entry.item = newItemsRecord[entry.item.id] || entry.item;
+			});
+
+			set({
+				entries: [...entries]
+			});
 		},
 		reset: () => {
 			set(getInitialState());

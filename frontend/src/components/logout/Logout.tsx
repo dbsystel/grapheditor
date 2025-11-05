@@ -1,9 +1,11 @@
 import { DBButton } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { destroyApplicationStoresObservers } from 'src/observers';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { usersApi } from 'src/utils/api/users';
+import { resetApplicationStates } from 'src/utils/helpers/general';
 import { LogoutProps } from './Logout.interfaces';
 
 export const Logout = ({ withLabel, id, className, testId }: LogoutProps) => {

@@ -12,7 +12,6 @@ import {
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Markdown from 'react-markdown';
 import { Connections } from 'src/components/connections/Connections';
 import { CopyToClipboard } from 'src/components/copy-to-clipboard/CopyToClipboard';
 import { EditSaveBlock } from 'src/components/edit-save-block/EditSaveBlock';
@@ -21,6 +20,7 @@ import { ItemProperties } from 'src/components/item-properties/ItemProperties';
 import { ItemPropertiesHandle } from 'src/components/item-properties/ItemProperties.interfaces';
 import { LoadPerspective } from 'src/components/load-perspective/LoadPerspective';
 import { Loading } from 'src/components/loading/Loading';
+import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrapper';
 import { MenuButton } from 'src/components/menu-button/MenuButton';
 import { fitGraphToViewport } from 'src/components/network-graph/helpers';
 import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder';
@@ -30,7 +30,6 @@ import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/Unsave
 import { ItemPropertyWithKey } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
 import { useGraphStore } from 'src/stores/graph';
-import { useItemsStore } from 'src/stores/items';
 import { metaForMetaApi } from 'src/utils/api/metaForMeta';
 import { nodesApi } from 'src/utils/api/nodes';
 import { GraphEditorType } from 'src/utils/constants';
@@ -39,13 +38,13 @@ import { getItemDBId, getItemMissingPropertiesForMeta } from 'src/utils/helpers/
 import { areNodesSameById, isNodePerspective, isPseudoNode } from 'src/utils/helpers/nodes';
 import { idFormatter } from 'src/utils/idFormatter';
 import { EditMode, SingleNodeProps } from './SingleNode.interfaces';
+import { formatItemId } from 'src/utils/idFormatter';
 
 /**
  * This component contains the logic to present a detailed single node view.
  */
 export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => {
 	const { t } = useTranslation();
-	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
 	const sigma = useGraphStore((store) => store.sigma);
 	const [selectedLabelIds, setSelectedLabelIds] = useState<Array<NodeId>>([]);
 	const [labelsMeta, setLabelsMeta] = useState<MetaForMeta | null>(null);
@@ -71,8 +70,8 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 	};
 
 	const getNodeLabelsNodes = () => {
-		getNodesAsync(node.labels).then((labels) => {
-			setLabelsValue(labels);
+		nodesApi.postNodesBulkFetch({ nodeIds: node.labels }).then((labelsNodes) => {
+			setLabelsValue(labelsNodes);
 		});
 	};
 
@@ -131,6 +130,18 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 	const nodeId = getItemDBId(node);
 	// had to create a "nodeId" variable explicitly, since direct use of node.id
 	// on the LoadPerspective component would cause "missing in props validation" eslint error
+
+	function formatNodeId(id: string): string {
+		const parts = id.split(':');
+		if (parts.length !== 5 || parts[0] !== 'id' || parts[1] !== '') {
+			return id; // Fallback zum Original
+		}
+		const number = parts[2];
+		const str = parts[3];
+		const rest = parts[4];
+		return `${number}:${str.slice(0, 4)}...:${rest}`;
+	}
+
 	const LoadPerspectiveButton = () => {
 		if (isNodePerspective(node)) {
 			return <LoadPerspective perspectiveId={nodeId} />;
@@ -202,15 +213,15 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 
 	return (
 		<DBSection id={id} className={rootElementClassName} data-testid={testId} spacing="none">
-			{renderPseudoNodeWarning && (
-				<div className="single-node__pseudo-node-warning">
-					<DBInfotext semantic="warning">
-						{t('single_node_pseudo_node_warning')}
-					</DBInfotext>
-				</div>
-			)}
-
 			<div className="single-item__header db-bg-color-basic-level-1">
+				{renderPseudoNodeWarning && (
+					<div className="single-node__pseudo-node-warning">
+						<DBInfotext semantic="warning">
+							{t('single_node_pseudo_node_warning')}
+						</DBInfotext>
+					</div>
+				)}
+
 				<div className="single-item__title">
 					<DBIcon icon="box" />
 
@@ -249,7 +260,17 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 
 				<div className="single-item__header-id">
 					<p className="single-item__header-headline">ID</p>
-					<p className="single-item__header-content">{nodeId}</p>
+					<p className="single-item__header-content">
+						{formatItemId(nodeId)}
+						<DBTooltip
+							id={nodeId}
+							placement="bottom-start"
+							width="auto"
+							showArrow={false}
+						>
+							{nodeId}
+						</DBTooltip>
+					</p>
 
 					<CopyToClipboard text={nodeId} />
 				</div>
@@ -257,7 +278,9 @@ export const SingleNode = ({ node, id, className, testId }: SingleNodeProps) => 
 
 			<DBAccordion behavior="multiple" initOpenIndex={[0, 1, 2, 3]} variant="card">
 				<DBAccordionItem headline={t('single_view_description')}>
-					<Markdown>{node.description}</Markdown>
+					<MarkdownWrapper className="single-item__description">
+						{node.description}
+					</MarkdownWrapper>
 				</DBAccordionItem>
 
 				<EditSaveBlock

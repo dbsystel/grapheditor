@@ -113,6 +113,7 @@ export const expandNodeAction = (nodeId: NodeId) => {
 			const newNodePosition = circleLayoutPositions[index];
 
 			if (newNodePosition) {
+				// TODO check if node's visual changes have effect of parallax
 				node.style.x = newNodePosition.x.toString();
 				node.style.y = newNodePosition.y.toString();
 
@@ -127,6 +128,7 @@ export const expandNodeAction = (nodeId: NodeId) => {
 
 		useGraphStore.getState().addRelations(relations);
 		useItemsStore.getState().setRelations(relations, true);
+		useItemsStore.getState().refreshNodesAndRelations();
 
 		if (relations.length) {
 			useGraphStore.getState().indexParallelRelations();

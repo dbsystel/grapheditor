@@ -58,9 +58,6 @@ class Login(MethodView):
     @require_tab_id()
     def post(self, login_data):
         """Set login data for this tab_id."""
-        if "login_data" not in session:
-            session["login_data"] = dict()
-
         tab_id = (
             request.headers.get("x-tab-id")
             if "x-tab-id" in request.headers
@@ -79,7 +76,12 @@ class Login(MethodView):
             abort_with_json(401, f"Error connecting to Neo4j: {e}")
         if not conn.is_valid():
             abort_with_json(401, "Invalid host or user credentials")
+
         session["last_tab_id"] = tab_id
+
+        # login successful, persist connection data into session.
+        if "login_data" not in session:
+            session["login_data"] = dict()
         session["login_data"][tab_id] = login_data
 
         return "Logged in"

@@ -98,6 +98,8 @@ class StyleCurrent(MethodView):
         """Get filename of style currently active.
         An empty string as filename means that default style rules are applied.
         """
+        # Since /api/v1/style doesn't require a connection (see main.py),
+        # connect here.
         neo4j_connect()
         cur_file = get_selected_style()
         return {"filename": cur_file}

@@ -11,7 +11,7 @@ export const NetworkGraphNodeClick = () => {
 	const { unHighlightNodes, highlightNode, unHighlightRelations } = useGraphStore(
 		(store) => store
 	);
-	const getNode = useItemsStore((store) => store.getNode);
+	const getStoreNode = useItemsStore((store) => store.getStoreNode);
 
 	useEffect(() => {
 		// open node details on node click
@@ -23,11 +23,11 @@ export const NetworkGraphNodeClick = () => {
 	}, []);
 
 	const enableNodeDetailsOnClick = (eventPayload: SigmaNodeEventPayload) => {
-		const node = getNode(eventPayload.node);
+		const node = getStoreNode(eventPayload.node);
 
 		if (node) {
 			setEntry({
-				itemId: node.id,
+				item: node,
 				itemType: 'node',
 				onMount: () => localHighlightNode(eventPayload.node),
 				onDrawerClose: unHighlightNodes

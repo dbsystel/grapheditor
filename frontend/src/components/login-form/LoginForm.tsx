@@ -5,6 +5,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Form } from 'src/components/form/Form';
 import { FormRow } from 'src/components/form-row/FormRow';
+import { initializeApplicationStoresObservers } from 'src/observers';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { usersApi } from 'src/utils/api/users';
@@ -25,11 +26,12 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 				password: password
 			})
 			.then(() => {
+				connect(host, username);
+
 				addNotification({
 					title: t('notifications_success_login'),
 					type: 'successful'
 				});
-				connect(host, username);
 			});
 	};
 

@@ -55,6 +55,7 @@ export const NetworkGraphAutoConnectNode = () => {
 		addRelation: addGraphRelation,
 		removeRelation: removeGraphRelation,
 		removeNode: removeGraphNode,
+		setNodePosition: setGraphNodePosition,
 		sigma
 	} = useGraphStore((state) => state);
 	const setNode = useItemsStore((store) => store.setNode);
@@ -118,11 +119,12 @@ export const NetworkGraphAutoConnectNode = () => {
 		let overlappingNodeId: string | undefined = '';
 
 		// update moving node position
-		graph.updateNodeAttribute(movingNodeId, 'x', (currentX) => {
-			return (currentX || 0) + (currentPosition.x - previousPosition.x);
-		});
-		graph.updateNodeAttribute(movingNodeId, 'y', (currentY) => {
-			return (currentY || 0) + (currentPosition.y - previousPosition.y);
+		const currentX = graph.getNodeAttribute(movingNodeId, 'x');
+		const currentY = graph.getNodeAttribute(movingNodeId, 'y');
+
+		setGraphNodePosition(movingNodeId, {
+			x: (currentX || 0) + (currentPosition.x - previousPosition.x),
+			y: (currentY || 0) + (currentPosition.y - previousPosition.y)
 		});
 
 		const sigmaNode = graph.getNodeAttributes(movingNodeId);
@@ -300,7 +302,7 @@ export const NetworkGraphAutoConnectNode = () => {
 
 		// sync graph with node from server
 		if (newNode) {
-			setNode(newNode, true);
+			setNode(newNode);
 			addGraphNode(newNode);
 
 			// After creating a node in the graph, Sigma won't register we are

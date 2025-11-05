@@ -72,4 +72,16 @@ export const idFormatter = new IdFormatter({
 	separator: '::'
 });
 
+// TODO move to IdFormatter
+export const formatItemId = (id: string): string => {
+	const parts = id.split(':');
+	if (parts.length !== 5 || parts[0] !== 'id' || parts[1] !== '') {
+		return id;
+	}
+	const number = parts[2];
+	const str = parts[3];
+	const rest = parts[4];
+	return `${number}:${str.slice(0, 4)}...:${rest}`;
+};
+
 (window as any).idFormatter = idFormatter;

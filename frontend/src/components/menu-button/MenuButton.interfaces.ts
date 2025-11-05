@@ -25,4 +25,5 @@ export type MenuButtonOption = Pick<
 
 export type MenuButtonOptionsContentProps = {
 	options: Array<MenuButtonOption>;
+	onOptionClick?: (option: MenuButtonOption) => void;
 };

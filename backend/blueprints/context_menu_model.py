@@ -48,17 +48,20 @@ class ContextMenuAction(Enum):
     HIDE = "hide"
     HIDE_NODES = "hide_nodes"
     HIDE_RELATIONS = "hide_relations"
+    SHOW = "show"
     DELETE = "delete"
     DELETE_RELATIONS = "delete_relations"
     COPY = "copy"
     COPY_NODES = "copy_nodes"
     PASTE = "paste"
+    PASTE_PROPERTIES = "paste_properties"
     DUPLICATE_COPIED = "duplicate_copied"
     MOVE_COPIED = "move_copied"
     ADD_TO_PERSPECTIVE = "add_to_perspective"
     ADD_NODE = "add_node"
     ADD_RELATION = "add_relation"
     ADD_LABELS = "add_labels"
+    REMOVE_LABELS = "remove_labels"
     ADD_PROPERTIES = "add_properties"
     APPLY_LAYOUT = "apply_layout"
     APPLY_LAYOUT_TO_FOLLOWING_NODES = "apply_layout_to_following_nodes"
@@ -78,21 +81,24 @@ context_action_table = {
     # fmt: off
     CA.EXPAND: is_single_node,
     CA.COLLAPSE: is_single_node,
-    CA.HIDE: any_selection,
+    CA.HIDE: lambda n,r: any_selection(n, r) or no_selection(n, r),
     CA.HIDE_NODES: lambda n, r: has_node(n, r) and is_multi_selection(n, r),
     CA.HIDE_RELATIONS: lambda n, r: has_relation(n, r) and is_multi_selection(n, r),
+    CA.SHOW: no_selection,
     CA.DELETE: any_selection,
     CA.DELETE_RELATIONS: lambda n, r: has_relation(n, r) and is_multi_selection(n, r),
     CA.COPY: any_selection,
     CA.COPY_NODES: lambda n, r: has_node(n, r) and is_multi_selection(n, r),
     CA.PASTE: lambda n, r: is_single_node(n, r) or is_single_relation(n, r),
+    CA.PASTE_PROPERTIES: lambda n, r: is_single_node(n, r) or is_single_relation(n, r),
     CA.DUPLICATE_COPIED: no_selection,
     CA.MOVE_COPIED: no_selection,
     CA.ADD_TO_PERSPECTIVE: any_selection,
     CA.ADD_NODE: no_selection,
     CA.ADD_RELATION: is_single_node,
-    CA.ADD_LABELS: lambda n, r: has_node(n, r) and is_multi_selection(n, r),
-    CA.ADD_PROPERTIES: lambda n, r: has_node(n, r) and is_multi_selection(n, r),
+    CA.ADD_LABELS: lambda n, r: has_node(n, r) or is_multi_selection(n, r),
+    CA.REMOVE_LABELS: lambda n, r: has_node(n, r) or is_multi_selection(n, r),
+    CA.ADD_PROPERTIES: lambda n, r: has_node(n, r) or is_multi_selection(n, r),
     CA.APPLY_LAYOUT: is_multi_selection,
     CA.APPLY_LAYOUT_TO_FOLLOWING_NODES: is_single_node,
     CA.LOAD_PERSPECTIVE: lambda n, r: is_single_node(n, r) and is_perspective(n, r),

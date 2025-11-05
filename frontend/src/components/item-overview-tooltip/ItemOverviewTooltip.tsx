@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { ItemOverviewButton } from 'src/components/item-overview-button/ItemOverviewButton';
+import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrapper';
 import { Table } from 'src/components/table/Table';
 import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
@@ -22,14 +23,13 @@ import { TableRow } from 'src/components/table-row/TableRow';
 import { Tooltip } from 'src/components/tooltip/Tooltip';
 import { MetaForMeta, Node } from 'src/models/node';
 import { useDrawerStore } from 'src/stores/drawer';
-import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { metaForMetaApi } from 'src/utils/api/metaForMeta';
 import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
 import { GraphEditorType } from 'src/utils/constants';
 import { isString } from 'src/utils/helpers/general';
-import { isNode } from 'src/utils/helpers/nodes';
+import { getNodeByIdFromArrayOfNodes, isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { RenderContent } from 'src/utils/helpers/search';
 import { CopyToClipboard } from '../copy-to-clipboard/CopyToClipboard';
@@ -62,24 +62,28 @@ export const ItemOverviewTooltip = ({
 	const [typeMeta, setTypeMeta] = useState<MetaForMeta>({});
 	const [isLoadingSourceAndTargetNodes, setIsLoadingSourceAndTargetNodes] = useState(true);
 	const [sourceAndTargetNodes, setSourceAndTargetNodes] = useState<Array<Node>>([]);
-	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const onClick = () => {
 		if (isInsideItemsDrawer) {
-			addEntry({ itemId: item.id });
+			addEntry({ item: item });
 		} else {
-			setEntry({ itemId: item.id });
+			setEntry({ item: item });
 		}
 	};
 	useEffect(() => {
 		(async () => {
 			if (isRelation(item)) {
 				setIsLoadingSourceAndTargetNodes(true);
-				const nodes = await getNodesAsync([item.source_id, item.target_id]);
+
+				const nodes = await nodesApi.postNodesBulkFetch({
+					nodeIds: [item.source_id, item.target_id]
+				});
+				const sourceNode = getNodeByIdFromArrayOfNodes(nodes, item.source_id);
+				const targetNode = getNodeByIdFromArrayOfNodes(nodes, item.target_id);
 
 				getMetaForMeta();
 
-				if (nodes != null && nodes[0] && nodes[1]) {
+				if (sourceNode && targetNode) {
 					setSourceAndTargetNodes(nodes);
 				} else {
 					addNotification({
@@ -177,7 +181,9 @@ export const ItemOverviewTooltip = ({
 							}}
 						>
 							{(item.description.length > 0 && (
-								<div className="db-font-size-sm">{item.description}</div>
+								<div className="db-font-size-sm">
+									<MarkdownWrapper>{item.description}</MarkdownWrapper>
+								</div>
 							)) || (
 								<div className="db-font-size-xs">
 									{t('item_overview_tooltip_no_description')}
@@ -298,7 +304,6 @@ export const ItemOverviewTooltip = ({
 										<TableBody>
 											{Object.keys(item.properties).map((property, index) => {
 												const content = item.properties[property].value;
-												const isContentString = isString(content);
 
 												return (
 													<TableRow key={index}>
@@ -311,7 +316,7 @@ export const ItemOverviewTooltip = ({
 														<TableCell>
 															<RenderContent
 																content={content}
-																applyMarkdown={isContentString}
+																applyMarkdown={false}
 															/>
 														</TableCell>
 														<TableCell>

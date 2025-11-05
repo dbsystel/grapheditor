@@ -1,43 +1,4 @@
 .create-perspective-dialog {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-color: rgba(0, 0, 0, 0.7);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	border: none;
-	padding: 0;
-	margin: 0;
-
-	&__modal {
-		padding: var(--db-spacing-fixed-lg) !important;
-		width: 500px;
-	}
-
-	&__modal-headline {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-
-		> h3 {
-			margin: 0;
-		}
-	}
-
-	&__modal-info {
-		display: flex;
-		align-items: start;
-		column-gap: var(--db-spacing-fixed-sm);
-		margin: var(--db-spacing-fixed-lg) 0;
-
-		> p {
-			margin: 0 0 var(--db-spacing-fixed-2xs) 0;
-		}
-	}
-
 	&__input {
 		margin-bottom: var(--db-spacing-fixed-lg);
 

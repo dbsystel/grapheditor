@@ -8,7 +8,7 @@ import { ParallaxNextSteps } from 'src/components/parallax-next-steps/ParallaxNe
 import { RightWidgetProps } from './RightWidget.interfaces';
 
 export const RightWidget = ({ id, className, testId }: RightWidgetProps) => {
-	const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+	const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
 	const rootElementClassName = clsx('right-widget', className, {
 		'right-widget--collapsed': isCollapsed
 	});

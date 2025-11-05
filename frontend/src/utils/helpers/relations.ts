@@ -70,14 +70,9 @@ export async function deleteRelationsAndUpdateApplication(relationIds: Array<Rel
 
 	if (window.confirm(i18n.t(confirmMessage, { id: relationIds.at(0) }))) {
 		const relationsDeletionResponse = await deleteRelations({ relationIds: relationIds });
-
 		const isDeletionSuccessful = relationsDeletionResponse.data.num_deleted > 0;
 
-		relationIds.forEach((relationId) => {
-			itemsStore.removeRelation(relationId, true);
-		});
-
-		itemsStore.refreshRelations();
+		itemsStore.removeRelations(relationIds);
 
 		if (isDeletionSuccessful) {
 			addNotification({
@@ -122,7 +117,7 @@ export async function patchRelationsAndUpdateApplication(relations: Array<PatchR
 			? 'notifications_success_relation_update'
 			: 'notifications_success_relations_update';
 
-	itemsStore.setRelations(Object.values(responseRelationsMap), true);
+	itemsStore.setRelations(Object.values(responseRelationsMap));
 
 	for (const oldRelationKey in responseRelationsMap) {
 		const serverRelation = responseRelationsMap[oldRelationKey];
@@ -134,10 +129,11 @@ export async function patchRelationsAndUpdateApplication(relations: Array<PatchR
 			const drawerItem = drawerStore.getActiveEntry();
 
 			// if necessary, update drawer data which will re-render this component
-			if (drawerItem && drawerItem.itemId === oldRelationKey) {
+			if (drawerItem && drawerItem.item.id === oldRelationKey) {
+				// TODO improve to replace a specific entry only, currently this will replace all entries
 				drawerStore.setEntry({
 					...drawerItem,
-					itemId: serverRelation.id
+					item: serverRelation
 				});
 			}
 

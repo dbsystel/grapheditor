@@ -80,18 +80,26 @@ export const ItemPropertiesAddNewProperty = ({
 			const semanticId = idFormatter.isValidSemanticId(key)
 				? key
 				: idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_PROPERTY, key);
+			const propertyNode = propertyOptions.find(
+				(propertyOption) => propertyOption.id === key
+			);
 
-			onPropertyCreate({
-				key: semanticId,
-				value: parsedValue,
-				type: type,
-				edit: true
-			});
+			if (propertyNode) {
+				onPropertyCreate(
+					{
+						key: semanticId,
+						value: parsedValue,
+						type: type,
+						edit: true
+					},
+					propertyNode
+				);
 
-			resetField('key');
-			resetField('value');
+				resetField('key');
+				resetField('value');
 
-			setSelectedProperty(null);
+				setSelectedProperty(null);
+			}
 		}
 	};
 

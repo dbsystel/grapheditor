@@ -92,11 +92,24 @@ class NodeBulkPatchSchema(Schema):
     patches = fields.List(fields.Nested(NodePatchSchema()))
 
 
-class NodeLabels(Schema):
+class NodeBulkPostSchema(Schema):
+    nodes = fields.List(fields.Nested(NodePostSchema()))
+
+
+class NodeBulkPostResponseSchema(Schema):
+    nodes = fields.Dict(
+        keys = fields.Str(metadata={
+            "description": "IDs of new nodes."
+        }),
+        values = fields.Nested(NodeSchema())
+    )
+
+
+class NodeLabelsSchema(Schema):
     labels = fields.List(fields.Str(), required=True)
 
 
-class NodeProperties(Schema):
+class NodePropertiesSchema(Schema):
     properties = fields.List(fields.Str(), required=True)
 
 

@@ -7,9 +7,10 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 
 from blueprints.maintenance.login_api import require_tab_id
+from database.utils import abort_with_json
 
 blp = Blueprint("Dev tools", __name__, description="For development only")
-
+TIMEOUT_LIMIT = 200
 
 def _reset_graph():
     g.conn.run("MATCH (n) DETACH DELETE n;")
@@ -70,10 +71,38 @@ class Reset(MethodView):
         _reset_graph()
 
         _run_file("cypher/install_grapheditor_functions_and_procedures.cypher")
+
+        # wait until custom functions/procedures are installed, otherwise
+        # triggers can be installed first and cause issues when manipulating
+        # data.
+        counter = 0
+        while not g.conn.has_ft():
+            if counter >= TIMEOUT_LIMIT:
+                abort_with_json(500, "Timeout installing functions/procedures.")
+            counter = counter + 1
+            current_app.logger.debug(
+                f"Waiting for function/procedure installation since {counter} seconds."
+            )
+            # if we don't commit here, has_ft is executed in the same transaction, returning
+            # always the same result.
+            g.conn.commit()
+            time.sleep(1)
+        current_app.logger.info("GraphEditor functions/procedures installed.")
+
         _run_file("cypher/install_grapheditor_triggers.cypher")
 
-        while not g.conn.has_ft():
+        # triggers must be installed before adding data.
+        counter = 0
+        while not g.conn.has_iga_triggers():
+            if counter >= TIMEOUT_LIMIT:
+                abort_with_json(500, "Timeout installing triggers.")
+            counter = counter + 1
+            current_app.logger.debug(
+                f"Waiting for trigger installation since {counter} seconds."
+            )
+            g.conn.commit()
             time.sleep(1)
+        current_app.logger.info("GraphEditor triggers installed.")
 
         _run_file("cypher/reset_dummy_data.cypher")
         # force computation of ft and uid, since trigger may be not active yet.

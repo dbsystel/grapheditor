@@ -25,7 +25,7 @@ export const preparePerspectiveDataAndRefreshNodesPosition = () => {
 		/* Update node data in memory, instead of reloading the graph from server.
 		 * Important for layout change. Note: here we update node.style in the ItemsStore, not GraphStore
 		 */
-		setNodePosition({ id: nodeId, x: attributes.x, y: attributes.y, z: attributes.z }, true);
+		setNodePosition(nodeId, { x: attributes.x, y: attributes.y, z: attributes.z }, true);
 	});
 
 	// hidden relations excluded from perspectives

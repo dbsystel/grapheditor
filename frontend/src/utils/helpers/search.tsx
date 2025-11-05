@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import Markdown from 'react-markdown';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
+import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrapper';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useItemsStore } from 'src/stores/items';
@@ -91,7 +91,7 @@ export const RenderContent = ({ content, applyMarkdown }: RenderContentProps): R
 	}
 
 	if (applyMarkdown && isString(contentToRender)) {
-		return <Markdown>{contentToRender}</Markdown>;
+		return <MarkdownWrapper>{contentToRender}</MarkdownWrapper>;
 	}
 
 	return contentToRender;

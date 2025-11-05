@@ -8,6 +8,22 @@ export type ParallaxHistory = {
 };
 
 /**
+ * We observe nodes changes, and since those changes can occur basically anywhere in the app,
+ * we need something to differentiate when parallax should be reset, when breadcrumbs should be
+ * updated and so on.
+ * Small note: when working with node and relation changes (add/update/remove) at the same time, and
+ * if both those changes are stored on the server, only nodes should trigger new render since the server
+ * now contains data about relations.
+ */
+type ParallaxStoreApiTriggerType =
+	| 'initial' // search/perspective executed, start the parallax (breadcrumbs start from the beginning and so on)
+	| 'filters' // filters executed (new filters applied, update breadcrumbs and so on)
+	| 'next-steps' // next steps executed (add new breadcrumb and so on)
+	| 'breadcrumbs' // breadcrumbs executed (user selected manually another breadcrumb)
+	| 'refresh' // general store nodes updates, can happen from anywhere (take the existing data but use new node IDs)
+	| 'none'; // chill, relax, a.k.a do nothing
+
+/**
  * Parallax store containing parallax query results and API for managing
  * the parallax-specific state. Similar pattern to items store but
  * specialized for parallax functionality.
@@ -19,14 +35,17 @@ type ParallaxStore = {
 	history: Array<ParallaxHistory>;
 	currentHistoryIndex: number;
 	isLoading: boolean;
+	apiTriggerType: ParallaxStoreApiTriggerType;
+	shouldPreventApiCall: boolean;
 	// Core data management API (similar to items store pattern)
 	setParallaxData: (data: ParallaxData) => void;
 	clearParallaxData: () => void;
 	setHistory: (historyEntries: Array<ParallaxHistory>) => void;
 	setInitialQuery: (initialQuery: ParallaxInitialQuery) => void;
 	setCurrentHistoryIndex: (currentHistoryIndex: number) => void;
-	setIsLoading: (loading: boolean) => void;
-
+	setIsLoading: (isLoading: boolean) => void;
+	setApiTriggerType: (newType: ParallaxStoreApiTriggerType) => void;
+	setShouldPreventApiCall: (shouldPreventApiCall: boolean) => void;
 	reset: () => void;
 };
 
@@ -39,6 +58,8 @@ type InitialParallaxState = Omit<
 	| 'reset'
 	| 'setCurrentHistoryIndex'
 	| 'setInitialQuery'
+	| 'setApiTriggerType'
+	| 'setShouldPreventApiCall'
 >;
 
 const getInitialParallaxState = (): InitialParallaxState => ({
@@ -52,7 +73,9 @@ const getInitialParallaxState = (): InitialParallaxState => ({
 	},
 	isLoading: false,
 	history: [],
-	currentHistoryIndex: -1 // -1 means no history entry is selected
+	currentHistoryIndex: -1, // -1 means no history entry is selected,
+	apiTriggerType: 'refresh',
+	shouldPreventApiCall: false
 });
 
 export const useParallaxStore = create<ParallaxStore>((set) => ({
@@ -82,7 +105,15 @@ export const useParallaxStore = create<ParallaxStore>((set) => ({
 			initialQuery: initialQuery
 		});
 	},
-	setIsLoading: (loading) => set({ isLoading: loading }),
+	setIsLoading: (isLoading) => {
+		set({ isLoading: isLoading });
+	},
+	setApiTriggerType: (newApiTriggerType) => {
+		set({ apiTriggerType: newApiTriggerType });
+	},
+	setShouldPreventApiCall: (shouldPreventApiCall) => {
+		set({ shouldPreventApiCall: shouldPreventApiCall });
+	},
 	reset: () => {
 		set(getInitialParallaxState());
 	}

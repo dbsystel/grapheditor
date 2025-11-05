@@ -3,7 +3,7 @@ import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 
-export const collapseNode = (nodeId: NodeId) => {
+export const collapseNodeAction = (nodeId: NodeId) => {
 	const expandedNodeNodeAndRelationIds = useContextMenuStore
 		.getState()
 		.getExpandedNodeNodeAndRelationIds(nodeId);
@@ -12,6 +12,8 @@ export const collapseNode = (nodeId: NodeId) => {
 		useGraphStore.getState().removeNode(nodeId);
 		useItemsStore.getState().removeNode(nodeId, true);
 	});
+
+	useItemsStore.getState().refreshNodesAndRelations();
 
 	useContextMenuStore.getState().removeExpandedNode(nodeId);
 	useContextMenuStore.getState().close();

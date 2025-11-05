@@ -2,7 +2,7 @@ import './NetworkGraphSearch.scss';
 import { DBInput } from '@db-ux/react-core-components';
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Markdown from 'react-markdown';
+import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrapper';
 import { GraphEditorSigmaNodeAttributes } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { useGraphStore } from 'src/stores/graph';
 import { nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
@@ -97,7 +97,7 @@ export const NetworkGraphSearch = () => {
 								key={option.id}
 								onClick={() => onOptionClick(option.id)}
 							>
-								<Markdown>{option.label}</Markdown>
+								<MarkdownWrapper>{option.label}</MarkdownWrapper>
 							</li>
 						);
 					})}

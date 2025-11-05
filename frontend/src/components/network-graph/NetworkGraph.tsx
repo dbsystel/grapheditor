@@ -7,7 +7,6 @@ import { NetworkGraphContainer } from 'src/components/network-graph/NetworkGraph
 import { NetworkGraphAutoConnectNode } from 'src/components/network-graph/plugins/auto-connect-node/NetworkGraphAutoConnectNode';
 import { NetworkGraphCanvasContextMenu } from 'src/components/network-graph/plugins/canvas-context-menu/NetworkGraphCanvasContextMenu';
 import { NetworkGraphDragNodes } from 'src/components/network-graph/plugins/drag-nodes/NetworkGraphDragNodes';
-import { NetworkGraphRelationContextMenu } from 'src/components/network-graph/plugins/NetworkGraphRelationContextMenu';
 import { NetworkGraphNodeClick } from 'src/components/network-graph/plugins/node-click/NetworkGraphNodeClick';
 import { NetworkGraphNodeContextMenu } from 'src/components/network-graph/plugins/node-context-menu/NetworkGraphNodeContextMenu';
 import { NetworkGraphNodeHtmlLabel } from 'src/components/network-graph/plugins/node-html-label/NetworkGraphNodeHtmlLabel';
@@ -15,6 +14,7 @@ import { NetworkGraphNodeRelationMouseover } from 'src/components/network-graph/
 import { NetworkGraphQuickNode } from 'src/components/network-graph/plugins/quick-node/NetworkGraphQuickNode';
 import { NetworkGraphQuickZoomFactor } from 'src/components/network-graph/plugins/quick-zoom-factor/NetworkGraphQuickZoomFactor';
 import { NetworkGraphRelationClick } from 'src/components/network-graph/plugins/relation-click/NetworkGraphRelationClick';
+import { NetworkGraphRelationContextMenu } from 'src/components/network-graph/plugins/relation-context-menu/NetworkGraphRelationContextMenu';
 import { NetworkGraphScale } from 'src/components/network-graph/plugins/scale/NetworkGraphScale';
 import { NetworkGraphSelectionTool } from 'src/components/network-graph/plugins/selection-tool/NetworkGraphSelectionTool';
 import i18n from 'src/i18n';
@@ -43,14 +43,11 @@ import { NetworkGraphProps } from './NetworkGraph.interfaces';
  * NOTE: lasso example (can be used instead of the rectangle selection)
  * https://codepen.io/cranes/pen/GvobwB.
  */
-let renderingCapabilitiesWarningShown = false;
 
 export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	const isLoading = useGraphStore((store) => store.isLoading);
-	const rootElementClassName = clsx(
-		'network-graph',
-		isLoading && 'network-graph--is-loading',
-		className
+	const isRenderingCapabilitiesWarningShown = useGraphStore(
+		(store) => store.isRenderingCapabilitiesWarningShown
 	);
 	const rootElementSize = useRef({ width: -1 });
 	const observerRef = useRef(
@@ -73,6 +70,12 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 			}
 		})
 	);
+	const rootElementClassName = clsx(
+		'network-graph',
+		isLoading && 'network-graph--is-loading',
+		className
+	);
+
 	const onRefChange = useCallback((element: HTMLDivElement | null) => {
 		if (element) {
 			observerRef.current.observe(element);
@@ -84,8 +87,8 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	useEffect(() => {
 		const renderingCapabilities = checkBrowserRenderingCapabilities();
 
-		if (renderingCapabilities.softwareRendering && !renderingCapabilitiesWarningShown) {
-			renderingCapabilitiesWarningShown = true;
+		if (renderingCapabilities.softwareRendering && !isRenderingCapabilitiesWarningShown) {
+			useGraphStore.getState().setIsRenderingCapabilitiesWarningShown(true);
 
 			useNotificationsStore.getState().addNotification({
 				title: i18n.t(

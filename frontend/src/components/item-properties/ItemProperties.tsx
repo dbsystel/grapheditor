@@ -14,10 +14,9 @@ import { TabList } from 'src/components/tab-list/TabList';
 import { TabPanel } from 'src/components/tab-panel/TabPanel';
 import { Tabs } from 'src/components/tabs/Tabs';
 import { ItemPropertyKey, ItemPropertyWithKey } from 'src/models/item';
-import { useItemsStore } from 'src/stores/items';
 import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
-import { clone, objectContainsKey } from 'src/utils/helpers/general';
+import { clone, objectHasOwnProperty } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { ItemPropertiesProps } from './ItemProperties.interfaces';
@@ -35,7 +34,6 @@ export const ItemProperties = ({
 	handleRef
 }: ItemPropertiesProps) => {
 	const { t } = useTranslation();
-	const getNodesAsync = useItemsStore((store) => store.getNodesAsync);
 	// splitting this state into multiple states and batching their update would
 	// sometimes cause React not to rerender the component although one of the states
 	// was updated (this behaviour would happen rarely, every ~15/20 times)
@@ -81,7 +79,9 @@ export const ItemProperties = ({
 
 		const processTableEntries = async () => {
 			const { metaData, filterMetaByNodeIds, itemProperties } = propsStorageRef.current;
-			const propertyNodes = await getNodesAsync(Object.keys(itemProperties));
+			const propertyNodes = await nodesApi.postNodesBulkFetch({
+				nodeIds: Object.keys(itemProperties)
+			});
 
 			const { newCompleteEntries, newIncompleteEntries, newTopEntries } =
 				processItemPropertiesEntries({
@@ -168,7 +168,7 @@ export const ItemProperties = ({
 
 	const onPropertyChange = (key: ItemPropertyKey, value: string) => {
 		// if we work with missing ("recommended") properties
-		if (!objectContainsKey(propertiesRef.current, key)) {
+		if (!objectHasOwnProperty(propertiesRef.current, key)) {
 			propertiesRef.current[key] = {
 				type: 'string',
 				value: '',

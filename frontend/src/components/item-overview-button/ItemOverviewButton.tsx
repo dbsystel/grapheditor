@@ -7,6 +7,7 @@ import { Loading } from 'src/components/loading/Loading';
 import { Node } from 'src/models/node';
 import { useDrawerStore } from 'src/stores/drawer';
 import { useItemsStore } from 'src/stores/items';
+import { nodesApi } from 'src/utils/api/nodes';
 import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { idFormatter } from 'src/utils/idFormatter';
 import { ItemOverviewButtonProps } from './ItemOverviewButton.interfaces';
@@ -20,7 +21,6 @@ export const ItemOverviewButton = ({ nodeId, id, className, testId }: ItemOvervi
 	const [renderLoadingTooltip, setRenderLoadingTooltip] = useState(false);
 	const [node, setNode] = useState<Node | undefined>(undefined);
 	const setEntry = useDrawerStore((state) => state.setEntry);
-	const getNodeAsync = useItemsStore((store) => store.getNodeAsync);
 	const getStoreNode = useItemsStore((store) => store.getStoreNode);
 	useItemsStore((store) => store.nodes);
 	const timeoutRef = useRef(0);
@@ -36,7 +36,7 @@ export const ItemOverviewButton = ({ nodeId, id, className, testId }: ItemOvervi
 
 	const onClick = () => {
 		if (node) {
-			setEntry({ itemId: node.id });
+			setEntry({ item: node });
 		}
 	};
 
@@ -48,8 +48,8 @@ export const ItemOverviewButton = ({ nodeId, id, className, testId }: ItemOvervi
 			setRenderLoadingTooltip(true);
 
 			timeoutRef.current = window.setTimeout(() => {
-				getNodeAsync(nodeId).then((fetchedNode) => {
-					setNode(fetchedNode);
+				nodesApi.getNode({ nodeId: nodeId }).then((response) => {
+					setNode(response.data);
 					setRenderLoadingTooltip(false);
 				});
 			}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
