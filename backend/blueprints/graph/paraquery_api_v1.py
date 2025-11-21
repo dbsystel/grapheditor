@@ -65,6 +65,6 @@ class ParaQuery(MethodView):
         if not paraquery_node:
             abort_with_json(400, 'No Paraquery with the given uuid/name found.')
 
-        query_text = paraquery_node["properties"]["MetaProperty::cypher__tech_"]["value"]
+        query_text = paraquery_node.properties["cypher__tech_"]
 
         return execute_query(query_text, parameters)

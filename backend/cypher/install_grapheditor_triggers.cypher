@@ -76,10 +76,6 @@ CALL apoc.systemdb.execute(
 ) YIELD row
 WITH dbName
 CALL apoc.cypher.runSchema(
-  "USE " + dbName + " CREATE TEXT INDEX nodeTextIndex IF NOT EXISTS FOR (n:___tech_) ON (n.`_ft__tech_`);",
-  {}) YIELD value
-WITH dbName
-CALL apoc.cypher.runSchema(
   "USE " + dbName + " CREATE FULLTEXT INDEX nft IF NOT EXISTS FOR (n:___tech_) ON EACH [n.`_ft__tech_`];",
   {}) YIELD value
 RETURN "done";

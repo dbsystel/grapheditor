@@ -5,25 +5,27 @@ Yes, I know, utils.py is an evil name. TODO
 import re
 from flask import abort, current_app, jsonify, make_response
 from database.settings import config
+from database.base_types import BaseElement
 
 
 def pascal_case(s):
     return "".join(x for x in s.title() if x.isalnum())
 
 
-def find_a_value(obj, attributes=None, keys=None, default=None):
+def find_a_value(obj: BaseElement, attributes: list[str] | None = None,
+                 keys: list[str] | None =None, default=None):
     attributes = [] if attributes is None else attributes
     keys = [] if keys is None else keys
 
     for key in keys:
-        for obj_key in obj.keys():
+        for obj_key in obj.properties.keys():
             if obj_key.lower().startswith(key):
-                return obj[obj_key]
+                return obj.properties[obj_key]
 
     for attribute in attributes:
-        for obj_key in obj.__dict__.keys():
+        for obj_key in obj.properties.keys():
             if obj_key.lower().startswith(attribute):
-                return getattr(obj, obj_key)
+                return obj.properties[obj_key]
 
     return default
 

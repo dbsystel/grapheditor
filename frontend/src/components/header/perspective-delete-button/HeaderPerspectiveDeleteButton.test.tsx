@@ -1,15 +1,15 @@
-import { userEvent } from '@vitest/browser/context';
 import { HeaderPerspectiveDeleteButton } from 'src/components/header/perspective-delete-button/HeaderPerspectiveDeleteButton';
 import { useGraphStore } from 'src/stores/graph';
 import { describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 describe('Components - HeaderPerspectiveDelete', () => {
 	const perspectiveId = 'node-0';
 
-	it('Render component', () => {
+	it('Render component', async () => {
 		useGraphStore.getState().setPerspectiveId(perspectiveId);
-		const screen = render(
+		const screen = await render(
 			<HeaderPerspectiveDeleteButton
 				perspectiveId={perspectiveId}
 				closeMenuFunction={() => {}}
@@ -26,7 +26,7 @@ describe('Components - HeaderPerspectiveDelete', () => {
 		vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
 		useGraphStore.getState().setPerspectiveId(perspectiveId);
 
-		const screen = render(
+		const screen = await render(
 			<HeaderPerspectiveDeleteButton
 				perspectiveId={perspectiveId}
 				closeMenuFunction={() => {}}

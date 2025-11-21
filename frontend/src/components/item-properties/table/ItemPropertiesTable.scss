@@ -1,79 +1,84 @@
-.item-properties-table {
-	$this: &;
+@layer item-properties-table {
+	.item-properties-table {
+		$this: &;
 
-	border-top: var(--db-border-width-2xs) solid var(--db-adaptive-on-bg-basic-emphasis-60-default);
-	table-layout: fixed;
+		border-top: var(--db-border-width-2xs) solid var(--db-adaptive-on-bg-basic-emphasis-60-default);
 
-	&__cell {
-		padding: var(--db-spacing-fixed-sm, 8px);
-		word-wrap: break-word;
-
-		&:first-of-type {
+		&__cell {
+			padding: var(--db-spacing-fixed-sm, 8px);
+			word-wrap: break-word;
 			vertical-align: top;
-		}
 
-		.item-info {
-			.db-button {
-				white-space: normal;
-				word-break: break-all;
-				text-align: left;
+			&:first-of-type {
+				vertical-align: top;
 			}
-		}
-	}
 
-	&__textarea {
-		vertical-align: top;
-		padding: 0;
-
-		.db-textarea {
-			label {
-				display: none;
+			.item-info {
+				.db-button {
+					white-space: normal;
+					word-break: break-all;
+					text-align: left;
+				}
 			}
 		}
 
-		textarea {
-			border: none;
-			background-color: var(--db-neutral-bg-basic-level-1-default);
-			border-radius: 0;
-			resize: none;
-			padding: var(--db-spacing-fixed-sm);
-		}
-	}
+		&__textarea {
+			.db-textarea {
+				label {
+					display: none;
+				}
+			}
 
-	.db-popover-content {
-		#{$this}__card {
-			max-height: 145px;
-			overflow: auto;
-		}
-	}
-
-	&__menu {
-		padding: var(--db-spacing-fixed-3xs) 2px 0 0;
-		width: 34px;
-
-		.db-popover-content {
-			z-index: 60;
-		}
-	}
-
-	&__menu-button {
-		display: flex;
-		justify-content: end;
-	}
-
-	&__change-data-type-button {
-		.db-popover-content {
-			z-index: 60;
-		}
-	}
-
-	&__hoverable-row {
-		vertical-align: top;
-
-		#{$this}__textarea {
 			textarea {
-				&:hover {
-					background-color: var(--db-neutral-bg-basic-level-1-default);
+				border: none;
+				background-color: var(--db-neutral-bg-basic-level-1-default);
+				border-radius: 0;
+				resize: none;
+				padding: 0;
+			}
+		}
+
+		.db-popover-content {
+			#{$this}__card {
+				max-height: 145px;
+				overflow: auto;
+			}
+		}
+
+		&__menu {
+			padding: var(--db-spacing-fixed-3xs) 2px 0 0;
+			width: 34px;
+
+			.db-popover-content {
+				z-index: 60;
+			}
+		}
+
+		&__menu-button {
+			display: flex;
+			justify-content: end;
+
+			> .db-popover-content {
+				.db-popover-content {
+					inset-inline: auto 0 !important;
+				}
+			}
+		}
+
+		&__change-data-type-button {
+			.db-popover-content {
+				z-index: 60;
+			}
+		}
+
+		&__hoverable-row {
+			vertical-align: top;
+
+			#{$this}__textarea {
+				textarea {
+					&:hover {
+						background-color: var(--db-neutral-bg-basic-level-1-default);
+					}
 				}
 			}
 		}

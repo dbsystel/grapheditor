@@ -4,6 +4,8 @@ from flask_smorest import Blueprint
 
 from blueprints.display import perspective_model
 from blueprints.maintenance.login_api import require_tab_id
+from database.id_handling import get_base_id
+from database.mapper import GraphEditorNode, GraphEditorRelation
 
 blp = Blueprint(
     "Perspectives",
@@ -26,6 +28,13 @@ class Perspectives(MethodView):
 
         Returns the ID of the newly created.
         """
+        perspective_data['relation_ids'] = [
+            get_base_id(rid) for rid in perspective_data['relation_ids']
+        ]
+        perspective_data['node_positions'] = {
+            get_base_id(k): v
+            for k, v in perspective_data['node_positions'].items()
+        }
         pid = current_app.graph_db.create_perspective(perspective_data)
         if not pid:
             abort(400)
@@ -47,7 +56,16 @@ class Perspective(MethodView):
         Returns an object containing nodes and their positions, as well
         relations.
         """
-        return current_app.graph_db.get_perspective_by_id(pid)
+        persp_data = current_app.graph_db.get_perspective_by_id(pid)
+        ge_nodes = {}
+        for nid, node in persp_data['nodes'].items():
+            ge_nodes[f"id::{nid}"] = GraphEditorNode.from_base_node(node)
+        persp_data['nodes'] = ge_nodes
+        ge_rels = {}
+        for rid, rel in persp_data['relations'].items():
+            ge_rels[f"id::{rid}"] = GraphEditorRelation.from_base_relation(rel)
+        persp_data['relations'] = ge_rels
+        return persp_data
 
     @blp.arguments(
         perspective_model.PerspectivePutSchema,
@@ -62,6 +80,20 @@ class Perspective(MethodView):
         Returns the ID of the perspective.
         """
         current_app.graph_db.get_perspective_by_id(pid)
+        json_node['node_positions'] = {
+            get_base_id(k): v
+            for k, v in json_node['node_positions'].items()
+        }
 
-        pid = current_app.graph_db.replace_perspective_by_id(pid, json_node)
+        json_node['node_positions'] = {
+            get_base_id(k): v
+            for k, v in json_node['node_positions'].items()
+        }
+        json_node['relation_ids'] = [
+            get_base_id(rid)
+            for rid in json_node['relation_ids']
+        ]
+
+        pid = current_app.graph_db.replace_perspective_by_id(
+            pid, json_node)
         return {"id": pid}

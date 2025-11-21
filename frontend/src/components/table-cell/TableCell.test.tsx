@@ -2,14 +2,14 @@ import { TableCell } from 'src/components/table-cell/TableCell';
 import { render } from 'vitest-browser-react';
 
 describe('Components - TableCell', () => {
-	test('Render component', () => {
-		const screen = render(<TableCell />);
+	test('Render component', async () => {
+		const screen = await render(<TableCell />);
 
 		expect(screen.getByRole('cell').element()).toBeInTheDocument();
 	});
 
-	test('Render children', () => {
-		const screen = render(
+	test('Render children', async () => {
+		const screen = await render(
 			<TableCell>
 				<button>Hello</button>
 			</TableCell>

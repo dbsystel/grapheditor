@@ -57,8 +57,7 @@ async function executeSearch() {
 			// make full-text search results format consistent with the cypher query
 			// results format, so we can reuse existing components
 			responseResult = buildSimpleSearchResult(
-				responses[0].data, // nodes API response
-				responses[1].data // relations API response
+				responses[0].data // nodes API response
 			);
 			searchResultType = GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT;
 		}

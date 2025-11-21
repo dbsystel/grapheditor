@@ -5,9 +5,9 @@ import { render } from 'vitest-browser-react';
 import { Header } from './Header';
 
 describe('Components - Header', () => {
-	it('Show search Start Button', () => {
+	it('Show search Start Button', async () => {
 		useSearchStore.getState().setType('full-text');
-		const screen = render(
+		const screen = await render(
 			<MemoryRouter>
 				<Header />
 			</MemoryRouter>
@@ -17,9 +17,9 @@ describe('Components - Header', () => {
 		expect(startButton).toBeInTheDocument();
 	});
 
-	it('show manage perspective button', () => {
+	it('show manage perspective button', async () => {
 		useSearchStore.getState().setType('perspectives');
-		const screen = render(
+		const screen = await render(
 			<MemoryRouter>
 				<Header />
 			</MemoryRouter>

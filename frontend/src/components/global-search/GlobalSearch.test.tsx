@@ -1,4 +1,3 @@
-import { userEvent } from '@vitest/browser/context';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { useSearchStore } from 'src/stores/search';
@@ -11,6 +10,7 @@ import {
 } from 'src/utils/constants';
 import { endpoints } from 'src/utils/endpoints';
 import { expect } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { GlobalSearch } from './GlobalSearch';
 
@@ -30,8 +30,8 @@ describe('Components - GlobalSearch', () => {
 		};
 	};
 
-	test('Render component', () => {
-		const { container } = render(
+	test('Render component', async () => {
+		const { container } = await render(
 			<MemoryRouter>
 				<GlobalSearch searchFunctionRef={globalSearchRef} />
 			</MemoryRouter>
@@ -49,7 +49,7 @@ describe('Components - GlobalSearch', () => {
 			})
 		);
 
-		const { getByRole } = render(
+		const { getByRole } = await render(
 			<MemoryRouter>
 				<GlobalSearch searchFunctionRef={globalSearchRef} />
 			</MemoryRouter>
@@ -85,7 +85,7 @@ describe('Components - GlobalSearch', () => {
 				})
 			);
 
-			const { getByRole } = render(
+			const { getByRole } = await render(
 				<MemoryRouter>
 					<GlobalSearch searchFunctionRef={globalSearchRef} />
 				</MemoryRouter>

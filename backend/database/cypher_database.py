@@ -4,21 +4,21 @@
 # specific parts. If in the future we switch to a different engine, we
 # can still subclass it.
 
-from typing import List, Any
+from uuid import uuid4
+from typing import Any
 from flask import abort, g, current_app
 import neo4j.exceptions
 
 from database import mapper, id_handling
 from database.graph_database import GraphDatabase
 from database.id_handling import (
-    GraphEditorLabel,
-    compute_semantic_id,
     extract_id_metatype,
     get_base_id,
     parse_db_id,
     parse_semantic_id,
     parse_unknown_id,
 )
+from database.base_types import BaseNode, BaseRelation
 from database.mapper import python_value_to_cypher
 from database.utils import abort_with_json, map_dict_keys, dict_to_array
 
@@ -29,13 +29,15 @@ from database.utils import abort_with_json, map_dict_keys, dict_to_array
 # pylint: disable=too-many-public-methods
 # pylint: disable=too-many-lines
 
+FT_QUERY_MIN_SCORE = 0.1
+FT_SEARCH_MAX_RESULTS = 5000
 
 class CypherDatabase(GraphDatabase):
     def _run(self, *args, **kwargs):
         return g.conn.run(*args, **kwargs)
 
     # ======================= Node related ====================================
-    def create_nodes(self, node_data_list: list[dict]):
+    def create_nodes(self, node_data_list: list[dict]) -> dict[str, BaseNode]:
         """Create multiple nodes at once.
         Return a dictionary mapping IDs to the generated nodes.
 
@@ -43,17 +45,18 @@ class CypherDatabase(GraphDatabase):
         """
 
         for node_data in node_data_list:
-            updated_labels = [get_base_id(l) for l in node_data["labels"]]
             updated_properties = {
-                get_base_id(k): v["value"]
-                for k, v in node_data["properties"].items()
+                k: v for k, v in node_data["properties"].items()
                 # we don't want to allow the user to set an UUID. This is
                 # specially important if this method is used for copying
                 # existing nodes.
-                if k != "_uuid__tech_"
+                if get_base_id(k) != "_uuid__tech_"
             }
-            node_data["labels"] = updated_labels
-            node_data["properties"] = updated_properties
+            # we don't leave generation of an UUID for a trigger, since
+            # it's not generated immediately and we want to return
+            # a node containing it.
+            updated_properties.update({'_uuid__tech_': str(uuid4())})
+            node_data['properties'] = updated_properties
 
         query_text = """
         UNWIND $node_data_list AS node_data
@@ -64,11 +67,10 @@ class CypherDatabase(GraphDatabase):
         query_result = self._run(query_text, node_data_list=node_data_list)
 
         new_nodes = {
-            f"id::{row['nid']}": mapper.neonode2grapheditor(row["n"])
+            f"id::{row['nid']}": mapper.BaseNode.from_neo_node(row["n"])
             for row in query_result
         }
         return new_nodes
-
 
     @staticmethod
     def _get_update_label_cypher(old_labels, new_labels):
@@ -104,10 +106,10 @@ class CypherDatabase(GraphDatabase):
         result = self._run(query, name=name)
         row = result.single()
         if row:
-            return mapper.neonode2grapheditor(row["n"], semantic_id=semantic_id)
+            return BaseNode.from_neo_node(row["n"])
         return None
 
-    def get_node_by_id(self, nid, replace_by_pseudo_node=False):
+    def get_node_by_id(self, nid: str) -> BaseNode|None:
         """Fetch a node by its id from the database.
         Might return None if not found"""
         # db:: case
@@ -118,12 +120,10 @@ class CypherDatabase(GraphDatabase):
         n = self._get_node_by_semantic_id(nid)
         if n:
             return n
-
-        if replace_by_pseudo_node:
-            return self._generate_pseudo_node(nid)
         return None
 
-    def get_nodes_by_ids(self, ids:list[str], replace_by_pseudo_node:bool=False, filters:dict=None):
+    def get_nodes_by_ids(self, ids:list[str],
+                         filters:dict|None=None) -> dict[str, BaseNode]:
         """Fetch multiple nodes by id from the database.
         Return a dictionary of original IDs to nodes.
         If an ID is not found and replace_by_pseudo_node is True, the ID is
@@ -171,17 +171,12 @@ class CypherDatabase(GraphDatabase):
         fetched_nodes = {}
 
         for row in query_result:
-            input_id = raw_db_id_to_input_id_map[row["id"]]
-            n = mapper.neonode2grapheditor(row["n"], semantic_id=input_id)
+            # TODO what to do without semantic id at this level?
+            #input_id = raw_db_id_to_input_id_map[row["id"]]
+            n = BaseNode.from_neo_node(row["n"])
             if n:
                 fetched_nodes[raw_db_id_to_input_id_map[row["id"]]] = n
 
-        for nid in ids:
-            # semantic ids are still returned if replace_pseudo_node is true
-            if (nid not in fetched_nodes
-                and parse_semantic_id(nid)
-                and replace_by_pseudo_node):
-                fetched_nodes[nid] = self._generate_pseudo_node(nid)
         return fetched_nodes
 
     def get_nodes_by_names(self, names: list[str], filters:dict[str, Any] | None = None) -> dict:
@@ -257,7 +252,7 @@ class CypherDatabase(GraphDatabase):
         )
         fetched_nodes = dict()
         for row in query_result:
-            n = mapper.neonode2grapheditor(row["n"])
+            n = BaseNode.from_neo_node(row["n"])
             if n:
                 fetched_nodes[row["result"]] = n
 
@@ -300,27 +295,6 @@ class CypherDatabase(GraphDatabase):
         result = result | {id: parse_db_id(id) for id in raw_db_ids}
         return result
 
-    @staticmethod
-    def _generate_pseudo_node(nid):
-        """Generate a pseudo-node for a node that doesn't exist in the
-        database / system.
-        """
-        parts = id_handling.semantic_id_parts(nid)
-        if not parts:
-            # ID is malformed
-            abort_with_json(400, f"Invalid ID {nid}")
-
-        grapheditor_dict = dict(
-            id=nid,
-            description="A pseudo-node.",
-            longDescription=f"Pseudo node for {nid}",
-            properties={},
-            labels=[],
-            title=get_base_id(nid),
-            _grapheditor_type="node",
-        )
-        return grapheditor_dict
-
     def _get_node_by_raw_db_id(self, nid):
         """Fetch a node by its id from the database.
         Might return None if not found."""
@@ -331,27 +305,27 @@ class CypherDatabase(GraphDatabase):
         row = result.single()
 
         if row is not None:
-            return mapper.neonode2grapheditor(row["n"], semantic_id=nid)
+            return BaseNode.from_neo_node(row["n"])
         return None
 
-    def replace_node_by_id(self, nid, node_data, existing_node=None):
+    def replace_node_by_id(
+            self, nid: str, node_data: dict, existing_node: BaseNode
+    ) -> BaseNode:
         """Replace a node by its id from the GraphEditor node_data."""
         if parse_unknown_id(nid):
             return None
 
-        if not existing_node:
-            existing_node = self.get_node_by_id(nid, True)
-
-        raw_db_id = parse_db_id(existing_node["id"])
+        raw_db_id = parse_db_id(existing_node.id)
         if not raw_db_id:
-            raw_db_id = existing_node["id"]
+            raw_db_id = existing_node.id
 
-        old_labels = list(map(get_base_id, existing_node["labels"]))
-        new_labels = list(map(get_base_id, node_data["labels"]))
+        old_labels = existing_node.labels
+        new_labels = node_data["labels"]
         label_update = self._get_update_label_cypher(old_labels, new_labels)
 
         properties = mapper.compute_updated_properties(
-            existing_node["properties"], node_data["properties"]
+            existing_node.properties,
+            node_data["properties"]
         )
 
         result = self._run(
@@ -364,9 +338,11 @@ class CypherDatabase(GraphDatabase):
             properties=properties,
         )
 
-        return mapper.neonode2grapheditor(result.single()["n"], semantic_id=nid)
+        return BaseNode.from_neo_node(result.single()["n"])
 
-    def update_node_by_id(self, nid, node_data, existing_node=None):
+    def update_node_by_id(
+            self, nid: str, node_data: dict, existing_node: BaseNode|None=None
+    ) -> BaseNode | None:
         """Update node with ID `nid` according to `node_data`.
         `node_data` is a dict containing partial information
         of a node.
@@ -375,11 +351,8 @@ class CypherDatabase(GraphDatabase):
         node corresponding to `nid`.
 
         Return updated node."""
-        if parse_unknown_id(nid):
-            return None
-
         if not existing_node:
-            existing_node = self.get_node_by_id(nid, True)
+            existing_node = self.get_node_by_id(nid)
 
         if not existing_node:
             current_app.logger.error(
@@ -387,26 +360,25 @@ class CypherDatabase(GraphDatabase):
             )
             return None
 
-        raw_db_id = parse_db_id(existing_node["id"])
-        if not raw_db_id:
-            raw_db_id = parse_db_id(existing_node["dbId"])
+        raw_db_id = existing_node.id
 
         label_update = ""
         if "labels" in node_data:
-            old_labels = list(map(get_base_id, existing_node["labels"]))
-            new_labels = list(map(get_base_id, node_data["labels"]))
+            old_labels = existing_node.labels
+            new_labels = node_data["labels"]
             label_update = self._get_update_label_cypher(
                 old_labels, new_labels
             )
 
         if "properties" in node_data:
             properties = mapper.compute_updated_properties(
-                existing_node["properties"], node_data["properties"]
+                existing_node.properties,
+                node_data["properties"]
             )
         else:
             properties = {
-                get_base_id(k): v["value"]
-                for k, v in existing_node["properties"].items()
+                k: v for k, v in existing_node.properties.items()
+                if get_base_id(k) != "_uuid__tech_"
             }
 
         if properties:
@@ -430,7 +402,7 @@ class CypherDatabase(GraphDatabase):
         if not result:
             current_app.logger.debug("No matching relations.")
             return None
-        return mapper.neonode2grapheditor(result.single()["n"], semantic_id=nid)
+        return BaseNode.from_neo_node(result.single()["n"])
 
     def delete_nodes_by_ids(self, ids):
         """Delete multiple nodes by their ids"""
@@ -503,8 +475,8 @@ class CypherDatabase(GraphDatabase):
             )
             incoming_with_source = [
                 {
-                    "relation": mapper.neorelation2grapheditor(row["r"]),
-                    "neighbor": mapper.neonode2grapheditor(row["neighbor"]),
+                    "relation": BaseRelation.from_neo_relation(row["r"]),
+                    "neighbor": BaseNode.from_neo_node(row["neighbor"]),
                     "direction": "incoming",
                 }
                 for row in incoming_res
@@ -522,15 +494,15 @@ class CypherDatabase(GraphDatabase):
             )
             outgoing_with_target = [
                 {
-                    "relation": mapper.neorelation2grapheditor(row["r"]),
-                    "neighbor": mapper.neonode2grapheditor(row["neighbor"]),
+                    "relation": BaseRelation.from_neo_relation(row["r"]),
+                    "neighbor": BaseNode.from_neo_node(row["neighbor"]),
                     "direction": "outgoing",
                 }
                 for row in outgoing_res
             ]
         return incoming_with_source + outgoing_with_target
 
-    def _get_node_relations_by_semantic_id(self, semantic_id, filters):
+    def _get_node_relations_by_semantic_id(self, semantic_id:str, filters:dict) -> list[dict]:
         """Get node relations from node with semantic_id.
         Return None if invalid."""
         incoming_with_source = []
@@ -560,8 +532,8 @@ class CypherDatabase(GraphDatabase):
             )
             incoming_with_source = [
                 {
-                    "relation": mapper.neorelation2grapheditor(row["r"]),
-                    "neighbor": mapper.neonode2grapheditor(row["neighbor"]),
+                    "relation": BaseRelation.from_neo_relation(row["r"]),
+                    "neighbor": BaseNode.from_neo_node(row["neighbor"]),
                     "direction": "incoming",
                 }
                 for row in incoming_res
@@ -579,15 +551,15 @@ class CypherDatabase(GraphDatabase):
             )
             outgoing_with_target = [
                 {
-                    "relation": mapper.neorelation2grapheditor(row["r"]),
-                    "neighbor": mapper.neonode2grapheditor(row["neighbor"]),
+                    "relation": BaseRelation.from_neo_relation(row["r"]),
+                    "neighbor": BaseNode.from_neo_node(row["neighbor"]),
                     "direction": "outgoing",
                 }
                 for row in outgoing_res
             ]
         return incoming_with_source + outgoing_with_target
 
-    def get_node_relations(self, nid, filters):
+    def get_node_relations(self, nid: str, filters: dict) -> list[dict]:
         """Return all relations that have node with ID 'nid' as source
         and/or target, or None if the ID is a db_id and doesn't exist.
 
@@ -647,18 +619,26 @@ class CypherDatabase(GraphDatabase):
         RETURN original_id, n
         """
 
-    def get_relations_by_node_ids(self, node_ids, exclude_relation_types=None):
+    def get_relations_by_node_ids(
+            self, node_ids: list[str], exclude_relation_types: bool = None
+    ) -> list[BaseRelation]:
         """Return all relations that have any of the nodes with IDs 'node_ids'
         as source and/or target.
         """
         if exclude_relation_types is None:
             exclude_relation_types = []
+        query = (f"MATCH (a)-[r]->(b) WHERE {g.cypher_id}(a) in $node_ids AND "
+                f"{g.cypher_id}(b) IN $node_ids")
+        if exclude_relation_types:
+            query += " AND NOT type(r) in $exclude_relation_types"
+        query +=" RETURN r"
+
         result = g.conn.run(
-            f"MATCH (a)-[r]->(b) WHERE {g.cypher_id}(a) in {node_ids} AND "
-            f"{g.cypher_id}(b) IN {node_ids} AND "
-            f"NOT type(r) in {exclude_relation_types} RETURN r"
+            query,
+            node_ids=node_ids,
+            exclude_relation_types=exclude_relation_types
         )
-        return [mapper.neorelation2grapheditor(row["r"]) for row in result]
+        return [BaseRelation.from_neo_relation(row["r"]) for row in result]
 
 
     def get_nodes_neighbors(
@@ -666,7 +646,7 @@ class CypherDatabase(GraphDatabase):
             relation_types: list[str],
             direction="both",
             neighbors_filters=None
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, BaseNode]]:
         """Return all neighbors from nodes in id_map.
 
         Args:
@@ -702,12 +682,12 @@ class CypherDatabase(GraphDatabase):
                              property_filters=property_filters)
 
             for row in res:
-                node = mapper.neonode2grapheditor(row["n"])
+                node = BaseNode.from_neo_node(row["n"])
                 oid = row["original_id"]
                 if oid in result:
-                    result[oid][node["id"]] = node
+                    result[oid][node.id] = node
                 else:
-                    result[oid] = {node["id"]: node}
+                    result[oid] = {node.id: node}
         else:
             query_str = self._neighbors_query_string(relation_types, "incoming", neighbors_filters)
             res = g.conn.run(query_str,
@@ -717,13 +697,12 @@ class CypherDatabase(GraphDatabase):
                              property_filters=property_filters)
 
             for row in res:
-                node = mapper.neonode2grapheditor(row["n"])
+                node = BaseNode.from_neo_node(row["n"])
                 oid = row["original_id"]
                 if oid in result:
-                    result[oid][node["id"]] = node
+                    result[oid][node.id] = node
                 else:
-                    result[oid] = {node["id"]: node}
-
+                    result[oid] = {node.id: node}
         return result
 
     def incoming_relation_types(self, node_ids):
@@ -750,44 +729,97 @@ class CypherDatabase(GraphDatabase):
             for row in result
         }
 
-    def query_nodes(self, text, labels, pseudo):
+    def _property_search_query_str(self, var_name:str="n"):
+        """Helper method for building a property filtering string for nodes and relations.
+        """
+        return f"""
+        WHERE
+        (({var_name}.`_ft__tech_` CONTAINS toLower($text))
+         OR (
+            {var_name}.`_ft__tech_` IS NULL
+            AND ANY(prop in keys({var_name})
+                WHERE (NOT prop STARTS WITH "_")
+                      AND ((toLower(toStringOrNull({var_name}[prop])) STARTS WITH toLower($text))
+                           OR (toLower(prop) STARTS WITH toLower($text))))
+            OR toLower(toString({g.cypher_id}({var_name}))) CONTAINS toLower($text)))
+        """
+
+    def _query_nodes_with_nft(self, text: str, labels: list[str]) -> dict[str, BaseNode]:
+        labels_filter_expr = """
+        any(lab IN $labels WHERE lab IN labels(n))
+        """ if labels else ""
+
+        query = f"""
+        CALL db.index.fulltext.queryNodes("nft", $text, {{limit: {FT_SEARCH_MAX_RESULTS}}})
+        YIELD node AS n, score
+        """
+        # Escape colon, otherwise searching for an element ID results in a crash.
+        # We don't need to support the whole lucene syntax.
+        text = f"{text.replace(':', r'\:')}"
+        if labels_filter_expr:
+            query += f"WHERE {labels_filter_expr} "
+        query += "RETURN n, elementid(n) AS nid, score"
+        result = self._run(query, text=text, labels=labels)
+        # If we allow any score, some things become confusing to the user. For
+        # example searching for an ID returns every node/relation in the graph,
+        # since a big portion of Neo4j's element IDs are equal.
+        nodes = {
+            row['nid']: BaseNode.from_neo_node(row["n"])
+            for row in result
+            if row['score'] > FT_QUERY_MIN_SCORE
+        }
+        return nodes
+
+
+    def _query_nodes_scan_props(self, text: str, labels: list[str]) -> dict[str, BaseNode]:
+        labels_filter_expr = """
+        any(lab IN $labels WHERE lab IN labels(n))
+        """ if labels else ""
+        query = "MATCH (n) "
+        query += self._property_search_query_str('n')
+
+        if labels_filter_expr:
+            query += f"AND {labels_filter_expr} "
+        query += "RETURN n, elementid(n) AS nid"
+
+        result = self._run(query, text=text, labels=labels)
+        nodes = {
+            row['nid']: BaseNode.from_neo_node(row["n"])
+            for row in result
+        }
+        return nodes
+
+
+    def query_nodes(self, text: str, labels: list[str], pseudo: bool) -> list[BaseNode]:
         """Return nodes which contain text and labels.
 
         If the database has _ft__tech_ support, use it. Otherwise search
         across all properties of all nodes
         """
 
+        if not text:
+            abort_with_json(400, "Parameter text cannot be empty.")
+
         # pylint: disable=unused-argument
-        filter_expr = ""
         if text != "":
             # if text is an ID, strip out the base and search for that instead
             raw_db_id = parse_db_id(text)
             if raw_db_id:
                 text = raw_db_id
 
-            filter_expr = f"""
-                ((n.`_ft__tech_` CONTAINS toLower("{text}")) OR
-                 (ANY(prop in keys(n) WHERE (
-                              NOT prop STARTS WITH "_") AND (
-                              (toLower(toStringOrNull(n[prop])) STARTS WITH toLower($text)) OR
-                              (toLower(prop) STARTS WITH toLower($text))
-                             )
-                          ) OR
-                          toString({g.cypher_id}(n)) = {cast_id('$text')}))"""
-
-        if labels:
-            if filter_expr:
-                filter_expr += "\n AND "
-            filter_expr += f"n:{':'.join(labels)}"
-
-        query = f"""MATCH (n)
-                    {filter_expr and 'WHERE' or ''}
-                    {filter_expr}
-                    RETURN n;
-                """
-        result = self._run(query, text=text)
-        nodes = [mapper.neonode2grapheditor(row["n"]) for row in result]
-        return nodes
+        if g.conn.has_nft_index():
+            # For simple queries (e.g. without boolean operators) we want to
+            # have the same search results, regardless of the database having
+            # nft or not. So we append an wildcard to text.  Unfortunately
+            # Neo4j's lucene support has a confusing behavior. If we have
+            # something complex as a node ID (with colon etc), adding wildcard
+            # to the beginning or the end doesn't work and returns no result,
+            # even though the ID is in the database and in the _ft__tech_
+            # property.  So we do two queries, one with and one without wildcard.
+            nodes = self._query_nodes_with_nft(text, labels) if text else {}
+        else:
+            nodes = self._query_nodes_scan_props(text, labels)
+        return list(nodes.values())
 
     # ======================= Relation related ================================
 
@@ -800,7 +832,7 @@ class CypherDatabase(GraphDatabase):
             return None
         return self._get_relation_by_raw_db_id(raw_db_id)
 
-    def get_relations_by_ids(self, rids):
+    def get_relations_by_ids(self, rids: list[str]) -> dict[str, BaseRelation]:
         """Fetch relations by their IDs. Return a map of IDs to
         Relation objects.  Assume all IDs are in the format
         id::<id> ."""
@@ -814,7 +846,7 @@ class CypherDatabase(GraphDatabase):
         """
         res = self._run(query, ids=list(id_map.keys()))
         return {
-            id_map[row["id"]]: mapper.neorelation2grapheditor(row["r"])
+            id_map[row["id"]]: BaseRelation.from_neo_relation(row["r"])
             for row in res
         }
 
@@ -826,7 +858,7 @@ class CypherDatabase(GraphDatabase):
         )
         row = result.single()
         if row is not None:
-            return mapper.neorelation2grapheditor(row["r"], semantic_id=rid)
+            return BaseRelation.from_neo_relation(row["r"])
         return None
 
     def _update_relation_references(self, old_rid, new_rid):
@@ -878,17 +910,14 @@ class CypherDatabase(GraphDatabase):
             # collect new properties with corresponding base IDS and keep
             # mandatory ones from the existing relation
             properties = mapper.compute_updated_properties(
-                existing_relation["properties"], relation_data["properties"]
+                existing_relation.properties, relation_data["properties"]
             )
         else:
-            properties = {
-                get_base_id(key): value["value"]
-                for key, value in existing_relation["properties"].items()
-            }
+            properties = existing_relation.properties
 
         if (
             "type" in relation_data
-            and relation_data["type"] != existing_relation["type"]
+            and relation_data["type"] != existing_relation.type
         ):
             new_type = relation_data["type"].split(":")[-1]
             result = self._run(
@@ -920,10 +949,10 @@ class CypherDatabase(GraphDatabase):
         self._update_relation_references(raw_db_id, new_rel.element_id)
 
         if raw_db_id:
-            return mapper.neorelation2grapheditor(new_rel)
-        return mapper.neorelation2grapheditor(new_rel, semantic_id=rid)
+            return BaseRelation.from_neo_relation(new_rel)
+        return BaseRelation.from_neo_relation(new_rel)
 
-    def create_relations(self, relation_data_list: list[dict]):
+    def create_relations(self, relation_data_list: list[dict]) -> dict[str, BaseRelation]:
         """Create multiple nodes at once.
         Return a dictionary mapping IDs to generated relations.
 
@@ -931,18 +960,16 @@ class CypherDatabase(GraphDatabase):
         """
 
         for relation_data in relation_data_list:
-            updated_type = get_base_id(relation_data["type"])
             updated_properties = {
-                get_base_id(k): v["value"]
-                for k, v in relation_data["properties"].items()
+                k: v
+                for k, v in relation_data.get('properties', {}).items()
                 if k != "_uuid__tech_"
-            } if "properties" in relation_data else {}
-            source_id = parse_db_id(relation_data["source_id"])
-            target_id = parse_db_id(relation_data["target_id"])
-            relation_data["type"] = updated_type
-            relation_data["properties"] = updated_properties
-            relation_data["source_id"] = source_id
-            relation_data["target_id"] = target_id
+            }
+            # we don't leave generation of an UUID for a trigger, since
+            # it's not generated immediately and we want to return
+            # a node containing it.
+            updated_properties.update({'_uuid__tech_': str(uuid4())})
+            relation_data['properties'] = updated_properties
 
         query_text = """
         UNWIND $relation_data_list AS rel_data
@@ -964,10 +991,11 @@ class CypherDatabase(GraphDatabase):
         """
         new_rels = {}
         try:
-            query_result = self._run(query_text,
-                                     relation_data_list=relation_data_list)
+            query_result = self._run(
+                query_text,
+                relation_data_list=relation_data_list)
             new_rels = {
-                f"id::{row['rid']}": mapper.neorelation2grapheditor(row["r"])
+                f"id::{row['rid']}": BaseRelation.from_neo_relation(row["r"])
                 for row in query_result
             }
             # even if we use apoc.util.validate in cypher, it may still be
@@ -1004,28 +1032,26 @@ class CypherDatabase(GraphDatabase):
         )
         return result.single()["c"]
 
-    def fulltext_query_relations(self, text):
+    def query_relations(self, text: str) -> list[BaseRelation]:
         """Return relations which contain text.
 
         If the database has _ft__tech_ support, use it. Otherwise query
         across all relations, looking in property keys and values.
         """
-        filter_expr = ""
-        text = get_base_id(text)
-        if text != "":
-            filter_expr = f"""WHERE r.`_ft__tech_` CONTAINS toLower("{text}") OR
-            ANY(prop IN KEYS(r)
-                WHERE (NOT prop STARTS WITH "_") AND
-                       ((toLower(toStringOrNull(r[prop])) STARTS WITH toLower($text)) OR
-                        (toLower(prop) STARTS WITH toLower($text))) OR
-                       {g.cypher_id}(r) = {cast_id('$text')} OR
-                       toLower(type(r)) STARTS WITH toLower($text))"""
-        query = f"""MATCH ()-[r]->()
-                    {filter_expr}
-                    RETURN r;
-                """
+        if not text:
+            abort_with_json(400, "Parameter text cannot be empty.")
+        raw_db_id = parse_db_id(text)
+        if raw_db_id:
+            text = raw_db_id
+        query = "MATCH ()-[r]->() "
+        query += self._property_search_query_str('r')
+        query += f"""
+        OR toLower(type(r)) STARTS WITH toLower($text)
+        RETURN r LIMIT {FT_SEARCH_MAX_RESULTS}
+        """
+
         result = self._run(query, text=text)
-        relations = [mapper.neorelation2grapheditor(row["r"]) for row in result]
+        relations = [BaseRelation.from_neo_relation(row["r"]) for row in result]
         return relations
 
     # ======================= Perspective related =============================
@@ -1038,7 +1064,7 @@ class CypherDatabase(GraphDatabase):
         """
         arr = [
             {
-                "id": parse_db_id(nid),
+                "id": nid,
                 "x": pos["x"],
                 "y": pos["y"],
                 "z": pos["z"] if "z" in pos else 0,
@@ -1121,13 +1147,13 @@ class CypherDatabase(GraphDatabase):
             if not perspective_desc:
                 perspective_desc = row["p"]["description__tech_"]
             pos = row["pos"]
-            node = mapper.neonode2grapheditor(row["b"])
-            node["style"]["x"] = pos["x__tech_"]
-            node["style"]["y"] = pos["y__tech_"]
+            node = BaseNode.from_neo_node(row["b"])
+            node.style["x"] = pos["x__tech_"]
+            node.style["y"] = pos["y__tech_"]
             if row["rel_uid"] != "last_element" and row["r"] is not None:
-                new_rel = mapper.neorelation2grapheditor(row["r"])
+                new_rel = BaseRelation.from_neo_relation(row["r"])
                 relations[f"id::{row['rel_id']}"] = new_rel
-            nodes[node["dbId"]] = node
+            nodes[node.id] = node
 
         return {
             "name": perspective_name,
@@ -1281,8 +1307,8 @@ class CypherDatabase(GraphDatabase):
         self._get_metaproperties()
         self._get_metarelations()
 
-    def get_all_labels(self, nids: List[str] = None):
-        """Return all labels as GraphEditorIDs.
+    def get_all_labels(self, nids: list[str] | None = None) -> list[str]:
+        """Return all labels available in graph.
         If nids is set, only labels of node ids in it are returned.
         """
         if nids:
@@ -1300,17 +1326,14 @@ class CypherDatabase(GraphDatabase):
             RETURN DISTINCT m.name__tech_ AS label
             """
             result = self._run(query)
-        semantic_ids = set()
+        labels = set()
         for r in result:
             label = r["label"]
-            stringid = compute_semantic_id(
-                label, GraphEditorLabel.MetaLabel
-            )
-            semantic_ids.add(stringid)
-        return sorted(list(semantic_ids))
+            labels.add(label)
+        return sorted(list(labels))
 
-    def get_all_types(self):
-        """Return all relation types as GraphEditorIDs."""
+    def get_all_types(self) -> list[str]:
+        """Return all relation types."""
         query = """
         MATCH ()-[r]->()
         RETURN DISTINCT type(r) AS type
@@ -1322,26 +1345,23 @@ class CypherDatabase(GraphDatabase):
         stringids = set()
         for r in result:
             rel_type = r["type"]
-            stringid = compute_semantic_id(
-                rel_type, GraphEditorLabel.MetaRelation
-            )
+            stringid = rel_type
             stringids.add(stringid)
         return sorted(list(stringids))
 
-    def _properties_result_to_stringids(self, result):
-        """Convert a query result with properties to string IDs."""
-        stringids = set()
+    def _sort_property_names(self, result):
+        """Collect and sort property names."""
+        # TODO should we do this in cypher?
+        prop_names = set()
         for r in result:
             prop = r["prop"]
-            stringid = compute_semantic_id(
-                prop, GraphEditorLabel.MetaProperty
-            )
-            stringids.add(stringid)
+            if prop:
+                prop_names.add(prop)
 
-        return sorted(list(stringids))
+        return sorted(list(prop_names))
 
-    def get_all_node_properties(self, nids: List[str] = None):
-        """Return semantic IDs of all node properties.
+    def get_all_node_properties(self, nids: list[str] | None = None) -> list[str]:
+        """Return all node property names.
         If nids is set, only properties of node ids in it are returned.
         """
 
@@ -1361,10 +1381,10 @@ class CypherDatabase(GraphDatabase):
             RETURN DISTINCT p.name__tech_ AS prop
             """
             result = self._run(query)
-        return self._properties_result_to_stringids(result)
+        return self._sort_property_names(result)
 
-    def get_all_relation_properties(self):
-        """Return all relation properties as stringids."""
+    def get_all_relation_properties(self) -> list[str]:
+        """Return all relation property names."""
         query = """MATCH ()-[r]->()
                    UNWIND keys(r) AS key
                    RETURN DISTINCT key AS prop
@@ -1373,7 +1393,7 @@ class CypherDatabase(GraphDatabase):
                    RETURN DISTINCT p.name__tech_ AS prop
                 """
         result = self._run(query)
-        return self._properties_result_to_stringids(result)
+        return self._sort_property_names(result)
 
 
 def _is_version_4_or_less():

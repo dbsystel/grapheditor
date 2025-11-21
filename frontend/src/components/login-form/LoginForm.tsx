@@ -5,7 +5,6 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Form } from 'src/components/form/Form';
 import { FormRow } from 'src/components/form-row/FormRow';
-import { initializeApplicationStoresObservers } from 'src/observers';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { usersApi } from 'src/utils/api/users';

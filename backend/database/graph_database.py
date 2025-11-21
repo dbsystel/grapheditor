@@ -4,8 +4,8 @@
 # direct dependencies on a particular graph database (or even on
 # cypher, when possible) and use a subclass of GraphDatabase instead.
 
-from typing import List
 from abc import ABC, abstractmethod
+from database.base_types import BaseNode, BaseRelation
 
 # We don't want to spread database-specific logic across many files,
 # what would make it harder to swap the database technology in the
@@ -24,13 +24,15 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_node_by_id(self, nid, replace_by_pseudo_node=False):
+    def get_node_by_id(self, nid: str) -> BaseNode|None:
         """Fetch a node by its id from the database.
         Might return None if not found"""
         pass
 
     @abstractmethod
-    def get_nodes_by_ids(self, ids, replace_by_pseudo_node=False, filters=None):
+    def get_nodes_by_ids(
+            self, ids:list[str], filters:dict|None=None
+    ) -> dict[str, BaseNode]:
         """Fetch multiple nodes by id from the database.
         Return a dictionary of original IDs to nodes.
         If an ID is not found and replace_by_pseudo_node is True, the ID is
@@ -46,12 +48,14 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def replace_node_by_id(self, nid, node_data, existing_node=None):
+    def replace_node_by_id(self, nid: str, node_data: dict, existing_node: BaseNode):
         """Replace a node by its id from the GraphEditor node_data."""
         pass
 
     @abstractmethod
-    def update_node_by_id(self, nid, node_data, existing_node=None):
+    def update_node_by_id(
+            self, nid: str, node_data: dict, existing_node: BaseNode|None=None
+    ) -> BaseNode | None:
         """Update node with partial data."""
         pass
 
@@ -92,7 +96,9 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_relations_by_node_ids(self, node_ids, exclude_relation_types=None):
+    def get_relations_by_node_ids(
+            self, node_ids: list[str], exclude_relation_types: bool = None
+    ) -> list[BaseRelation]:
         """Return all relations that have any of the nodes with IDs 'node_ids'
         # as source and/or target.
         """
@@ -128,6 +134,15 @@ class GraphDatabase(ABC):
         """
         pass
 
+    @abstractmethod
+    def query_relations(self, text: str) -> list[BaseRelation]:
+        """Return relations which contain text.
+
+        If the database has _ft__tech_ support, use it. Otherwise query
+        across all relations, looking in property keys and values.
+        """
+        pass
+
     # ====================== Relation related =================================
 
     @abstractmethod
@@ -144,7 +159,7 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def create_relations(self, relation_data_list):
+    def create_relations(self, relation_data_list: list[dict]) -> dict[str, BaseRelation]:
         """Create multiple nodes at once.
         For now this method transforms node data contained in its input.
         """
@@ -184,26 +199,26 @@ class GraphDatabase(ABC):
     # ====================== General Info =====================================
 
     @abstractmethod
-    def get_all_labels(self, nids: List[str] = None):
+    def get_all_labels(self, nids: list[str] | None = None) -> list[str]:
         """Return all labels as GraphEditorIDs.
         If nids is set, only labels of node ids in it are returned.
         """
         pass
 
     @abstractmethod
-    def get_all_types(self):
+    def get_all_types(self) -> list[str]:
         """Return all relation types as GraphEditorIDs."""
         pass
 
     @abstractmethod
-    def get_all_node_properties(self, nids: List[str] = None):
+    def get_all_node_properties(self, nids: list[str] | None = None) -> list[str]:
         """Return semantic IDs of all node properties.
            If nids is set, only properties of node ids in it are returned.
         """
         pass
 
     @abstractmethod
-    def get_all_relation_properties(self):
+    def get_all_relation_properties(self) -> list[str]:
         """Return all relation properties as stringids."""
         pass
 

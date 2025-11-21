@@ -19,18 +19,40 @@ import { Node, PatchNode } from 'src/models/node';
 import { PatchRelation } from 'src/models/relation';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
+import { useNotificationsStore } from 'src/stores/notifications';
 import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
 import { clone } from 'src/utils/helpers/general';
+import { idFormatter } from 'src/utils/idFormatter';
 import { ContextMenuSubMenu } from '../sub-menu/ContextMenuSubMenu';
 
 export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 	const [newProperties, setNewProperties] = useState<
-		Record<ItemPropertyKey, { property: ItemProperty; node: Node }>
+		Record<ItemPropertyKey, { property: ItemProperty; node?: Node }>
 	>({});
 
-	const onPropertyCreate = (newProperty: ItemPropertyWithKey, propertyNode: Node) => {
+	const onPropertyCreate = async (newProperty: ItemPropertyWithKey, propertyNode?: Node) => {
 		const newPropertiesClone = clone(newProperties);
+		let newPropertyNode = propertyNode;
+
+		if (!propertyNode) {
+			const response = await nodesApi.postNodesBulkFetch({ nodeIds: [newProperty.key] });
+			const responseNode = response.at(0);
+
+			if (responseNode) {
+				newPropertyNode = responseNode;
+			} else {
+				useNotificationsStore.getState().addNotification({
+					title: i18n.t(
+						'notifications_warning_context_menu_add_properties_node_fetch_fail',
+						{
+							id: newProperty.key
+						}
+					),
+					type: 'warning'
+				});
+			}
+		}
 
 		newPropertiesClone[newProperty.key] = {
 			property: {
@@ -38,7 +60,7 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 				type: newProperty.type,
 				edit: newProperty.edit
 			},
-			node: propertyNode
+			node: newPropertyNode
 		};
 
 		setNewProperties(newPropertiesClone);
@@ -126,7 +148,11 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 									return (
 										<TableRow key={propertyKey}>
 											<TableCell>
-												{<ItemInfo item={propertyEntry.node} />}
+												{propertyEntry.node && (
+													<ItemInfo item={propertyEntry.node} />
+												)}
+												{!propertyEntry.node &&
+													idFormatter.parseIdToName(propertyKey)}
 											</TableCell>
 											<TableCell>{propertyEntry.property.value}</TableCell>
 											<TableCell>{propertyEntry.property.type}</TableCell>

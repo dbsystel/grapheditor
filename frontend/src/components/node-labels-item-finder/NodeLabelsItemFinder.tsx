@@ -4,10 +4,11 @@ import clsx from 'clsx';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
-import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
+import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { Node } from 'src/models/node';
 import { nodesApi } from 'src/utils/api/nodes';
 import { GraphEditorTypeSimplified, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { compareTwoStringsForSorting } from 'src/utils/helpers/general';
 import {
 	generateNode,
 	getNodeSemanticIdOrId,
@@ -38,7 +39,12 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const [selectedTagIds, setSelectedTagIds] = useState<Array<string>>([]);
 	const [originalValue, setOriginalValue] = useState<Array<Node> | undefined>(undefined);
 	const sortedLabels = useMemo(() => {
-		return value?.slice().sort((a, b) => a.title.localeCompare(b.title));
+		return value?.slice().toSorted((a, b) => {
+			const aTitle = idFormatter.parseIdToName(a.title);
+			const bTitle = idFormatter.parseIdToName(b.title);
+
+			return compareTwoStringsForSorting(aTitle, bTitle);
+		});
 	}, [value]);
 	const indeterminateCheckboxRef = useRef<HTMLInputElement>(null);
 	const allTagIds = sortedLabels?.map((label) => label.id) || [];
@@ -263,7 +269,11 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 							checked={isCheckboxChecked}
 						/>
 
-						<DBTooltip width="fixed" placement="left-end" showArrow={false}>
+						<DBTooltip
+							width="fixed"
+							showArrow={false}
+							className="db-tooltip-fix db-tooltip-fix--bottom-end"
+						>
 							{isCheckboxChecked
 								? t('node-labels-item-finder-checkbox-uncheck_all_labels')
 								: t('node-labels-item-finder-checkbox-select_all_labels')}
@@ -357,7 +367,7 @@ const Tag = ({
 
 				{idFormatter.parseIdToName(label.title)}
 
-				{tooltipLabel && <ItemOverviewTooltip item={tooltipLabel} tooltipRef={ref} />}
+				{tooltipLabel && <ItemOverviewPopover item={tooltipLabel} popoverRef={ref} />}
 			</DBCheckbox>
 		</DBTag>
 	);

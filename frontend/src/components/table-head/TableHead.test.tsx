@@ -4,14 +4,14 @@ import { TableRow } from 'src/components/table-row/TableRow';
 import { render } from 'vitest-browser-react';
 
 describe('Components - TableHead', () => {
-	test('Render component', () => {
-		const screen = render(<TableHead />);
+	test('Render component', async () => {
+		const screen = await render(<TableHead />);
 
 		expect(screen.getByRole('rowgroup').element()).toBeInTheDocument();
 	});
 
-	test('Render children', () => {
-		const screen = render(
+	test('Render children', async () => {
+		const screen = await render(
 			<TableHead>
 				<TableRow>
 					<TableCell>Hello</TableCell>

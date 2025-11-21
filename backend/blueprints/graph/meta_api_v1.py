@@ -4,7 +4,7 @@ from flask_smorest import Blueprint
 
 from blueprints.graph import meta_model
 from blueprints.maintenance.login_api import require_tab_id
-from database import mapper
+from database.mapper import get_base_id, GraphEditorNode
 from database.id_handling import GraphEditorLabel, extract_id_metatype
 
 blp = Blueprint(
@@ -45,7 +45,7 @@ class MetaForMeta(MethodView):
         db_ids_metatypes = {}
         for nid, node in fetched_nodes.items():
             for metatype in self._supported_metalabels:
-                if metatype.name in map(mapper.get_base_id, node["labels"]):
+                if metatype.name in map(get_base_id, node["labels"]):
                     db_ids_metatypes[nid] = metatype
 
         result = db_ids_metatypes | semantic_ids_metatypes
@@ -64,7 +64,10 @@ class MetaForMeta(MethodView):
 
         result = {}
         for nid, neighbors in nodes_to_neighbors_map.items():
-            result[nid] = neighbors.values()
+            result[nid] = [
+                GraphEditorNode.from_base_node(node)
+                for node in neighbors.values()
+            ]
         return result
 
     def _get_metaobjects_of_metaproperties(self, id_map):
@@ -78,8 +81,10 @@ class MetaForMeta(MethodView):
             id_map, ["prop__tech_"], "outgoing"
         )
         for nid, neighbors in nodes_to_neighbors_map.items():
-            result[nid] = neighbors.values()
-
+            result[nid] = [
+                GraphEditorNode.from_base_node(base_node)
+                for base_node in neighbors.values()
+            ]
         return result
 
     @blp.arguments(
@@ -126,12 +131,12 @@ class MetaForMeta(MethodView):
         # check of metatype consistency in the future.
         # Get first MetaLabel found.
         for nid in ids:
-            sample_node = current_app.graph_db.get_node_by_id(nid, True)
+            sample_node = current_app.graph_db.get_node_by_id(nid)
             if sample_node is None:
                 continue
-            for label in sample_node["labels"]:
+            for label in sample_node.labels:
                 try:
-                    metatype = mapper.GraphEditorLabel(mapper.get_base_id(label))
+                    metatype = GraphEditorLabel(get_base_id(label))
                 except ValueError:
                     pass
             if metatype in [

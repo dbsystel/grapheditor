@@ -406,6 +406,7 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 					);
 			}
 		},
+		// TODO refactor to more bulky
 		// much bulk, very wow
 		addRelations: (relations) => {
 			relations.forEach((relation) => {

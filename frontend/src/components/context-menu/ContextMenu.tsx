@@ -1,7 +1,8 @@
 import './ContextMenu.scss';
 import { DBButton } from '@db-ux/react-core-components';
+import { autoPlacement, autoUpdate, offset, useFloating } from '@floating-ui/react';
 import clsx from 'clsx';
-import { CSSProperties, Fragment, ReactNode, useEffect, useState } from 'react';
+import { Fragment, ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loading } from 'src/components/loading/Loading';
 import { Modal } from 'src/components/modal/Modal';
@@ -22,6 +23,34 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 		fromServer: []
 	});
 	const rootElementClassName = clsx('context-menu', className);
+	const setContextMenuRef = (element: HTMLDivElement | null) => {
+		refs.setFloating(element);
+		refContextMenu.current = element;
+	};
+
+	const { refs, floatingStyles } = useFloating({
+		strategy: 'fixed',
+		middleware: [
+			offset(5),
+			autoPlacement({
+				allowedPlacements: [
+					'top',
+					'top-end',
+					'top-start',
+					'right',
+					'right-end',
+					'right-start',
+					'bottom',
+					'bottom-end',
+					'bottom-start',
+					'left',
+					'left-end',
+					'left-start'
+				]
+			})
+		],
+		whileElementsMounted: autoUpdate
+	});
 
 	const { reFetch, isLoading } = usePostContextMenuActions(
 		{
@@ -45,6 +74,27 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 			close();
 		}
 	});
+
+	useEffect(() => {
+		if (isOpen) {
+			const virtualElement = {
+				getBoundingClientRect() {
+					return {
+						x,
+						y,
+						top: y,
+						left: x,
+						right: x,
+						bottom: y,
+						width: 0,
+						height: 0
+					};
+				}
+			};
+
+			refs.setReference(virtualElement);
+		}
+	}, [isOpen, x, y, refs]);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -72,12 +122,6 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 		}
 	};
 
-	const contextMenuStyle: CSSProperties = {
-		top: y,
-		left: x,
-		position: 'fixed'
-	};
-
 	const filteredOptions: Array<ContextMenuOption> = filterContextMenuOptions(contextMenuOptions);
 
 	if (!isOpen) {
@@ -93,7 +137,7 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 			className={rootElementClassName}
 			data-testid={testId}
 		>
-			<div className="context-menu__content" style={contextMenuStyle} ref={refContextMenu}>
+			<div className="context-menu__content" ref={setContextMenuRef} style={floatingStyles}>
 				<Loading
 					key={1}
 					isLoading={isLoading || isActionLoading}

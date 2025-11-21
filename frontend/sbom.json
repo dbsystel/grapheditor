@@ -3,9 +3,9 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "version": 1,
-  "serialNumber": "urn:uuid:9076c513-dddf-4e43-8525-4e97b31c9f03",
+  "serialNumber": "urn:uuid:83e0d031-b592-42ce-b2b0-0e0ace003dc4",
   "metadata": {
-    "timestamp": "2025-10-29T10:39:57.485Z",
+    "timestamp": "2025-11-17T16:32:00.916Z",
     "tools": {
       "components": [
         {
@@ -17,7 +17,7 @@
           "type": "application",
           "name": "cyclonedx-npm",
           "group": "@cyclonedx",
-          "version": "4.0.3",
+          "version": "4.1.0",
           "author": "Jan Kowalleck",
           "description": "Create CycloneDX Software Bill of Materials (SBOM) from NPM projects.",
           "licenses": [
@@ -111,8 +111,8 @@
       "type": "library",
       "name": "react-core-components",
       "group": "@db-ux",
-      "version": "4.0.2",
-      "bom-ref": "grapheditor-frontend@0.0.0|@db-ux/react-core-components@4.0.2",
+      "version": "4.1.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|@db-ux/react-core-components@4.1.0",
       "description": "React components for @db-ux/core-components",
       "licenses": [
         {
@@ -122,7 +122,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40db-ux/react-core-components@4.0.2",
+      "purl": "pkg:npm/%40db-ux/react-core-components@4.1.0",
       "externalReferences": [
         {
           "url": "git+https://github.com/db-ux-design-system/core-web.git",
@@ -140,7 +140,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/@db-ux/react-core-components/-/react-core-components-4.0.2.tgz",
+          "url": "https://registry.npmjs.org/@db-ux/react-core-components/-/react-core-components-4.1.0.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -381,8 +381,8 @@
     {
       "type": "library",
       "name": "axios",
-      "version": "1.12.2",
-      "bom-ref": "grapheditor-frontend@0.0.0|axios@1.12.2",
+      "version": "1.13.2",
+      "bom-ref": "grapheditor-frontend@0.0.0|axios@1.13.2",
       "author": "Matt Zabriskie",
       "description": "Promise based HTTP client for the browser and node.js",
       "licenses": [
@@ -393,7 +393,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/axios@1.12.2",
+      "purl": "pkg:npm/axios@1.13.2",
       "externalReferences": [
         {
           "url": "git+https://github.com/axios/axios.git",
@@ -411,7 +411,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/axios/-/axios-1.12.2.tgz",
+          "url": "https://registry.npmjs.org/axios/-/axios-1.13.2.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -739,8 +739,8 @@
     {
       "type": "library",
       "name": "i18next",
-      "version": "25.6.0",
-      "bom-ref": "grapheditor-frontend@0.0.0|i18next@25.6.0",
+      "version": "25.6.2",
+      "bom-ref": "grapheditor-frontend@0.0.0|i18next@25.6.2",
       "author": "Jan Mühlemann",
       "description": "i18next internationalization framework",
       "licenses": [
@@ -751,7 +751,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/i18next@25.6.0",
+      "purl": "pkg:npm/i18next@25.6.2",
       "externalReferences": [
         {
           "url": "git+https://github.com/i18next/i18next.git",
@@ -769,7 +769,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/i18next/-/i18next-25.6.0.tgz",
+          "url": "https://registry.npmjs.org/i18next/-/i18next-25.6.2.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -784,8 +784,8 @@
     {
       "type": "library",
       "name": "jsdom",
-      "version": "27.0.1",
-      "bom-ref": "grapheditor-frontend@0.0.0|jsdom@27.0.1",
+      "version": "27.1.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|jsdom@27.1.0",
       "description": "A JavaScript implementation of many web standards",
       "licenses": [
         {
@@ -795,7 +795,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/jsdom@27.0.1",
+      "purl": "pkg:npm/jsdom@27.1.0",
       "externalReferences": [
         {
           "url": "git+https://github.com/jsdom/jsdom.git",
@@ -813,7 +813,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/jsdom/-/jsdom-27.0.1.tgz",
+          "url": "https://registry.npmjs.org/jsdom/-/jsdom-27.1.0.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -829,7 +829,7 @@
           "type": "library",
           "name": "parse5",
           "version": "8.0.0",
-          "bom-ref": "grapheditor-frontend@0.0.0|jsdom@27.0.1|parse5@8.0.0",
+          "bom-ref": "grapheditor-frontend@0.0.0|jsdom@27.1.0|parse5@8.0.0",
           "author": "Ivan Nikulin",
           "description": "HTML parser and serializer.",
           "licenses": [
@@ -875,8 +875,8 @@
     {
       "type": "library",
       "name": "lucide-react",
-      "version": "0.546.0",
-      "bom-ref": "grapheditor-frontend@0.0.0|lucide-react@0.546.0",
+      "version": "0.553.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|lucide-react@0.553.0",
       "author": "Eric Fennis",
       "description": "A Lucide icon library package for React applications.",
       "licenses": [
@@ -887,7 +887,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/lucide-react@0.546.0#packages/lucide-react",
+      "purl": "pkg:npm/lucide-react@0.553.0#packages/lucide-react",
       "externalReferences": [
         {
           "url": "git+https://github.com/lucide-icons/lucide.git#packages/lucide-react",
@@ -905,7 +905,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/lucide-react/-/lucide-react-0.546.0.tgz",
+          "url": "https://registry.npmjs.org/lucide-react/-/lucide-react-0.553.0.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -964,8 +964,8 @@
     {
       "type": "library",
       "name": "react-hook-form",
-      "version": "7.65.0",
-      "bom-ref": "grapheditor-frontend@0.0.0|react-hook-form@7.65.0",
+      "version": "7.66.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|react-hook-form@7.66.0",
       "author": "Beier",
       "description": "Performant, flexible and extensible forms library for React Hooks",
       "licenses": [
@@ -976,7 +976,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/react-hook-form@7.65.0",
+      "purl": "pkg:npm/react-hook-form@7.66.0",
       "externalReferences": [
         {
           "url": "git+https://github.com/react-hook-form/react-hook-form.git",
@@ -994,7 +994,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/react-hook-form/-/react-hook-form-7.65.0.tgz",
+          "url": "https://registry.npmjs.org/react-hook-form/-/react-hook-form-7.66.0.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -1009,8 +1009,8 @@
     {
       "type": "library",
       "name": "react-i18next",
-      "version": "16.1.3",
-      "bom-ref": "grapheditor-frontend@0.0.0|react-i18next@16.1.3",
+      "version": "16.2.4",
+      "bom-ref": "grapheditor-frontend@0.0.0|react-i18next@16.2.4",
       "author": "Jan Mühlemann",
       "description": "Internationalization for react done right. Using the i18next i18n ecosystem.",
       "licenses": [
@@ -1021,7 +1021,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/react-i18next@16.1.3",
+      "purl": "pkg:npm/react-i18next@16.2.4",
       "externalReferences": [
         {
           "url": "git+https://github.com/i18next/react-i18next.git",
@@ -1039,7 +1039,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/react-i18next/-/react-i18next-16.1.3.tgz",
+          "url": "https://registry.npmjs.org/react-i18next/-/react-i18next-16.2.4.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -1099,8 +1099,8 @@
     {
       "type": "library",
       "name": "react-router-dom",
-      "version": "7.9.4",
-      "bom-ref": "grapheditor-frontend@0.0.0|react-router-dom@7.9.4",
+      "version": "7.9.5",
+      "bom-ref": "grapheditor-frontend@0.0.0|react-router-dom@7.9.5",
       "author": "Remix Software",
       "description": "Declarative routing for React web applications",
       "licenses": [
@@ -1111,7 +1111,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/react-router-dom@7.9.4#packages/react-router-dom",
+      "purl": "pkg:npm/react-router-dom@7.9.5#packages/react-router-dom",
       "externalReferences": [
         {
           "url": "git+https://github.com/remix-run/react-router.git#packages/react-router-dom",
@@ -1129,7 +1129,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.9.4.tgz",
+          "url": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.9.5.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -1458,8 +1458,8 @@
       "type": "library",
       "name": "core-components",
       "group": "@db-ux",
-      "version": "4.0.2",
-      "bom-ref": "grapheditor-frontend@0.0.0|@db-ux/core-components@4.0.2",
+      "version": "4.1.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|@db-ux/core-components@4.1.0",
       "author": "DB Systel GmbH",
       "description": "General technical components (styling, fonts and icons) out of DB UX Design System (Version 3)",
       "licenses": [
@@ -1470,7 +1470,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40db-ux/core-components@4.0.2",
+      "purl": "pkg:npm/%40db-ux/core-components@4.1.0",
       "externalReferences": [
         {
           "url": "git+https://github.com/db-ux-design-system/core-web.git",
@@ -1488,7 +1488,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/@db-ux/core-components/-/core-components-4.0.2.tgz",
+          "url": "https://registry.npmjs.org/@db-ux/core-components/-/core-components-4.1.0.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -1504,8 +1504,8 @@
       "type": "library",
       "name": "core-foundations",
       "group": "@db-ux",
-      "version": "4.0.2",
-      "bom-ref": "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.0.2",
+      "version": "4.1.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.1.0",
       "description": "Provides basic tokens and assets based on DB UX Design System (Version 3).",
       "licenses": [
         {
@@ -1515,7 +1515,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40db-ux/core-foundations@4.0.2",
+      "purl": "pkg:npm/%40db-ux/core-foundations@4.1.0",
       "externalReferences": [
         {
           "url": "git+https://github.com/db-ux-design-system/core-web.git",
@@ -1533,7 +1533,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/@db-ux/core-foundations/-/core-foundations-4.0.2.tgz",
+          "url": "https://registry.npmjs.org/@db-ux/core-foundations/-/core-foundations-4.1.0.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -2088,10 +2088,56 @@
     },
     {
       "type": "library",
+      "name": "cssom",
+      "group": "@acemir",
+      "version": "0.9.21",
+      "bom-ref": "grapheditor-frontend@0.0.0|@acemir/cssom@0.9.21",
+      "author": "Nikita Vasilyev",
+      "description": "CSS Object Model implementation and CSS parser",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40acemir/cssom@0.9.21",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/acemir/CSSOM.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://github.com/acemir/CSSOM#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/acemir/CSSOM/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@acemir/cssom/-/cssom-0.9.21.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@acemir/cssom"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "dom-selector",
       "group": "@asamuzakjp",
-      "version": "6.7.2",
-      "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2",
+      "version": "6.7.4",
+      "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4",
       "author": "asamuzaK",
       "description": "A CSS selector engine.",
       "licenses": [
@@ -2102,7 +2148,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40asamuzakjp/dom-selector@6.7.2",
+      "purl": "pkg:npm/%40asamuzakjp/dom-selector@6.7.4",
       "externalReferences": [
         {
           "url": "git+https://github.com/asamuzaK/domSelector.git",
@@ -2120,7 +2166,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/@asamuzakjp/dom-selector/-/dom-selector-6.7.2.tgz",
+          "url": "https://registry.npmjs.org/@asamuzakjp/dom-selector/-/dom-selector-6.7.4.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -2136,7 +2182,7 @@
           "type": "library",
           "name": "css-tree",
           "version": "3.1.0",
-          "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|css-tree@3.1.0",
+          "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|css-tree@3.1.0",
           "author": "Roman Dvornov",
           "description": "A tool set for CSS: fast detailed parser (CSS → AST), walker (AST traversal), generator (AST → CSS) and lexer (validation and matching) based on specs and browser implementations",
           "licenses": [
@@ -2181,7 +2227,7 @@
           "type": "library",
           "name": "lru-cache",
           "version": "11.2.2",
-          "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|lru-cache@11.2.2",
+          "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|lru-cache@11.2.2",
           "author": "Isaac Z. Schlueter",
           "description": "A cache object that deletes the least-recently-used items.",
           "licenses": [
@@ -2226,7 +2272,7 @@
           "type": "library",
           "name": "mdn-data",
           "version": "2.12.2",
-          "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|mdn-data@2.12.2",
+          "bom-ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|mdn-data@2.12.2",
           "author": "Mozilla Developer Network",
           "description": "Open Web data by the Mozilla Developer Network",
           "licenses": [
@@ -2272,8 +2318,8 @@
     {
       "type": "library",
       "name": "cssstyle",
-      "version": "5.3.1",
-      "bom-ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.1",
+      "version": "5.3.2",
+      "bom-ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.2",
       "description": "CSSStyleDeclaration Object Model implementation",
       "licenses": [
         {
@@ -2283,7 +2329,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/cssstyle@5.3.1",
+      "purl": "pkg:npm/cssstyle@5.3.2",
       "externalReferences": [
         {
           "url": "git+https://github.com/jsdom/cssstyle.git",
@@ -2301,7 +2347,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/cssstyle/-/cssstyle-5.3.1.tgz",
+          "url": "https://registry.npmjs.org/cssstyle/-/cssstyle-5.3.2.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -2317,7 +2363,7 @@
           "type": "library",
           "name": "css-tree",
           "version": "3.1.0",
-          "bom-ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.1|css-tree@3.1.0",
+          "bom-ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.2|css-tree@3.1.0",
           "author": "Roman Dvornov",
           "description": "A tool set for CSS: fast detailed parser (CSS → AST), walker (AST traversal), generator (AST → CSS) and lexer (validation and matching) based on specs and browser implementations",
           "licenses": [
@@ -2362,7 +2408,7 @@
           "type": "library",
           "name": "mdn-data",
           "version": "2.12.2",
-          "bom-ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.1|mdn-data@2.12.2",
+          "bom-ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.2|mdn-data@2.12.2",
           "author": "Mozilla Developer Network",
           "description": "Open Web data by the Mozilla Developer Network",
           "licenses": [
@@ -2672,51 +2718,6 @@
         {
           "name": "cdx:npm:package:path",
           "value": "node_modules/is-potential-custom-element-name"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "rrweb-cssom",
-      "version": "0.8.0",
-      "bom-ref": "grapheditor-frontend@0.0.0|rrweb-cssom@0.8.0",
-      "author": "Nikita Vasilyev",
-      "description": "CSS Object Model implementation and CSS parser",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/rrweb-cssom@0.8.0",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/rrweb-io/CSSOM.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/rrweb-io/CSSOM#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/rrweb-io/CSSOM/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/rrweb-cssom/-/rrweb-cssom-0.8.0.tgz",
-          "type": "distribution",
-          "comment": "as detected from npm-ls property \"resolved\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/rrweb-cssom"
         }
       ]
     },
@@ -3255,6 +3256,50 @@
         {
           "name": "cdx:npm:package:path",
           "value": "node_modules/html-parse-stringify"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "use-sync-external-store",
+      "version": "1.6.0",
+      "bom-ref": "grapheditor-frontend@0.0.0|use-sync-external-store@1.6.0",
+      "description": "Backwards compatible shim for React's useSyncExternalStore. Works with any React that supports hooks.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/use-sync-external-store@1.6.0#packages/use-sync-external-store",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/facebook/react.git#packages/use-sync-external-store",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\" and \"repository.directory\""
+        },
+        {
+          "url": "https://github.com/facebook/react#readme",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/facebook/react/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.6.0.tgz",
+          "type": "distribution",
+          "comment": "as detected from npm-ls property \"resolved\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/use-sync-external-store"
         }
       ]
     },
@@ -3801,8 +3846,8 @@
     {
       "type": "library",
       "name": "react-router",
-      "version": "7.9.4",
-      "bom-ref": "grapheditor-frontend@0.0.0|react-router@7.9.4",
+      "version": "7.9.5",
+      "bom-ref": "grapheditor-frontend@0.0.0|react-router@7.9.5",
       "author": "Remix Software",
       "description": "Declarative routing for React",
       "licenses": [
@@ -3813,7 +3858,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/react-router@7.9.4#packages/react-router",
+      "purl": "pkg:npm/react-router@7.9.5#packages/react-router",
       "externalReferences": [
         {
           "url": "git+https://github.com/remix-run/react-router.git#packages/react-router",
@@ -3831,7 +3876,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/react-router/-/react-router-7.9.4.tgz",
+          "url": "https://registry.npmjs.org/react-router/-/react-router-7.9.5.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -4488,8 +4533,8 @@
       "type": "library",
       "name": "css-syntax-patches-for-csstree",
       "group": "@csstools",
-      "version": "1.0.14",
-      "bom-ref": "grapheditor-frontend@0.0.0|@csstools/css-syntax-patches-for-csstree@1.0.14",
+      "version": "1.0.15",
+      "bom-ref": "grapheditor-frontend@0.0.0|@csstools/css-syntax-patches-for-csstree@1.0.15",
       "description": "CSS syntax patches for CSS tree",
       "licenses": [
         {
@@ -4499,7 +4544,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/%40csstools/css-syntax-patches-for-csstree@1.0.14#packages/css-syntax-patches-for-csstree",
+      "purl": "pkg:npm/%40csstools/css-syntax-patches-for-csstree@1.0.15#packages/css-syntax-patches-for-csstree",
       "externalReferences": [
         {
           "url": "git+https://github.com/csstools/postcss-plugins.git#packages/css-syntax-patches-for-csstree",
@@ -4517,7 +4562,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/@csstools/css-syntax-patches-for-csstree/-/css-syntax-patches-for-csstree-1.0.14.tgz",
+          "url": "https://registry.npmjs.org/@csstools/css-syntax-patches-for-csstree/-/css-syntax-patches-for-csstree-1.0.15.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -4577,8 +4622,8 @@
     {
       "type": "library",
       "name": "debug",
-      "version": "4.4.1",
-      "bom-ref": "grapheditor-frontend@0.0.0|debug@4.4.1",
+      "version": "4.4.3",
+      "bom-ref": "grapheditor-frontend@0.0.0|debug@4.4.3",
       "author": "Josh Junon",
       "description": "Lightweight debugging utility for Node.js and the browser",
       "licenses": [
@@ -4589,7 +4634,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/debug@4.4.1",
+      "purl": "pkg:npm/debug@4.4.3",
       "externalReferences": [
         {
           "url": "git://github.com/debug-js/debug.git",
@@ -4607,7 +4652,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/debug/-/debug-4.4.1.tgz",
+          "url": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -6108,8 +6153,8 @@
     {
       "type": "library",
       "name": "set-cookie-parser",
-      "version": "2.7.1",
-      "bom-ref": "grapheditor-frontend@0.0.0|set-cookie-parser@2.7.1",
+      "version": "2.7.2",
+      "bom-ref": "grapheditor-frontend@0.0.0|set-cookie-parser@2.7.2",
       "author": "Nathan Friedly",
       "description": "Parses set-cookie headers into objects",
       "licenses": [
@@ -6120,7 +6165,7 @@
           }
         }
       ],
-      "purl": "pkg:npm/set-cookie-parser@2.7.1",
+      "purl": "pkg:npm/set-cookie-parser@2.7.2",
       "externalReferences": [
         {
           "url": "git+https://github.com/nfriedly/set-cookie-parser.git",
@@ -6138,7 +6183,7 @@
           "comment": "as detected from PackageJson property \"bugs.url\""
         },
         {
-          "url": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.1.tgz",
+          "url": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.2.tgz",
           "type": "distribution",
           "comment": "as detected from npm-ls property \"resolved\""
         }
@@ -6732,51 +6777,6 @@
         {
           "name": "cdx:npm:package:path",
           "value": "node_modules/@csstools/css-tokenizer"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "postcss",
-      "version": "8.5.6",
-      "bom-ref": "grapheditor-frontend@0.0.0|postcss@8.5.6",
-      "author": "Andrey Sitnik",
-      "description": "Tool for transforming styles with JS plugins",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/postcss@8.5.6",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/postcss/postcss.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://postcss.org/",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/postcss/postcss/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/postcss/-/postcss-8.5.6.tgz",
-          "type": "distribution",
-          "comment": "as detected from npm-ls property \"resolved\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/postcss"
         }
       ]
     },
@@ -8088,96 +8088,6 @@
     },
     {
       "type": "library",
-      "name": "nanoid",
-      "version": "3.3.11",
-      "bom-ref": "grapheditor-frontend@0.0.0|nanoid@3.3.11",
-      "author": "Andrey Sitnik",
-      "description": "A tiny (116 bytes), secure URL-friendly unique string ID generator",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/nanoid@3.3.11",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/ai/nanoid.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/ai/nanoid#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/ai/nanoid/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz",
-          "type": "distribution",
-          "comment": "as detected from npm-ls property \"resolved\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/nanoid"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "picocolors",
-      "version": "1.1.1",
-      "bom-ref": "grapheditor-frontend@0.0.0|picocolors@1.1.1",
-      "author": "Alexey Raspopov",
-      "description": "The tiniest and the fastest library for terminal output formatting with ANSI colors",
-      "licenses": [
-        {
-          "license": {
-            "id": "ISC",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/picocolors@1.1.1",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/alexeyraspopov/picocolors.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/alexeyraspopov/picocolors#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/alexeyraspopov/picocolors/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
-          "type": "distribution",
-          "comment": "as detected from npm-ls property \"resolved\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/picocolors"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "longest-streak",
       "version": "3.1.0",
       "bom-ref": "grapheditor-frontend@0.0.0|longest-streak@3.1.0",
@@ -9395,13 +9305,13 @@
     {
       "ref": "grapheditor-frontend@0.0.0",
       "dependsOn": [
-        "grapheditor-frontend@0.0.0|@db-ux/react-core-components@4.0.2",
+        "grapheditor-frontend@0.0.0|@db-ux/react-core-components@4.1.0",
         "grapheditor-frontend@0.0.0|@floating-ui/react@0.27.16",
         "grapheditor-frontend@0.0.0|@sigma/edge-curve@3.1.0",
         "grapheditor-frontend@0.0.0|@sigma/node-border@3.0.0",
         "grapheditor-frontend@0.0.0|@sigma/node-square@3.0.0",
         "grapheditor-frontend@0.0.0|@sigma/utils@3.0.0",
-        "grapheditor-frontend@0.0.0|axios@1.12.2",
+        "grapheditor-frontend@0.0.0|axios@1.13.2",
         "grapheditor-frontend@0.0.0|clsx@2.1.1",
         "grapheditor-frontend@0.0.0|graphology-layout-force@0.2.4",
         "grapheditor-frontend@0.0.0|graphology-layout-forceatlas2@0.10.1",
@@ -9409,14 +9319,14 @@
         "grapheditor-frontend@0.0.0|graphology-layout@0.6.1",
         "grapheditor-frontend@0.0.0|graphology@0.26.0",
         "grapheditor-frontend@0.0.0|i18next-browser-languagedetector@8.2.0",
-        "grapheditor-frontend@0.0.0|i18next@25.6.0",
-        "grapheditor-frontend@0.0.0|jsdom@27.0.1",
-        "grapheditor-frontend@0.0.0|lucide-react@0.546.0",
+        "grapheditor-frontend@0.0.0|i18next@25.6.2",
+        "grapheditor-frontend@0.0.0|jsdom@27.1.0",
+        "grapheditor-frontend@0.0.0|lucide-react@0.553.0",
         "grapheditor-frontend@0.0.0|react-dom@19.2.0",
-        "grapheditor-frontend@0.0.0|react-hook-form@7.65.0",
-        "grapheditor-frontend@0.0.0|react-i18next@16.1.3",
+        "grapheditor-frontend@0.0.0|react-hook-form@7.66.0",
+        "grapheditor-frontend@0.0.0|react-i18next@16.2.4",
         "grapheditor-frontend@0.0.0|react-markdown@10.1.0",
-        "grapheditor-frontend@0.0.0|react-router-dom@7.9.4",
+        "grapheditor-frontend@0.0.0|react-router-dom@7.9.5",
         "grapheditor-frontend@0.0.0|react@19.2.0",
         "grapheditor-frontend@0.0.0|seedrandom@3.0.5",
         "grapheditor-frontend@0.0.0|sigma@3.0.2",
@@ -9426,10 +9336,10 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@db-ux/react-core-components@4.0.2",
+      "ref": "grapheditor-frontend@0.0.0|@db-ux/react-core-components@4.1.0",
       "dependsOn": [
-        "grapheditor-frontend@0.0.0|@db-ux/core-components@4.0.2",
-        "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.0.2"
+        "grapheditor-frontend@0.0.0|@db-ux/core-components@4.1.0",
+        "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.1.0"
       ]
     },
     {
@@ -9467,7 +9377,7 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|axios@1.12.2",
+      "ref": "grapheditor-frontend@0.0.0|axios@1.13.2",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|follow-redirects@1.15.9",
         "grapheditor-frontend@0.0.0|form-data@4.0.4",
@@ -9520,25 +9430,25 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|i18next@25.6.0",
+      "ref": "grapheditor-frontend@0.0.0|i18next@25.6.2",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|@babel/runtime@7.28.2",
         "grapheditor-frontend@0.0.0|typescript@5.9.3"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|jsdom@27.0.1",
+      "ref": "grapheditor-frontend@0.0.0|jsdom@27.1.0",
       "dependsOn": [
-        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2",
-        "grapheditor-frontend@0.0.0|cssstyle@5.3.1",
+        "grapheditor-frontend@0.0.0|@acemir/cssom@0.9.21",
+        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4",
+        "grapheditor-frontend@0.0.0|cssstyle@5.3.2",
         "grapheditor-frontend@0.0.0|data-urls@6.0.0",
         "grapheditor-frontend@0.0.0|decimal.js@10.6.0",
         "grapheditor-frontend@0.0.0|html-encoding-sniffer@4.0.0",
         "grapheditor-frontend@0.0.0|http-proxy-agent@7.0.2",
         "grapheditor-frontend@0.0.0|https-proxy-agent@7.0.6",
         "grapheditor-frontend@0.0.0|is-potential-custom-element-name@1.0.1",
-        "grapheditor-frontend@0.0.0|jsdom@27.0.1|parse5@8.0.0",
-        "grapheditor-frontend@0.0.0|rrweb-cssom@0.8.0",
+        "grapheditor-frontend@0.0.0|jsdom@27.1.0|parse5@8.0.0",
         "grapheditor-frontend@0.0.0|saxes@6.0.0",
         "grapheditor-frontend@0.0.0|symbol-tree@3.2.4",
         "grapheditor-frontend@0.0.0|tough-cookie@6.0.0",
@@ -9552,13 +9462,13 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|jsdom@27.0.1|parse5@8.0.0",
+      "ref": "grapheditor-frontend@0.0.0|jsdom@27.1.0|parse5@8.0.0",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|entities@6.0.1"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|lucide-react@0.546.0",
+      "ref": "grapheditor-frontend@0.0.0|lucide-react@0.553.0",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|react@19.2.0"
       ]
@@ -9571,19 +9481,20 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|react-hook-form@7.65.0",
+      "ref": "grapheditor-frontend@0.0.0|react-hook-form@7.66.0",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|react@19.2.0"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|react-i18next@16.1.3",
+      "ref": "grapheditor-frontend@0.0.0|react-i18next@16.2.4",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|@babel/runtime@7.28.2",
         "grapheditor-frontend@0.0.0|html-parse-stringify@3.0.1",
-        "grapheditor-frontend@0.0.0|i18next@25.6.0",
+        "grapheditor-frontend@0.0.0|i18next@25.6.2",
         "grapheditor-frontend@0.0.0|react@19.2.0",
-        "grapheditor-frontend@0.0.0|typescript@5.9.3"
+        "grapheditor-frontend@0.0.0|typescript@5.9.3",
+        "grapheditor-frontend@0.0.0|use-sync-external-store@1.6.0"
       ]
     },
     {
@@ -9605,10 +9516,10 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|react-router-dom@7.9.4",
+      "ref": "grapheditor-frontend@0.0.0|react-router-dom@7.9.5",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|react-dom@19.2.0",
-        "grapheditor-frontend@0.0.0|react-router@7.9.4",
+        "grapheditor-frontend@0.0.0|react-router@7.9.5",
         "grapheditor-frontend@0.0.0|react@19.2.0"
       ]
     },
@@ -9644,17 +9555,18 @@
       "ref": "grapheditor-frontend@0.0.0|zustand@5.0.8",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|@types/react@19.2.2",
-        "grapheditor-frontend@0.0.0|react@19.2.0"
+        "grapheditor-frontend@0.0.0|react@19.2.0",
+        "grapheditor-frontend@0.0.0|use-sync-external-store@1.6.0"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@db-ux/core-components@4.0.2",
+      "ref": "grapheditor-frontend@0.0.0|@db-ux/core-components@4.1.0",
       "dependsOn": [
-        "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.0.2"
+        "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.1.0"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.0.2"
+      "ref": "grapheditor-frontend@0.0.0|@db-ux/core-foundations@4.1.0"
     },
     {
       "ref": "grapheditor-frontend@0.0.0|@floating-ui/react-dom@2.1.6",
@@ -9711,45 +9623,48 @@
       "ref": "grapheditor-frontend@0.0.0|typescript@5.9.3"
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2",
+      "ref": "grapheditor-frontend@0.0.0|@acemir/cssom@0.9.21"
+    },
+    {
+      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|@asamuzakjp/nwsapi@2.3.9",
         "grapheditor-frontend@0.0.0|bidi-js@1.0.3",
-        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|css-tree@3.1.0",
+        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|css-tree@3.1.0",
         "grapheditor-frontend@0.0.0|is-potential-custom-element-name@1.0.1",
-        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|lru-cache@11.2.2"
+        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|lru-cache@11.2.2"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|css-tree@3.1.0",
+      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|css-tree@3.1.0",
       "dependsOn": [
-        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|mdn-data@2.12.2",
+        "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|mdn-data@2.12.2",
         "grapheditor-frontend@0.0.0|source-map-js@1.2.1"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|lru-cache@11.2.2"
+      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|lru-cache@11.2.2"
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.2|mdn-data@2.12.2"
+      "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/dom-selector@6.7.4|mdn-data@2.12.2"
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.1",
+      "ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.2",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|@asamuzakjp/css-color@4.0.5",
-        "grapheditor-frontend@0.0.0|@csstools/css-syntax-patches-for-csstree@1.0.14",
-        "grapheditor-frontend@0.0.0|cssstyle@5.3.1|css-tree@3.1.0"
+        "grapheditor-frontend@0.0.0|@csstools/css-syntax-patches-for-csstree@1.0.15",
+        "grapheditor-frontend@0.0.0|cssstyle@5.3.2|css-tree@3.1.0"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.1|css-tree@3.1.0",
+      "ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.2|css-tree@3.1.0",
       "dependsOn": [
-        "grapheditor-frontend@0.0.0|cssstyle@5.3.1|mdn-data@2.12.2",
+        "grapheditor-frontend@0.0.0|cssstyle@5.3.2|mdn-data@2.12.2",
         "grapheditor-frontend@0.0.0|source-map-js@1.2.1"
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.1|mdn-data@2.12.2"
+      "ref": "grapheditor-frontend@0.0.0|cssstyle@5.3.2|mdn-data@2.12.2"
     },
     {
       "ref": "grapheditor-frontend@0.0.0|data-urls@6.0.0",
@@ -9771,21 +9686,18 @@
       "ref": "grapheditor-frontend@0.0.0|http-proxy-agent@7.0.2",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|agent-base@7.1.4",
-        "grapheditor-frontend@0.0.0|debug@4.4.1"
+        "grapheditor-frontend@0.0.0|debug@4.4.3"
       ]
     },
     {
       "ref": "grapheditor-frontend@0.0.0|https-proxy-agent@7.0.6",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|agent-base@7.1.4",
-        "grapheditor-frontend@0.0.0|debug@4.4.1"
+        "grapheditor-frontend@0.0.0|debug@4.4.3"
       ]
     },
     {
       "ref": "grapheditor-frontend@0.0.0|is-potential-custom-element-name@1.0.1"
-    },
-    {
-      "ref": "grapheditor-frontend@0.0.0|rrweb-cssom@0.8.0"
     },
     {
       "ref": "grapheditor-frontend@0.0.0|saxes@6.0.0",
@@ -9840,6 +9752,12 @@
       "ref": "grapheditor-frontend@0.0.0|html-parse-stringify@3.0.1",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|void-elements@3.1.0"
+      ]
+    },
+    {
+      "ref": "grapheditor-frontend@0.0.0|use-sync-external-store@1.6.0",
+      "dependsOn": [
+        "grapheditor-frontend@0.0.0|react@19.2.0"
       ]
     },
     {
@@ -9950,12 +9868,12 @@
       ]
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|react-router@7.9.4",
+      "ref": "grapheditor-frontend@0.0.0|react-router@7.9.5",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|cookie@1.0.2",
         "grapheditor-frontend@0.0.0|react-dom@19.2.0",
         "grapheditor-frontend@0.0.0|react@19.2.0",
-        "grapheditor-frontend@0.0.0|set-cookie-parser@2.7.1"
+        "grapheditor-frontend@0.0.0|set-cookie-parser@2.7.2"
       ]
     },
     {
@@ -10033,16 +9951,13 @@
       "ref": "grapheditor-frontend@0.0.0|@asamuzakjp/css-color@4.0.5|lru-cache@11.2.2"
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|@csstools/css-syntax-patches-for-csstree@1.0.14",
-      "dependsOn": [
-        "grapheditor-frontend@0.0.0|postcss@8.5.6"
-      ]
+      "ref": "grapheditor-frontend@0.0.0|@csstools/css-syntax-patches-for-csstree@1.0.15"
     },
     {
       "ref": "grapheditor-frontend@0.0.0|agent-base@7.1.4"
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|debug@4.4.1",
+      "ref": "grapheditor-frontend@0.0.0|debug@4.4.3",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|ms@2.1.3"
       ]
@@ -10225,7 +10140,7 @@
       "ref": "grapheditor-frontend@0.0.0|cookie@1.0.2"
     },
     {
-      "ref": "grapheditor-frontend@0.0.0|set-cookie-parser@2.7.1"
+      "ref": "grapheditor-frontend@0.0.0|set-cookie-parser@2.7.2"
     },
     {
       "ref": "grapheditor-frontend@0.0.0|@floating-ui/core@1.7.3",
@@ -10296,14 +10211,6 @@
     },
     {
       "ref": "grapheditor-frontend@0.0.0|@csstools/css-tokenizer@3.0.4"
-    },
-    {
-      "ref": "grapheditor-frontend@0.0.0|postcss@8.5.6",
-      "dependsOn": [
-        "grapheditor-frontend@0.0.0|nanoid@3.3.11",
-        "grapheditor-frontend@0.0.0|picocolors@1.1.1",
-        "grapheditor-frontend@0.0.0|source-map-js@1.2.1"
-      ]
     },
     {
       "ref": "grapheditor-frontend@0.0.0|ms@2.1.3"
@@ -10424,7 +10331,7 @@
       "ref": "grapheditor-frontend@0.0.0|micromark@4.0.2",
       "dependsOn": [
         "grapheditor-frontend@0.0.0|@types/debug@4.1.12",
-        "grapheditor-frontend@0.0.0|debug@4.4.1",
+        "grapheditor-frontend@0.0.0|debug@4.4.3",
         "grapheditor-frontend@0.0.0|decode-named-character-reference@1.2.0",
         "grapheditor-frontend@0.0.0|devlop@1.1.0",
         "grapheditor-frontend@0.0.0|micromark-core-commonmark@2.0.3",
@@ -10476,12 +10383,6 @@
     },
     {
       "ref": "grapheditor-frontend@0.0.0|@csstools/color-helpers@5.1.0"
-    },
-    {
-      "ref": "grapheditor-frontend@0.0.0|nanoid@3.3.11"
-    },
-    {
-      "ref": "grapheditor-frontend@0.0.0|picocolors@1.1.1"
     },
     {
       "ref": "grapheditor-frontend@0.0.0|longest-streak@3.1.0"

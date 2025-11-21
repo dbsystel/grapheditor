@@ -10,7 +10,7 @@ describe('Components - ParaQueriesEditor', () => {
 		const paraQuery = paraQueries['id::4:bb368931-775e-4eb9-a9fd-a06c3b6efc14:0'];
 		const onParameterChange = vi.fn();
 
-		const screen = render(
+		const screen = await render(
 			<ParaQueryEditor paraQuery={paraQuery} onParameterChange={onParameterChange} />
 		);
 

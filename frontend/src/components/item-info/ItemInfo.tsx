@@ -2,7 +2,7 @@ import './ItemInfo.scss';
 import { DBButton } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { MouseEvent, useCallback, useRef, useState } from 'react';
-import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
+import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { useItemsDrawerContext } from 'src/components/items-drawer/context/ItemsDrawerContext';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useDrawerStore } from 'src/stores/drawer';
@@ -102,7 +102,7 @@ export const ItemInfo = ({
 			>
 				{idFormatter.parseIdToName(item.title)}
 
-				{renderTooltip && <ItemOverviewTooltip item={item} tooltipRef={ref} />}
+				{renderTooltip && <ItemOverviewPopover item={item} popoverRef={ref} />}
 			</DBButton>
 		</div>
 	);

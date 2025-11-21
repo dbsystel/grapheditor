@@ -46,6 +46,20 @@ def fetch_sample_relation_id(client, text="likes"):
     return fetch_sample_relation(client, text=text)["id"]
 
 
+def find_by_property(lst: list, prop_name: str, prop_val):
+    """Scan a list of nodes/relations by any element with a property
+    named `prop_name` with value `prop_val`.
+    """
+    result = [
+        n for n in lst
+        if prop_name in n['properties']
+        and n['properties'][prop_name]['value'] == prop_val
+    ]
+    if result:
+        return result[0]
+    return None
+
+
 def create_perspective(client):
     """Create a sample perpesctive and return its ID.
     :param client:

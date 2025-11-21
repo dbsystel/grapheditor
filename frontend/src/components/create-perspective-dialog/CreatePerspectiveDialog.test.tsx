@@ -1,7 +1,5 @@
-import { userEvent } from '@vitest/browser/context';
-import { Notifications } from 'src/components/notifications/Notifications';
 import i18n from 'src/i18n';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { CreatePerspectiveDialog } from './CreatePerspectiveDialog';
 
@@ -20,7 +18,7 @@ import { CreatePerspectiveDialog } from './CreatePerspectiveDialog';
 
 describe('Components - CreatePerspectiveDialog', () => {
 	it('Render component', async () => {
-		const screen = render(
+		const screen = await render(
 			<CreatePerspectiveDialog closeFunction={() => {}} testId="create-perspective-save" />
 		);
 

@@ -3,14 +3,14 @@ import { TableRow } from 'src/components/table-row/TableRow';
 import { render } from 'vitest-browser-react';
 
 describe('Components - TableRow', () => {
-	test('Render component', () => {
-		const screen = render(<TableRow />);
+	test('Render component', async () => {
+		const screen = await render(<TableRow />);
 
 		expect(screen.getByRole('row').element()).toBeInTheDocument();
 	});
 
-	test('Render children', () => {
-		const screen = render(
+	test('Render children', async () => {
+		const screen = await render(
 			<TableRow>
 				<TableCell>Hello</TableCell>
 			</TableRow>

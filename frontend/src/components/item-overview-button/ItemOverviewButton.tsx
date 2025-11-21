@@ -2,7 +2,7 @@ import './ItemOverviewButton.scss';
 import { DBButton, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useCallback, useRef, useState } from 'react';
-import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
+import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { Loading } from 'src/components/loading/Loading';
 import { Node } from 'src/models/node';
 import { useDrawerStore } from 'src/stores/drawer';
@@ -82,7 +82,7 @@ export const ItemOverviewButton = ({ nodeId, id, className, testId }: ItemOvervi
 						<Loading isLoading={true} />
 					</DBTooltip>
 				)}
-				{node && <ItemOverviewTooltip item={node} tooltipRef={ref} />}
+				{node && <ItemOverviewPopover item={node} popoverRef={ref} />}
 			</DBButton>
 		</div>
 	);

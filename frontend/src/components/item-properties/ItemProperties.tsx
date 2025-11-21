@@ -152,6 +152,8 @@ export const ItemProperties = ({
 	const handleUndo = () => {
 		propertiesRef.current = clone(item.properties);
 		topEntriesPropertyKeysCacheRef.current = [];
+		tabsActiveIndexRef.current = 0;
+		// TODO check if this needs to be optimized to not refresh the whole component
 		refreshComponent();
 	};
 
@@ -213,7 +215,6 @@ export const ItemProperties = ({
 					</TabPanel>
 				</Tabs>
 			)}
-
 			<ItemPropertiesTable
 				topEntries={entriesState.top}
 				entries={entriesState.complete}

@@ -63,7 +63,7 @@ def test_fulltext_without_ft():
     assert response.status_code == 200
     response = client.get(
         BASE_URL + "/api/v1/nodes",
-        query_string=dict(text="hom"),
+        query_string=dict(text="homer"),
         headers=HEADERS,
     )
     assert response.status_code == 200

@@ -33,13 +33,8 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 		removeEntryByItemId,
 		updateEntriesByItems
 	} = useDrawerStore((store) => store);
-	// const getStoreItem = useItemsStore((store) => store.getStoreItem);
-	// const getStoreNode = useItemsStore((store) => store.getStoreNode);
-	// const getStoreRelation = useItemsStore((store) => store.getStoreRelation);
 	const addEventListener = useItemsStore((store) => store.addEventListener);
 	const removeEventListener = useItemsStore((store) => store.removeEventListener);
-	// useItemsStore((store) => store.nodes);
-	// useItemsStore((store) => store.relations);
 	const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 	// consider memo
 	const activeDrawerEntry = getActiveEntry();
@@ -87,30 +82,10 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 
 	if (activeDrawerEntry) {
 		activeItem = activeDrawerEntry.item;
-		// if (activeDrawerEntry.itemType === 'node') {
-		// 	activeItem = getStoreNode(activeDrawerEntry.itemId);
-		// } else if (activeDrawerEntry.itemType === 'relation') {
-		// 	activeItem = getStoreRelation(activeDrawerEntry.itemId);
-		// } else {
-		// 	activeItem = getStoreItem(activeDrawerEntry.itemId);
-		// }
 	}
 
 	// prepare breadcrumbs
 	const breadcrumbItems: Array<Breadcrumb> = entries.map((storeItem, index) => {
-		// let storeItemItem: Node | Relation | undefined;
-		//
-		// switch (storeItem.itemType) {
-		// 	case 'node':
-		// 		storeItemItem = getStoreNode(storeItem.item.id);
-		// 		break;
-		// 	case 'relation':
-		// 		storeItemItem = getStoreRelation(storeItem.itemId);
-		// 		break;
-		// 	default:
-		// 		storeItemItem = getStoreItem(storeItem.itemId);
-		// }
-
 		return {
 			text: storeItem.item.title,
 			title: storeItem.item.id,
@@ -167,13 +142,13 @@ const RenderComponent = ({
 	if (isNode(item)) {
 		return (
 			<ComponentWrapper key={item.id} entry={drawerEntry}>
-				<SingleNode node={item} />
+				<SingleNode node={item} shouldShowCenterButton={true} />
 			</ComponentWrapper>
 		);
 	} else if (isRelation(item)) {
 		return (
 			<ComponentWrapper key={item.id} entry={drawerEntry}>
-				<SingleRelation relation={item} />
+				<SingleRelation relation={item} shouldShowCenterButton={true} />
 			</ComponentWrapper>
 		);
 	}

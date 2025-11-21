@@ -2,10 +2,14 @@ from flask import abort, current_app, g, session
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
-from database.utils import abort_with_json
 from blueprints.maintenance.login_api import require_tab_id
 from blueprints.graph import node_model
 from blueprints.graph import relation_model
+from database.mapper import GraphEditorNode, GraphEditorRelation, prepare_node_patch
+from database.id_handling import (
+    compute_semantic_id, get_base_id, GraphEditorLabel, parse_semantic_id, id_is_valid
+)
+from database.utils import abort_with_json
 
 
 blp = Blueprint(
@@ -24,10 +28,11 @@ class Nodes(MethodView):
 
         Returns the newly created node
         """
-        new_nodes = current_app.graph_db.create_nodes([node_data])
+        new_nodes = current_app.graph_db.create_nodes(
+            [prepare_node_patch(node_data)])
         if not new_nodes:
             abort_with_json(500, "Couldn't create node.")
-        return next(iter(new_nodes.values()))
+        return GraphEditorNode.from_base_node(next(iter(new_nodes.values())))
 
     @blp.arguments(node_model.NodeQuery, as_kwargs=True, location="query")
     @blp.response(
@@ -44,7 +49,16 @@ class Nodes(MethodView):
         """
         if labels is None:
             labels = []
-        return current_app.graph_db.query_nodes(text, labels, pseudo)
+        # TODO should we return a map as in other endpoints?
+        nodes = [
+            GraphEditorNode.from_base_node(base_node)
+            for base_node in
+            current_app.graph_db.query_nodes(
+                text,
+                [get_base_id(l) for l in labels],
+                pseudo)
+        ]
+        return nodes
 
 
 @blp.route("/bulk_fetch")
@@ -63,11 +77,25 @@ class NodesBulkFetch(MethodView):
 
         Return a dictionary mapping node IDs to the corresponding nodes.
         """
-        nodes = current_app.graph_db.get_nodes_by_ids(
-            ids,
-            replace_by_pseudo_node=True
-        )
-        return dict(nodes=nodes)
+        base_nodes_map = current_app.graph_db.get_nodes_by_ids(ids)
+
+        nodes = {
+            k: GraphEditorNode.from_base_node(base_node)
+            for k, base_node in
+            base_nodes_map.items()
+        }
+        for nid, node in nodes.items():
+            if parse_semantic_id(nid):
+                node.id = nid
+
+        for nid in ids:
+            # semantic ids are still returned if replace_pseudo_node is true
+            if nid not in nodes:
+                sem_node = GraphEditorNode.create_pseudo_node(nid)
+                if sem_node:
+                    nodes[nid] = sem_node
+
+        return dict(nodes=dict(sorted(nodes.items(), key=lambda i: getattr(i[1],"title",""))))
 
 
 @blp.route("/bulk_delete")
@@ -111,9 +139,11 @@ class NodesBulkPatch(MethodView):
             raw_db_id = id_map[orig_id]
             if not raw_db_id:
                 abort_with_json(400, f"Can't patch an unexisting node: {orig_id}")
-            new_node = current_app.graph_db.update_node_by_id(f"id::{raw_db_id}", patch)
-            new_node["id"] = orig_id
-            result[orig_id] = new_node
+            new_node = current_app.graph_db.update_node_by_id(
+                f"id::{raw_db_id}", prepare_node_patch(patch)
+            )
+            new_node.id = orig_id
+            result[orig_id] = GraphEditorNode.from_base_node(new_node)
         return dict(
             nodes=result
         )
@@ -128,7 +158,13 @@ class NodesBulkPost(MethodView):
     @require_tab_id()
     def post(self, nodes):
         return {
-            "nodes": current_app.graph_db.create_nodes(nodes)
+            "nodes": {
+                k: GraphEditorNode.from_base_node(base_node)
+                for k, base_node in
+                current_app.graph_db.create_nodes(
+                    [prepare_node_patch(node_data) for node_data in nodes]
+                ).items()
+            }
         }
 
 
@@ -142,10 +178,16 @@ class Node(MethodView):
 
         Returns a node
         """
-        grapheditor_node = current_app.graph_db.get_node_by_id(nid, True)
+        if not id_is_valid(nid):
+            abort(400, "invalid id")
+        base_node = current_app.graph_db.get_node_by_id(nid)
+        if not base_node:
+            grapheditor_node = GraphEditorNode.create_pseudo_node(nid)
+        else:
+            grapheditor_node = GraphEditorNode.from_base_node(base_node)
         if grapheditor_node is None:
             abort(404)
-        grapheditor_node.update(dict(id=nid))
+        grapheditor_node.id = nid
         return grapheditor_node
 
     @blp.arguments(node_model.NodeSchema, example=node_model.node_put_example)
@@ -157,16 +199,16 @@ class Node(MethodView):
 
         Returns the updated node
         """
-        existing_node = current_app.graph_db.get_node_by_id(nid, True)
-        if "dbId" not in existing_node:
+        existing_node = current_app.graph_db.get_node_by_id(nid)
+        if not existing_node:
             abort_with_json(405, f"Node {nid} doesn't exist in the database")
 
-        grapheditor_node = current_app.graph_db.replace_node_by_id(
-            nid, json_node, existing_node
+        base_node = current_app.graph_db.replace_node_by_id(
+            nid, prepare_node_patch(json_node), existing_node
         )
 
-        grapheditor_node.update(dict(id=nid))
-        return grapheditor_node
+        base_node.id = nid
+        return GraphEditorNode.from_base_node(base_node)
 
     @blp.arguments(
         node_model.NodePatchSchema, example=node_model.node_patch_example
@@ -175,18 +217,23 @@ class Node(MethodView):
     @require_tab_id()
     def patch(self, json_node, nid: str):
         """
-        Partial update of a node
+        Partial update of a node.
 
-        Returns the updated node
+        Returns the updated node.
         """
-        neo_node = current_app.graph_db.get_node_by_id(nid, True)
+        # TODO check and update node in same query
+        base_node = current_app.graph_db.get_node_by_id(nid)
         # pseudo node
-        if not neo_node or "dbId" not in neo_node:
+        if not base_node and GraphEditorNode.create_pseudo_node(nid):
             abort_with_json(405, f"Can't patch a pseudo node: {nid}")
-        grapheditor_node = current_app.graph_db.update_node_by_id(nid, json_node)
-        grapheditor_node.update(dict(id=nid))
+        elif not base_node:
+            abort_with_json(404, f"Node ID doesn't exist: {nid}")
 
-        return grapheditor_node
+        updated_node = current_app.graph_db.update_node_by_id(
+            nid, prepare_node_patch(json_node), base_node)
+        updated_node.id = nid
+
+        return GraphEditorNode.from_base_node(updated_node)
 
     @blp.response(200)
     @require_tab_id()
@@ -235,7 +282,12 @@ class NodeRelations(MethodView):
         # relation map and leads to a 200 response.
         if rel_map is None:
             abort(404)
-        return dict(relations=rel_map)
+        for rel_info in rel_map:
+            base_rel = rel_info['relation']
+            rel_info['relation'] = GraphEditorRelation.from_base_relation(base_rel)
+            base_node = rel_info['neighbor']
+            rel_info['neighbor'] = GraphEditorNode.from_base_node(base_node)
+        return dict(relations = rel_map)
 
 
 @blp.route("/labels")
@@ -246,7 +298,10 @@ class NodeLabels(MethodView):
     @require_tab_id()
     def get(self):
         """Return all labels available in the database."""
-        labels = current_app.graph_db.get_all_labels()
+        labels = [
+            compute_semantic_id(label, GraphEditorLabel.MetaLabel)
+            for label in current_app.graph_db.get_all_labels()
+        ]
         return dict(labels=labels)
 
 
@@ -262,10 +317,17 @@ class NodeDefaultLabels(MethodView):
             label_ids = session["default_labels"][g.tab_id]
         except KeyError:
             return {"nodes": []}
-        labels = current_app.graph_db.get_nodes_by_ids(
-            label_ids, replace_by_pseudo_node=True
-        )
-        return {"nodes": labels.values()}
+        label_nodes_map = current_app.graph_db.get_nodes_by_ids(label_ids)
+        result = []
+        for label_id in label_ids:
+            if label_id not in label_nodes_map:
+                pseudo_label_node = GraphEditorNode.create_pseudo_node(label_id)
+                if pseudo_label_node:
+                    result.append(pseudo_label_node)
+            else:
+                node = GraphEditorNode.from_base_node(label_nodes_map[label_id])
+                result.append(node)
+        return {"nodes": result}
 
     @blp.arguments(node_model.NodeDefaultLabelsPostSchema, as_kwargs=True)
     @require_tab_id()
@@ -295,5 +357,8 @@ class NodeProperties(MethodView):
     @require_tab_id()
     def get(self):
         """Return all node properties available in the database."""
-        properties = current_app.graph_db.get_all_node_properties()
+        properties = [
+            compute_semantic_id(pname, GraphEditorLabel.MetaProperty)
+            for pname in current_app.graph_db.get_all_node_properties()
+        ]
         return dict(properties=properties)

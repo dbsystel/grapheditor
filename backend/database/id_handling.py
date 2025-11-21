@@ -130,6 +130,10 @@ def parse_unknown_id(idstr):
     return None
 
 
+def id_is_valid(idstr):
+    return bool(parse_semantic_id(idstr) or parse_db_id(idstr))
+
+
 def get_internal_id(idstr: str):
     """Get internal neo4j ID from idstr
         Examples:

@@ -1,11 +1,11 @@
-import { userEvent } from '@vitest/browser/context';
 import i18n from 'src/i18n';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { HeaderSettings } from './HeaderSettings';
 
 describe('Components - HeaderSettings', () => {
-	test('Render component', () => {
-		const screen = render(<HeaderSettings />);
+	test('Render component', async () => {
+		const screen = await render(<HeaderSettings />);
 
 		expect(screen.getByRole('button').element()).toBeInTheDocument();
 		expect(screen.getByRole('button').element().getAttribute('data-icon')).toBe('gear_wheel');
@@ -13,7 +13,7 @@ describe('Components - HeaderSettings', () => {
 	});
 
 	test('Render children', async () => {
-		const screen = render(<HeaderSettings />);
+		const screen = await render(<HeaderSettings />);
 		const button = screen.getByRole('button');
 
 		await userEvent.click(button);

@@ -16,7 +16,7 @@
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"noFallthroughCasesInSwitch": true,
-		"types": ["vite/client", "vitest/globals", "vite-plugin-svgr/client", "@vitest/browser/providers/playwright"],
+		"types": ["vite/client", "vitest/globals", "vite-plugin-svgr/client", "@vitest/browser-playwright"],
 		"baseUrl": ".",
 		"strictNullChecks": true,
 		"strictFunctionTypes": true,

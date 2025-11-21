@@ -2,13 +2,19 @@
 GraphEditor and vice-versa
 """
 
+import copy
+from dataclasses import dataclass
+from typing import Optional
 import re
 import neo4j
 
 from blueprints.display.style_support import apply_style_rules
 from database.utils import find_a_value
 from database.settings import config
-from database.id_handling import compute_semantic_id, get_base_id, GraphEditorLabel
+from database.id_handling import (
+    compute_semantic_id, get_base_id, GraphEditorLabel, semantic_id_parts
+)
+from database.base_types import BaseNode, BaseRelation, BaseElement
 
 # ----------------------- Constants --------------------------------------
 
@@ -62,43 +68,153 @@ METALABELS = {e.name for e in GraphEditorLabel}
 # all tech labels
 TECH_LABELS = METALABELS.union({"___tech_"})
 
-# ------------------------------- Functions -----------------------------------
+@dataclass
+class GraphEditorElement():
+    id: str
+    properties: dict
+
+# dataclasses representing API may have many attributes.
+# our API uses pascalCase.
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=invalid-name
+@dataclass
+class GraphEditorNode(GraphEditorElement):
+    labels: list
+    description: str
+    longDescription: str
+    title: str
+    style: Optional[dict] = None
+    semanticId: Optional[str] = None
+    dbId: Optional[str] = None
+    _grapheditor_type: str = "node" # TODO remove this from datatype
+
+    @classmethod
+    def from_base_node(cls, base_node: BaseNode):
+        # base_node may contain style information like x, y position
+        # from perspectives.
+        prev_style = copy.copy(base_node.style)
+        apply_style_rules(base_node)
+        base_node.style.update(prev_style)
+        grapheditor_dict = neoproperties2grapheditor(base_node)
+        title = get_node_title(base_node)
+        sem_id = get_semantic_id_from_neonode(base_node)
+        grapheditor_node = GraphEditorNode(
+            id = f"id::{base_node.element_id}",
+            dbId=f"id::{base_node.element_id}",
+            semanticId=sem_id,
+            labels=[
+                compute_semantic_id(label, metalabel=GraphEditorLabel.MetaLabel)
+                for label in base_node.labels
+            ],
+            title=title,
+            _grapheditor_type='node',
+            properties=grapheditor_dict["properties"],
+            description=grapheditor_dict["description"],
+            longDescription=grapheditor_dict["longDescription"],
+            style=base_node.style
+        )
+        return grapheditor_node
+
+    def to_base_node(self):
+        nid = get_base_id(self.id)
+        return BaseNode(
+            id=nid,
+            element_id=nid,
+            properties={
+                get_base_id(k): v["value"]
+                for k, v in self.properties.items()
+            },
+            style="", # ignored
+            labels=[get_base_id(label) for label in self.labels]
+        )
+
+    @classmethod
+    def from_neo_node(cls, neo_node):
+        return cls.from_base_node(BaseNode.from_neo_node(neo_node))
+
+    @classmethod
+    def create_pseudo_node(cls, nid):
+        if not semantic_id_parts(nid):
+            return None
+        return cls(
+            id=nid,
+            semanticId=nid,
+            description="A pseudo-node.",
+            longDescription=f"Pseudo node for {nid}",
+            properties={},
+            labels=[],
+            title=get_base_id(nid),
+            _grapheditor_type="node",
+        )
 
 
-def neonode2grapheditor(neo_node, semantic_id=None):
-    """Converts a neo4j node into the grapheditor node data structure"""
-    grapheditor_dict = neoproperties2grapheditor(neo_node, semantic_id=semantic_id)
-    title = get_node_title(neo_node)
-    sem_id = get_semantic_id_from_neonode(neo_node)
+@dataclass
+class GraphEditorRelation(GraphEditorElement):
+    type: str
+    source_id: str
+    target_id: str
+    description: str
+    longDescription: str
+    title: str
+    style: Optional[dict] = None
+    semanticId: Optional[str] = None
+    dbId: Optional[str] = None
+    _grapheditor_type: str = "relation" # TODO remove this from datatype
 
-    grapheditor_dict.update(
-        dict(
+    @classmethod
+    def from_base_relation(cls, base_relation: BaseRelation, semantic_id: str | None = None):
+        # base_relation may contain style information like x, y position
+        # from perspectives.
+        prev_style = copy.copy(base_relation.style)
+        apply_style_rules(base_relation)
+        base_relation.style.update(prev_style)
+        title = get_relation_title(base_relation)
+        grapheditor_dict = neoproperties2grapheditor(base_relation, semantic_id)
+        source_id = f"id::{base_relation.source.element_id}"
+        target_id = f"id::{base_relation.target.element_id}"
+        grapheditor_dict = neoproperties2grapheditor(base_relation, semantic_id=semantic_id)
+        grapheditor_rel = GraphEditorRelation(
             id=(
                 semantic_id
                 if semantic_id
-                else f"id::{neo_node.element_id}"
+                else f"id::{base_relation.element_id}"
             ),
-            dbId=f"id::{neo_node.element_id}",
-            semanticId=sem_id,
-            labels=list(
-                map(
-                    lambda label: compute_semantic_id(
-                        label, metalabel=GraphEditorLabel.MetaLabel
-                    ),
-                    neo_node.labels,
-                )
-            ),
+            dbId=f"id::{base_relation.element_id}",
+            semanticId = semantic_id or "",
             title=title,
-            _grapheditor_type="node",
+            source_id=source_id,
+            target_id=target_id,
+            type=compute_semantic_id(
+                base_relation.type, metalabel=GraphEditorLabel.MetaRelation
+            ),
+            properties=grapheditor_dict["properties"],
+            description=grapheditor_dict["description"],
+            longDescription=grapheditor_dict["longDescription"],
+            style=base_relation.style,
+            _grapheditor_type="relation",
         )
-    )
+        return grapheditor_rel
 
-    apply_style_rules(grapheditor_dict)
+    @classmethod
+    def from_neo_relation(cls, neo_relation):
+        return cls.from_base_relation(
+            BaseRelation.from_neo_relation(neo_relation)
+        )
 
-    return grapheditor_dict
+    def remove_semantic_ids(self):
+        self.type = get_base_id(self.type)
+        self.properties = {
+            get_base_id(k): v["value"]
+            for k, v in self.properties.items()
+        }
+        self.source_id = get_base_id(self.source_id)
+        self.target_id = get_base_id(self.target_id)
+        return self
 
 
-def get_node_title(node):
+# ------------------------------- Functions -----------------------------------
+
+def get_node_title(node: BaseNode):
     """Determine the title of a node by trying keys. Defaults to label: id"""
 
     title = find_a_value(node, keys=config.node_title_keys)
@@ -125,42 +241,19 @@ def get_relation_title(relation):
     return f"{relation.type}"
 
 
-def neorelation2grapheditor(neo_relation, semantic_id=None):
-    """Converts a neo4j relation into the grapheditor relation data structure"""
-    title = get_relation_title(neo_relation)
-    grapheditor_dict = neoproperties2grapheditor(neo_relation, semantic_id)
-    source_id = f"id::{neo_relation.start_node.element_id}"
-    target_id = f"id::{neo_relation.end_node.element_id}"
-    grapheditor_dict.update(
-        id=(
-            semantic_id
-            if semantic_id
-            else f"id::{neo_relation.element_id}"
-        ),
-        dbId=f"id::{neo_relation.element_id}",
-        title=title,
-        source_id=source_id,
-        target_id=target_id,
-        type=compute_semantic_id(
-            neo_relation.type, metalabel=GraphEditorLabel.MetaRelation
-        ),
-        _grapheditor_type="relation",
-    )
-
-    apply_style_rules(grapheditor_dict)
-    return grapheditor_dict
-
-
 def neoobject2grapheditor(obj):
     """Converts arbitrary neo4j data to a dictionary where 'type'
     is the grapheditor typo, and 'contents' the corresponding grapheditor
     data structure"""
+    result = None
     if isinstance(obj, neo4j.graph.Node):
-        return neonode2grapheditor(obj)
-    if isinstance(obj, neo4j.graph.Relationship):
-        return neorelation2grapheditor(obj)
-    if isinstance(obj, neo4j.graph.Path):
-        result = [neonode2grapheditor(obj.start_node)]
+        result = GraphEditorNode.from_neo_node(obj)
+    elif isinstance(obj, neo4j.graph.Relationship):
+        result = GraphEditorRelation.from_neo_relation(obj)
+    elif isinstance(obj, neo4j.graph.Path):
+        result: list[GraphEditorElement] = [
+            GraphEditorNode.from_neo_node(obj.start_node)
+        ]
 
         # We need to consider that paths might not be directed. E.g. a path can
         # go to a node, and the next relation doesn't start with the current
@@ -169,24 +262,54 @@ def neoobject2grapheditor(obj):
         current_node_id = obj.start_node.id
 
         for rel in obj:
-            result.append(neorelation2grapheditor(rel))
+            result.append(GraphEditorRelation.from_neo_relation(rel))
 
             if rel.start_node.id == current_node_id:
                 current_node = rel.end_node
             else:
                 current_node = rel.start_node
 
-            result.append(neonode2grapheditor(current_node))
+            result.append(GraphEditorNode.from_neo_node(current_node))
             current_node_id = current_node.id
+    elif isinstance(obj, (neo4j.time.DateTime, neo4j.time.Time, neo4j.time.DateTime)):
+        result = obj.to_native()
+    elif isinstance(obj, list):
+        result = list(map(neoobject2grapheditor, obj))
+    elif isinstance(obj, dict):
+        result = {k: neoobject2grapheditor(v) for (k, v) in obj.items()}
+    else:
+        result = obj
 
-        return result
+    return result
 
-    if isinstance(obj, list):
-        return list(map(neoobject2grapheditor, obj))
-    if isinstance(obj, dict):
-        return {k: neoobject2grapheditor(v) for (k, v) in obj.items()}
 
-    return obj
+def prepare_node_patch(node_data: dict):
+    """Remove semantic IDs from node patch."""
+    if labels := node_data.get('labels', None):
+        node_data['labels'] = [get_base_id(label) for label in labels]
+    if props := node_data.get('properties', None):
+        node_data['properties'] = {
+            get_base_id(k): v['value']
+            for k, v in props.items()
+        }
+    return node_data
+
+
+def prepare_relation_patch(rel_data: dict):
+    """Remove semantic IDs from relation patch.
+    """
+    if rel_type := rel_data.get('type', None):
+        rel_data['type'] = get_base_id(rel_type)
+    if props := rel_data.get('properties', None):
+        rel_data['properties'] = {
+            get_base_id(k): v['value']
+            for k, v in props.items()
+        }
+    if source_id := rel_data.get('source_id', None):
+        rel_data['source_id'] = get_base_id(source_id)
+    if target_id := rel_data.get('target_id', None):
+        rel_data['target_id'] = get_base_id(target_id)
+    return rel_data
 
 
 def is_metalevel(obj):
@@ -218,8 +341,10 @@ def is_metalabel(label):
     return label in METALABELS
 
 
-def neoproperties2grapheditor(obj, semantic_id=None):
-    """Converts a neo4j object with properties into an grapheditor dict"""
+def neoproperties2grapheditor(obj: BaseElement, semantic_id: str|None=None) -> dict:
+    """Extract properties and attributes from a neo4j object.
+    Return a dictionary containing properties and description-related
+    attributes."""
     description = find_a_value(
         obj,
         keys=["_description",
@@ -240,7 +365,7 @@ def neoproperties2grapheditor(obj, semantic_id=None):
 
     properties = {}
 
-    for key, value in obj.items():
+    for key, value in obj.properties.items():
         prop_type = pythontype2json.get(type(value).__name__, "unknown")
         if key == "_ft__tech_":
             # we don't pass _ft__tech_ to the frontend
@@ -253,7 +378,11 @@ def neoproperties2grapheditor(obj, semantic_id=None):
         if type(value).__name__ in ['DateTime', 'Date', 'Time']:
             # convert to a python value so that jsonify can work with it.
             py_val = value.to_native()
-        properties[prop_id] = dict(edit=True, type=prop_type, value=py_val)
+        properties[prop_id] = {
+            "edit": True,
+            "type": prop_type,
+            "value": py_val
+        }
 
     new_properties = dict(
         sorted(
@@ -271,7 +400,7 @@ def neoproperties2grapheditor(obj, semantic_id=None):
         long_desc = "<table>"
         obj_id = semantic_id if semantic_id else "id::" + obj.element_id
 
-        if isinstance(obj, neo4j.graph.Node):
+        if isinstance(obj, BaseNode):
             long_desc += f"<tr><th>Node</th><td>{obj_id}</td></tr>\n"
             long_desc += f"""<tr>
                                <th>Labels</th>
@@ -283,7 +412,7 @@ def neoproperties2grapheditor(obj, semantic_id=None):
             long_desc += f"<tr><th>Type</th><td>{obj.type}</td></tr>\n"
             long_desc += "<tr><th colspan=2>&nbsp;</th></tr>\n"
 
-        for key, value in sorted(obj.items()):
+        for key, value in sorted(obj.properties.items()):
             long_desc += f"<tr><th>{key}</th><td> {value}</td></tr>\n"
 
         long_desc += "</table>"
@@ -299,14 +428,15 @@ def neoproperties2grapheditor(obj, semantic_id=None):
 def compute_updated_properties(old_properties, new_properties):
     """Return a properties dict keeping mandatory tech properties."""
     properties = {
-        get_base_id(k): v["value"]
+        k: v
         for k, v in old_properties.items()
         if is_tech_property(k)
     }
     properties.update(
         {
-            get_base_id(key): value["value"]
-            for key, value in new_properties.items()
+            k: v
+            for k, v in new_properties.items()
+            if k != "_uuid__tech_"
         }
     )
     return properties
@@ -324,17 +454,15 @@ def get_metatype_from_labels(labels):
     return None
 
 
-def get_semantic_id_from_neonode(neo_node):
-    try:
-        name = neo_node["name__tech_"]
-        if name is None:
-            return None
-        metatype = get_metatype_from_labels(neo_node.labels)
-        if not metatype:
-            return None
-        return compute_semantic_id(name, metatype)
-    except ValueError:  # name is missing
+def get_semantic_id_from_neonode(node: BaseNode) -> str | None:
+    "Return a semantic ID for node if possible, otherwise None."
+    name = node.properties.get("name__tech_", None)
+    if name is None:
         return None
+    metatype = get_metatype_from_labels(node.labels)
+    if not metatype:
+        return None
+    return compute_semantic_id(name, metatype)
 
 
 def get_internal_id(idstr: str):

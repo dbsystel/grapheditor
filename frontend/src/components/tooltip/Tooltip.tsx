@@ -38,7 +38,7 @@ export const Tooltip = (props: TooltipProps) => {
 		whileElementsMounted(referenceEl, floatingEl, update) {
 			/**
 			 * Performance improvement. We want tooltip to be properly positioned only on mouseOver, no need
-			 * to observe
+			 * to observe other changes.
 			 *
 			 * @see https://floating-ui.com/docs/autoUpdate
 			 */
@@ -48,10 +48,11 @@ export const Tooltip = (props: TooltipProps) => {
 				layoutShift: false,
 				animationFrame: false
 			});
+
 			return cleanup;
 		}
 	});
-	const rootElementClassName = clsx('tooltip db-bg-color-lvl-1', className);
+	const rootElementClassName = clsx('tooltip', className);
 
 	useEffect(() => {
 		if (props.isOpen) {

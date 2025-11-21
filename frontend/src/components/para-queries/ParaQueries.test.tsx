@@ -1,12 +1,12 @@
-import { userEvent } from '@vitest/browser/context';
 import { ParaQueries } from 'src/components/para-queries/ParaQueries';
 import { vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 describe('Components - ParaQueries', () => {
 	test('Options are shown + option click', async () => {
 		const ref = { current: { triggerSearch: () => {} } };
-		const screen = render(<ParaQueries searchFunctionRef={ref} />);
+		const screen = await render(<ParaQueries searchFunctionRef={ref} />);
 
 		const summary = screen.getByRole('group').element().getElementsByTagName('summary')[0];
 

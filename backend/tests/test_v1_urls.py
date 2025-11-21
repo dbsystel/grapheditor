@@ -18,6 +18,7 @@ from helpers import (
     fetch_sample_relation,
     fetch_sample_node_id,
     fetch_sample_relation_id,
+    find_by_property,
     create_sample_node,
     create_sample_relation,
     upload_style_file,
@@ -324,8 +325,8 @@ def test_patch_node_with_invalid_id():
         headers=HEADERS,
         json={"labels": ["MetaLabel::Human", "MetaLabel::Person__dummy_"]},
     )
-    assert response.status_code == 405
-    assert response.json["message"] == "Can't patch a pseudo node: id::i_dont_exist"
+    assert response.status_code == 404
+    assert response.json["message"] == "Node ID doesn't exist: id::i_dont_exist"
 
 
 def test_patch_node_properties():
@@ -434,14 +435,14 @@ def test_fulltext_node_with_labels():
     props = response.json[0]["properties"]
     assert props["MetaProperty::name__dummy_"]["value"] == "Bob"
 
-    # A node must have all labels, what is not Bobs case
+    # A node must have any of the labels
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="bob", labels=["Person__dummy_", "Human"]),
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert len(response.json) == 0
+    assert len(response.json) == 1
 
     response = client.get(
         BASE_URL + "/api/v1/nodes",
@@ -450,6 +451,15 @@ def test_fulltext_node_with_labels():
     )
     assert response.status_code == 200
     assert len(response.json) == 0
+
+    # Semantic IDs are also supported.
+    response = client.get(
+        BASE_URL + "/api/v1/nodes",
+        query_string=dict(text="bob", labels=["MetaLabel::Person__dummy_"]),
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json) == 1
 
 
 def test_fulltext_node_upper():
@@ -478,15 +488,54 @@ def test_fulltext_node_id():
 
 
 def test_fulltext_node_empty():
-    """An empty fulltext search return everything."""
-    # TODO does this make sense? We could limit fulltext search to require a
-    # minimum length string instead.
+    """An empty fulltext is invalid."""
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         headers=HEADERS,
     )
+    assert response.status_code == 400
+
+
+def test_fulltext_boolean_operators():
+    """Fulltext supports lucine syntax."""
+    # Test basic ORing without property names.
+    response = client.get(
+        BASE_URL + "/api/v1/nodes",
+        query_string=dict(text="alice OR bob"),
+        headers=HEADERS,
+    )
     assert response.status_code == 200
-    assert len(response.json) > 20
+    assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
+    assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Bob')
+
+    # Test ORing with property names.
+    response = client.get(
+        BASE_URL + "/api/v1/nodes",
+        query_string=dict(text="'name__dummy_=alice' OR 'name__tech_=MetaLabel__tech_'"),
+        headers=HEADERS,
+    )
+
+    assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
+    assert find_by_property(response.json, 'MetaProperty::name__tech_', 'MetaLabel__tech_')
+
+    # Test ANDing.
+    response = client.get(
+        BASE_URL + "/api/v1/nodes",
+        query_string=dict(text="alice AND person__dummy_"),
+        headers=HEADERS,
+    )
+    assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
+    assert not find_by_property(response.json, 'MetaProperty::name__dummy_', 'Bob')
+
+    # Filtering labels also works
+    response = client.get(
+        BASE_URL + "/api/v1/nodes",
+        query_string=dict(text="alice AND person__dummy_",
+                          labels="MetaLabel::Person__dummy_"),
+        headers=HEADERS,
+    )
+    assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
+    assert not find_by_property(response.json, 'MetaProperty::name__dummy_', 'Bob')
 
 
 def test_get_relation():
@@ -596,6 +645,7 @@ def test_bulk_fetch_nodes():
     assert person_id in nodes
     assert nodes[alice_id]['id'] == alice_id
     assert nodes[person_id]['id'] == person_id
+    assert list(nodes.items())[0][0] == alice_id
 
     # no crash if ids empty
     response = client.post(
@@ -747,13 +797,13 @@ def test_bulk_post_nodes():
     assert len(new_nodes) == 2
     homer = next(n for n in new_nodes
                  if n["properties"]["MetaProperty::name__dummy_"]["value"] == "Homer")
+
     assert "MetaProperty::hair_color__dummy_" not in homer["properties"]
-    assert homer["properties"]["MetaProperty::_uuid__tech_"] != sample_uuid
+    assert homer["properties"]["MetaProperty::_uuid__tech_"]["value"] != sample_uuid
 
     bart = next(n for n in new_nodes
                 if n["properties"]["MetaProperty::name__dummy_"]["value"] == "Bart")
     assert bart["properties"]["MetaProperty::hair_color__dummy_"]["value"] == "blond"
-
     # empty list doesn't crash
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_post",
@@ -999,7 +1049,7 @@ def test_bulk_post_relations():
     assert works_for_rel["properties"]["MetaProperty::since__dummy_"]["value"] == "80s"
     assert works_for_rel["type"] == "MetaRelation::works_for__dummy_"
     # the backend must return a different uuid
-    assert works_for_rel["properties"]["MetaProperty::_uuid__tech_"] != sample_uuid
+    assert works_for_rel["properties"]["MetaProperty::_uuid__tech_"]["value"] != sample_uuid
 
     exploits_rel = next(r for r in new_rels
                         if r["source_id"] == montgomery["id"])
@@ -1046,7 +1096,7 @@ def test_default_labels():
     assert len(response.json["nodes"]) == 0
 
     person_id = fetch_sample_node_id(
-        client, text="Person", labels=["MetaLabel__tech_"]
+        client, text="Person*", labels=["MetaLabel__tech_"]
     )
     response = client.post(
         BASE_URL + "/api/v1/nodes/labels/default",
@@ -1086,7 +1136,7 @@ def test_default_relation_type():
     assert "FIX_ME" in response.json["node"]["id"]
 
     nid = fetch_sample_node_id(
-        client, text="likes", labels=["MetaRelation__tech_"]
+        client, text="likes*", labels=["MetaRelation__tech_"]
     )
     response = client.post(
         BASE_URL + "/api/v1/relations/types/default",
@@ -1145,15 +1195,12 @@ def test_fulltext_relation_id():
 
 
 def test_fulltext_relation_empty():
-    """An empty fulltext search return everything."""
-    # TODO does this make sense? We could limit fulltext search to require a
-    # minimum length string instead.
+    """An empty fulltext is invalid."""
     response = client.get(
         BASE_URL + "/api/v1/relations",
         headers=HEADERS,
     )
-    assert response.status_code == 200
-    assert len(response.json) > 20
+    assert response.status_code == 400
 
 
 def test_all_relation_properties():
@@ -2142,7 +2189,7 @@ def test_db_id():
     # pseudo nodes don't have a db_id
     pseudo_node = fetch_node_by_id(client, "MetaLabel::i_dont_exist__dummy_")
     assert "id" in pseudo_node
-    assert "dbId" not in pseudo_node
+    assert pseudo_node["dbId"] is None
 
     likes = fetch_sample_relation(client)
     assert likes["dbId"] == likes["id"]

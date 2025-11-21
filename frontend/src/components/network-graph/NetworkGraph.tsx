@@ -20,7 +20,7 @@ import { NetworkGraphSelectionTool } from 'src/components/network-graph/plugins/
 import i18n from 'src/i18n';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { checkBrowserRenderingCapabilities } from 'src/utils/helpers/general';
+import { checkBrowserRenderingCapabilities } from 'src/utils/helpers/browser';
 import { NetworkGraphProps } from './NetworkGraph.interfaces';
 
 /**

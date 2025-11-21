@@ -4,6 +4,7 @@ import { GlobalComponentProps } from 'src/types/components';
 
 export type ConnectionsProps = GlobalComponentProps & {
 	node: Node;
+	isEditMode?: boolean;
 };
 
 export type ConnectionsData = Array<{
@@ -19,6 +20,7 @@ export type ConnectionsBoxProps = {
 	direction: ConnectionDirection;
 	onDelete: (relation: Relation) => void;
 	className?: string;
+	isEditMode?: boolean;
 };
 
 export type ConnectionObject = {

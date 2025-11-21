@@ -4,7 +4,7 @@ export type EditSaveButtonProps = GlobalComponentProps & {
 	headline: string;
 	isEditMode: boolean;
 	isEditable?: boolean;
-	onEditClick: () => void;
-	onSaveClick: () => void;
-	onUndoClick: () => void;
+	onEditClick?: () => void;
+	onSaveClick?: () => void;
+	onUndoClick?: () => void;
 };

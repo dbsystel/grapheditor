@@ -21,17 +21,26 @@ export const EditSaveButtons = ({
 
 	const toggleEdit = (event: MouseEvent) => {
 		event.stopPropagation();
-		onEditClick();
+
+		if (onEditClick) {
+			onEditClick();
+		}
 	};
 
 	const saveChanges = (event: MouseEvent) => {
 		event.stopPropagation();
-		onSaveClick();
+
+		if (onSaveClick) {
+			onSaveClick();
+		}
 	};
 
 	const undoChanges = (event: MouseEvent) => {
 		event.stopPropagation();
-		onUndoClick();
+
+		if (onUndoClick) {
+			onUndoClick();
+		}
 	};
 
 	return (

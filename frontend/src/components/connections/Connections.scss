@@ -1,75 +1,79 @@
-.connections {
-	&__overview {
-		width: 100%;
-		table-layout: fixed;
-		border-top: var(--db-border-width-2xs) solid
-			var(--db-adaptive-on-bg-basic-emphasis-60-default);
-	}
+@layer connections {
+	.connections {
+		$this: &;
 
-	&__cell {
-		padding: var(--db-spacing-fixed-sm, 8px);
-		vertical-align: middle;
+		&__overview {
+			width: 100%;
+			table-layout: fixed;
+			border-top: var(--db-border-width-2xs) solid
+				var(--db-adaptive-on-bg-basic-emphasis-60-default);
+		}
 
-		.item-info {
+		&__cell {
+			padding: var(--db-spacing-fixed-sm, 8px);
+			vertical-align: middle;
+
+			.item-info {
+				.db-button {
+					white-space: normal;
+					word-break: break-all;
+					text-align: left;
+				}
+			}
+		}
+
+		&__icon-only {
+			width: 36px;
+		}
+
+		&__relation-name {
+			width: 32.5%;
+		}
+
+		&__node-icon {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			vertical-align: middle;
+
 			.db-button {
-				white-space: normal;
-				word-break: break-all;
-				text-align: left;
+				&:hover,
+				&:active,
+				&:focus {
+					background-color: inherit;
+					color: inherit;
+					box-shadow: none;
+				}
+
+				// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
+				> .db-tooltip {
+					position: absolute !important;
+					inset-inline: calc(100% + 5px) 0 !important;
+					inset-block: 50% 0 !important;
+				}
 			}
 		}
-	}
 
-	&__icon-only {
-		width: 36px;
-	}
-
-	&__relation-name {
-		width: 32.5%;
-	}
-
-	&__node-icon {
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		vertical-align: middle;
-
-		.db-button {
-			&:hover,
-			&:active,
-			&:focus {
-				background-color: inherit;
-				color: inherit;
-				box-shadow: none;
-			}
-
-			// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
-			> .db-tooltip {
-				position: absolute !important;
-				inset-inline: calc(100% + 5px) 0 !important;
-				inset-block: 50% 0 !important;
-			}
+		&__menu {
+			padding: 0;
+			text-align: right;
 		}
-	}
 
-	&__menu {
-		padding: 0;
-		text-align: right;
-	}
+		&__headline {
+			font-size: 1.2rem;
+		}
 
-	&__headline {
-		font-size: 1.2rem;
-	}
+		&__new-value {
+			background-color: var(--db-neutral-bg-basic-level-2-default);
+		}
 
-	&__new-value {
-		background-color: var(--db-neutral-bg-basic-level-2-default);
-	}
+		[data-icon]:is(span) {
+			vertical-align: bottom;
+		}
 
-	[data-icon]:is(span) {
-		vertical-align: bottom;
-	}
-
-	&__menu-button {
-		justify-content: end;
+		&__menu-button {
+			justify-content: end;
+		}
 	}
 }

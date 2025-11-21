@@ -1,30 +1,33 @@
+@use "sass:meta";
 /*
 	************************************************************************************
 						GENERAL Styles for our project
 	************************************************************************************
 */
-@forward '@db-ux/core-components/build/styles/rollup';
 @forward "../icons/index.css";
+@forward "./db-tooltip-fix";
 
-:root {
-	--db-icon-font-family: 'grapheditor-icon-font';
+@layer db-ux-core-components {
+	@include meta.load-css('@db-ux/core-components/build/styles/rollup.scss');
 }
 
-#root {
-	min-height: 100dvh;
-}
+@layer main {
+	:root {
+		--db-icon-font-family: 'grapheditor-icon-font';
+	}
 
-select,
-button {
-	cursor: pointer;
-}
+	#root {
+		min-height: 100dvh;
+	}
 
-.db-accordion-item summary + div {
-	overflow: auto;
-}
+	select,
+	button {
+		cursor: pointer;
+	}
 
-@media screen and (min-width: 64em) {
-	.db-section:not([data-force-mobile]) {
-		padding-inline: 0;
+	@media screen and (min-width: 64em) {
+		.db-section:not([data-force-mobile]) {
+			padding-inline: 0;
+		}
 	}
 }

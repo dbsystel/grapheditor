@@ -4,6 +4,7 @@ import { worker } from './worker';
 
 export const testExtend = testBase.extend<{ worker: SetupWorker }>({
 	worker: [
+		// eslint-disable-next-line
 		async ({}, use) => {
 			// Start the worker before the test.
 			//await worker.start();

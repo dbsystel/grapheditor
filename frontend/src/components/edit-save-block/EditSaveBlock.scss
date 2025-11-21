@@ -34,30 +34,6 @@
 		}
 	}
 
-	&--small {
-		padding-left: var(--db-spacing-fixed-3xs);
-		margin-left: var(--db-spacing-fixed-none);
-
-		details{
-			
-			summary{
-				margin: var(--db-spacing-fixed-none);
-				font-size: x-small;
-				font-style: normal;
-				color: var(--db-on-bg-color-emphasis-90);
-				padding: var(--db-spacing-fixed-3xs);
-			}
-			div{
-				font-size: small;
-				padding-top: var(--db-spacing-fixed-none) !important;
-				padding-left: var(--db-spacing-fixed-xs) !important;
-				padding-right: var(--db-spacing-fixed-3xs) !important;
-				padding-bottom: var(--db-spacing-fixed-3xs) !important;
-			}
-		}
-		
-	}
-
 	&:has(~ .edit-save-block--edit-mode) {
 		details[open] {
 			@include hide-editing-buttons;

@@ -2,14 +2,14 @@ import { TableBody } from 'src/components/table-body/TableBody';
 import { render } from 'vitest-browser-react';
 
 describe('Components - TableBody', () => {
-	test('Render component', () => {
-		const screen = render(<TableBody />);
+	test('Render component', async () => {
+		const screen = await render(<TableBody />);
 
 		expect(screen.getByRole('rowgroup').element()).toBeInTheDocument();
 	});
 
-	test('Render children', () => {
-		const screen = render(
+	test('Render children', async () => {
+		const screen = await render(
 			<TableBody>
 				<button>Hello</button>
 			</TableBody>

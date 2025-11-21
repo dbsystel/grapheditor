@@ -3,7 +3,7 @@ import { AttributeUpdatePayload } from 'graphology-types';
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SigmaEdgeEventPayload, SigmaNodeEventPayload } from 'sigma/types';
-import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
+import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { GraphEditorSigmaNodeAttributes } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { StateManager } from 'src/components/network-graph/state-manager';
 import { Node } from 'src/models/node';
@@ -137,10 +137,10 @@ export const NetworkGraphNodeRelationMouseover = () => {
 			style={tooltipParentStyle}
 		>
 			{selectedGraphItem && (
-				<ItemOverviewTooltip
+				<ItemOverviewPopover
 					item={selectedGraphItem.item}
-					tooltipRef={tooltipRef.current}
-					tooltipOffset={selectedGraphItem.offset}
+					popoverRef={tooltipRef.current}
+					popoverOffset={selectedGraphItem.offset}
 				/>
 			)}
 		</div>,

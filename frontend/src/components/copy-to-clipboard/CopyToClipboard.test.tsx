@@ -1,15 +1,15 @@
-import userEvent from '@testing-library/user-event';
 import i18n from 'src/i18n';
 import { useClipboardStore } from 'src/stores/clipboard';
 import { generateTestNode } from 'src/tests/data/nodes';
 import { generateTestRelation } from 'src/tests/data/relations';
 import { expect } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CopyToClipboard } from './CopyToClipboard';
 
 describe('Components - CopyToClipboard', () => {
-	test('Render component', () => {
-		const screen = render(<CopyToClipboard nodes={[]} relations={[]} />);
+	test('Render component', async () => {
+		const screen = await render(<CopyToClipboard nodes={[]} relations={[]} />);
 
 		expect(screen.getByRole('button').element()).toBeInTheDocument();
 		expect(screen.container.querySelector('[data-icon="copy"]')).toBeInTheDocument();
@@ -22,9 +22,11 @@ describe('Components - CopyToClipboard', () => {
 		/**
 		 * 	@see https://testing-library.com/docs/user-event/clipboard/
 		 */
-		const screen = render(<CopyToClipboard nodes={[testNode]} relations={[testRelation]} />);
+		const screen = await render(
+			<CopyToClipboard nodes={[testNode]} relations={[testRelation]} />
+		);
 
-		const copyButton = screen.getByRole('button').element();
+		const copyButton = screen.getByRole('button'); /* .element(); */
 
 		await userEvent.click(copyButton);
 
@@ -39,13 +41,13 @@ describe('Components - CopyToClipboard', () => {
 	});
 
 	test('Successful copy GUI feedback', async () => {
-		const screen = render(<CopyToClipboard nodes={[]} relations={[]} />);
+		const screen = await render(<CopyToClipboard nodes={[]} relations={[]} />);
 
-		const copyButton = screen.getByRole('button').element();
+		const copyButton = screen.getByRole('button');
 
 		await userEvent.click(copyButton);
 
-		const tooltip = screen.getByRole('tooltip', { includeHidden: true }).element();
+		const tooltip = screen.getByRole('tooltip', { includeHidden: true });
 
 		expect(tooltip).toBeInTheDocument();
 		expect(tooltip).toHaveTextContent(i18n.t('clipboard_items_copied'));

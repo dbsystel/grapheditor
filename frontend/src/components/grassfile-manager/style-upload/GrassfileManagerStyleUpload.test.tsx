@@ -1,10 +1,10 @@
-import { GrassFileManagerStyleUpload } from './GrassfileManagerStyleUpload';
+import { it } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { vi, it } from 'vitest';
+import { GrassFileManagerStyleUpload } from './GrassfileManagerStyleUpload';
 
 describe('GrassfileManagerStyleUpload', () => {
-	it('Render component', () => {
-		const screen = render(<GrassFileManagerStyleUpload />);
+	it('Render component', async () => {
+		const screen = await render(<GrassFileManagerStyleUpload />);
 
 		const inputField = screen.getByRole('textbox').element();
 		const cancelButton = screen.getByRole('button', { name: 'cross' });

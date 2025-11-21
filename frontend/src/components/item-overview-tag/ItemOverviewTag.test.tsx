@@ -1,22 +1,21 @@
-import { userEvent } from '@vitest/browser/context';
-import { ItemOverviewTag } from 'src/components/item-overview-tag/ItemOverviewTag';
 import { testNodes } from 'src/tests/data/nodes';
 import { idFormatter } from 'src/utils/idFormatter';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ItemOverviewButton } from '../item-overview-button/ItemOverviewButton';
 
 describe('Components - ItemOverviewTag', () => {
 	const node = testNodes[0];
 
-	test('Render component', () => {
-		const screen = render(<ItemOverviewButton nodeId={node.id} />);
+	test('Render component', async () => {
+		const screen = await render(<ItemOverviewButton nodeId={node.id} />);
 		const button = screen.getByRole('button').element();
 
 		expect(button).toBeInTheDocument();
 	});
 
-	test('Render node title as component text', () => {
-		const screen = render(<ItemOverviewButton nodeId={node.id} />);
+	test('Render node title as component text', async () => {
+		const screen = await render(<ItemOverviewButton nodeId={node.id} />);
 		const button = screen.getByRole('button').element();
 
 		expect(button.textContent).toBe(idFormatter.parseIdToName(node.id));
@@ -25,7 +24,7 @@ describe('Components - ItemOverviewTag', () => {
 	test('Render elements on hover', async () => {
 		vi.useFakeTimers();
 
-		const screen = render(<ItemOverviewButton nodeId={node.id} />);
+		const screen = await render(<ItemOverviewButton nodeId={node.id} />);
 		const button = screen.getByRole('button').element();
 
 		await userEvent.hover(button);

@@ -1,3 +1,4 @@
+import dataclasses
 from flask import g
 from flask.views import MethodView
 from flask_smorest import Blueprint
@@ -18,14 +19,17 @@ def execute_query(query_text:str, parameters:dict=None):
     } if parameters else {}
     neo_result = g.conn.run(query_text, **raw_parameters)
     result = []
-
     for record in neo_result:
         api_record = {}
         for key in record.keys():
             val = record.get(key)
-            api_record[key] = mapper.neoobject2grapheditor(val)
+            obj = mapper.neoobject2grapheditor(val)
+            if isinstance(obj, (mapper.GraphEditorNode, mapper.GraphEditorRelation)):
+                api_record[key] = dataclasses.asdict(obj)
+            else:
+                api_record[key] = obj
         result.append(api_record.items())
-    return {"result": result}
+    return {"result": list(result)}
 
 
 @blp.route("cypher")

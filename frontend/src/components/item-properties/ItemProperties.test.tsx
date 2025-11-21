@@ -55,7 +55,9 @@ describe('Components - ItemProperties', () => {
 	};
 
 	test('Render component', async () => {
-		const screen = render(<ItemProperties item={node} metaData={meta} isEditMode={true} />);
+		const screen = await render(
+			<ItemProperties item={node} metaData={meta} isEditMode={true} />
+		);
 		const tabs = screen.getByRole('tab');
 
 		await vi.waitFor(() => {
@@ -67,16 +69,19 @@ describe('Components - ItemProperties', () => {
 		const rows = screen.getByRole('row').elements();
 		const cells = screen.getByRole('cell').elements();
 		const propertiesKeys = Object.keys(node.properties);
+		const numberOfCellsPerRow = 3;
 
 		expect(rows.length).toBe(propertiesKeys.length);
-		expect(cells.length).toBe(propertiesKeys.length * 3);
+		expect(cells.length).toBe(propertiesKeys.length * numberOfCellsPerRow);
 
 		for (let i = 0, l = propertiesKeys.length; i < l; i++) {
-			expect(cells[i * 3].textContent).toBe(idFormatter.parseIdToName(propertiesKeys[i]));
-			expect(cells[i * 3 + 1].querySelector('textarea')?.textContent).toBe(
+			expect(cells[i * numberOfCellsPerRow].textContent).toBe(
+				idFormatter.parseIdToName(propertiesKeys[i])
+			);
+			expect(cells[i * numberOfCellsPerRow + 1].querySelector('textarea')?.textContent).toBe(
 				node.properties[propertiesKeys[i]].value
 			);
-			expect(cells[i * 3 + 2].querySelector('button')).toBeInTheDocument();
+			expect(cells[i * numberOfCellsPerRow + 2].querySelector('button')).toBeInTheDocument();
 		}
 	});
 });

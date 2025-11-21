@@ -1,16 +1,18 @@
-.table {
-	display: table;
-	width: fit-content;
+@layer table {
+	.table {
+		display: table;
+		width: fit-content;
 
-	&__auto {
-		width: max-content;
-	}
+		&__auto {
+			width: max-content;
+		}
 
-	&__full {
-		width: 100%;
-	}
+		&__full {
+			width: 100%;
+		}
 
-	&__grid {
-		display: grid;
+		&__grid {
+			display: grid;
+		}
 	}
 }

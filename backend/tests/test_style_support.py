@@ -4,6 +4,7 @@ import pytest
 from pyparsing import ParseException
 
 from blueprints.display.style_support import parse_style, apply_style_rules
+from database.base_types import BaseNode
 
 app = Flask(__name__)
 
@@ -11,18 +12,15 @@ app = Flask(__name__)
 # Usually it's acceptable (and even encouraged) to duplicate stuff between tests
 # and regular code.
 # pylint: disable=duplicate-code
-bob_node = {
-    "_grapheditor_type": "node",
-    "id": "bob",
-    "labels": ["MetaLabel::Person__dummy_"],
-    "properties": {
-        "MetaProperty::name__dummy_": {
-            "edit": True,
-            "type": "string",
-            "value": "Bob",
-        }
+bob_node = BaseNode(
+    element_id="123",
+    id="bob",
+    labels=["Person__dummy_"],
+    properties={
+        "name__dummy_": "Bob"
     },
-}
+    style={}
+)
 
 
 def test_node_rule():
@@ -37,7 +35,7 @@ def test_node_rule():
     result = parse_style(text)
     assert len(result) == 1
     rule = result[0].to_dict()
-    assert rule["grapheditor_type"] == "node"
+    assert rule["object_type"] == "node"
     assert rule["label"] == "Vertrag"
     props = rule["properties"]
     assert props["diameter"] == "160px"
@@ -56,7 +54,7 @@ def test_relationship_rule():
     result = parse_style(text)
     assert len(result) == 1
     rule = result[0].to_dict()
-    assert rule["grapheditor_type"] == "relation"
+    assert rule["object_type"] == "relation"
     assert rule["label"] == "ABZWEIG"
 
 
@@ -73,7 +71,7 @@ def test_node_rule_with_wildcard():
     result = parse_style(text)
     assert len(result) == 1
     rule = result[0].to_dict()
-    assert rule["grapheditor_type"] == "node"
+    assert rule["object_type"] == "node"
     assert rule["label"] == "*"
 
 
@@ -87,7 +85,7 @@ def test_relationship_rule_with_wildcard():
     result = parse_style(entry)
     assert len(result) == 1
     rule = result[0].to_dict()
-    assert rule["grapheditor_type"] == "relation"
+    assert rule["object_type"] == "relation"
     assert rule["label"] == "*"
 
 
@@ -99,7 +97,8 @@ def test_basic_star_property():
         }
     """
     rule = parse_style(style_text)[0]
-    node = {"_grapheditor_type": "node", "id": "dummy_node", "properties": {}}
+    node = BaseNode(id="dummy_node", element_id="123", properties={},
+                    labels=["Dummy"], style={})
     result = rule.apply(node, {})
     assert result["diameter"] == "4px"
 
@@ -170,7 +169,7 @@ def test_eval_runtime_error():
     """
     styles = parse_style(style_text)
     result = apply_style_rules(bob_node, styles)
-    caption = result["style"]["caption"]
+    caption = result.style["caption"]
     assert caption.startswith("ERROR: runtime error: ZeroDivisionError")
 
 
@@ -184,7 +183,7 @@ def test_eval_syntax_error():
     """
     styles = parse_style(style_text)
     result = apply_style_rules(bob_node, styles)
-    caption = result["style"]["caption"]
+    caption = result.style["caption"]
     assert caption.startswith("ERROR: syntax error:")
 
 
@@ -210,15 +209,22 @@ def test_multiple_rules_application_with_function_definition():
 
     # we create a node without labels, so that only the first style rule
     # applies.
-    generic_node = dict(bob_node)
-    generic_node["labels"] = []
+    generic_node = BaseNode(
+        element_id="124",
+        id="generic",
+        labels=[],
+        properties={
+            "name__dummy_": "Generic Bob"
+        },
+        style={}
+    )
     result = apply_style_rules(generic_node, styles)
-    assert result["style"]["caption"] == "Hello, I'm a generic node."
+    assert result.style["caption"] == "Hello, I'm a generic node."
 
     # Bob satisfies both rules, so the second one overwrite the first, but uses
     # its definitions.
     result = apply_style_rules(bob_node, styles)
-    assert result["style"]["caption"] == "Hello, I'm Bob."
+    assert result.style["caption"] == "Hello, I'm Bob."
 
 
 def test_no_access_to_system():
@@ -233,7 +239,7 @@ def test_no_access_to_system():
     """
     styles = parse_style(style_text)
     result = apply_style_rules(bob_node, styles)
-    caption = result["style"]["caption"]
+    caption = result.style["caption"]
     assert caption.startswith("ERROR: runtime error")
     assert "ImportError" in caption
 
@@ -249,7 +255,7 @@ def test_random_available():
     """
     styles = parse_style(style_text)
     result = apply_style_rules(bob_node, styles)
-    caption = result["style"]["caption"]
+    caption = result.style["caption"]
     assert re.findall(r"\d+", caption)
 
 
@@ -265,7 +271,7 @@ def test_no_access_to_disk():
     """
     styles = parse_style(style_text)
     result = apply_style_rules(bob_node, styles)
-    caption = result["style"]["caption"]
+    caption = result.style["caption"]
     assert caption.startswith("ERROR: runtime error")
     assert "is not defined" in caption
 

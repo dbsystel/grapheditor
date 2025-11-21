@@ -1,101 +1,130 @@
 // styling for single-node and single-relation components
 
-.single-item {
-	display: grid;
-	height: 100%;
-	grid-template-rows: auto 1fr;
+@layer single-item {
+	.single-item {
+		display: grid;
+		inline-size: 420px;
+		block-size: 100%;
+		grid-template-rows: auto 1fr;
+		padding-inline: 0;
 
-	&__header {
-		box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.2);
-	}
+		&__header {
+			box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.2);
+		}
 
-	&__header-id {
-		display: flex;
-		align-items: center;
-		column-gap: var(--db-spacing-fixed-md);
-		min-width: 0;
-		padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+		&__header-id {
+			display: flex;
+			align-items: center;
+			column-gap: var(--db-spacing-fixed-md);
+			min-width: 0;
+			padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
 
-		p {
+			p {
+				margin: var(--db-spacing-fixed-3xs);
+			}
+		}
+
+		&__header-headline {
+			color: var(--db-adaptive-on-bg-basic-emphasis-90-default);
+			font: var(--db-type-body-xs);
+		}
+
+		&__header-content {
+			font: var(--db-type-body-md);
+
+			> .db-tooltip {
+				max-width: 300px !important;
+			}
+		}
+
+		&__title {
+			display: flex;
+			align-items: center;
+			column-gap: 5px;
+			padding: var(--db-spacing-fixed-3xs) var(--db-spacing-fixed-sm);
+			margin-bottom: var(--db-spacing-fixed-sm);
+
+			.db-tooltip {
+				width: max-content;
+			}
+		}
+
+		&__title-title {
+			width: max-content;
+			font-size: var(--db-type-headline-font-size-3xs);
+			font-weight: bold;
 			margin: var(--db-spacing-fixed-3xs);
-		}
-	}
 
-	&__header-headline {
-		color: var(--db-adaptive-on-bg-basic-emphasis-90-default);
-		font: var(--db-type-body-xs);
-	}
-
-	&__header-content {
-		font: var(--db-type-body-md);
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-
-		// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
-		> .db-tooltip {
-			position: absolute !important;
-			max-width: 300px !important;
-			inset-inline: auto !important;
-			inset-block: auto !important;
-			transform: translate(0, 100%) !important;
-		}
-	}
-
-	&__title {
-		display: flex;
-		align-items: center;
-		column-gap: 5px;
-		padding: var(--db-spacing-fixed-3xs) var(--db-spacing-fixed-sm);
-		margin-bottom: var(--db-spacing-fixed-sm);
-	}
-
-	&__title-title {
-		width: max-content;
-		font-size: var(--db-type-headline-font-size-3xs);
-		font-weight: bold;
-		margin: var(--db-spacing-fixed-3xs);
-		position: relative;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-
-		// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
-		> .db-tooltip {
-			position: absolute !important;
-			inset-inline: auto !important;
-			inset-block: auto !important;
-			transform: translate(0, 100%) !important;
+			&:after {
+				content: '';
+				position: absolute;
+				background-color: var(--db-brand-origin-default);
+				border-radius: 10px;
+				width: 100%;
+				height: 3px;
+				bottom: -5px;
+				left: 0;
+			}
 		}
 
-		&:after {
-			content: '';
-			position: absolute;
-			background-color: var(--db-brand-origin-default);
-			border-radius: 10px;
-			width: 100%;
-			height: 3px;
-			bottom: -5px;
-			left: 0;
+		&__buttons-right {
+			margin-left: auto;
+		}
+
+		&__description {
+			word-break: break-word;
+		}
+
+		> .db-accordion {
+			padding-top: var(--db-spacing-fixed-md);
+			max-block-size: 100%;
+			overflow: auto;
+
+			> .db-accordion-item {
+				&[open] summary + div {
+					animation: none;
+				}
+
+				> details {
+					> summary {
+						+ div {
+							overflow: visible;
+						}
+					}
+				}
+			}
 		}
 	}
+}
 
-	&__description {
-		word-break: break-word;
-	}
+@layer single-item--small {
+	.single-item {
+		&--small {
+			// "small" LOL
+			max-inline-size: 550px;
+			max-block-size: 550px;
 
-	.db-accordion {
-		padding: var(--db-spacing-fixed-md) 0;
-		overflow: auto;
+			> .db-accordion {
+				> .db-accordion-item {
+					> details {
+						> summary {
+							padding: var(--db-spacing-fixed-sm);
 
-		.db-accordion-item {
-			&[open] summary + div {
-				animation: none;
+							+ div {
+								padding: var(--db-spacing-fixed-sm);
+								padding-top: 0;
+							}
+						}
+					}
+				}
 			}
 
-			> details > summary + div {
-				overflow: visible;
+			.table {
+				border-top-width: 1px;
+			}
+
+			.table-cell {
+				padding: var(--db-spacing-fixed-2xs) var(--db-spacing-fixed-xs);
 			}
 		}
 	}

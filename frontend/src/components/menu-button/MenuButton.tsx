@@ -1,3 +1,4 @@
+import './MenuButton.scss';
 import { DBButton, DBCard, DBIcon, DBPopover } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ReactNode, useState } from 'react';
@@ -7,7 +8,6 @@ import {
 	MenuButtonOptionsContentProps,
 	MenuButtonProps
 } from './MenuButton.interfaces';
-import './MenuButton.scss';
 
 // TODO refactor when design is done
 export const MenuButton = ({

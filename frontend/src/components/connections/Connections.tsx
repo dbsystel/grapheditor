@@ -22,7 +22,7 @@ import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelati
  * This component contains a list of relations between nodes.
  * Depending on from which startpoint it has been rendered.
  */
-export const Connections = ({ node, id, className, testId }: ConnectionsProps) => {
+export const Connections = ({ node, isEditMode, id, className, testId }: ConnectionsProps) => {
 	const [connectionBoxData, setConnectionBoxData] = useState<Array<ConnectionObject>>([]);
 	const [newConnectionBoxData, setNewConnectionBoxData] = useState<Array<ConnectionObject>>([]);
 	const rootElementClassName = clsx('connections', className);
@@ -71,7 +71,9 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 
 	return (
 		<section id={id} className={rootElementClassName} data-testid={testId}>
-			<ConnectionsAddRelation refItem={node} onSave={onSave} onTabClose={onTabClose} />
+			{isEditMode && (
+				<ConnectionsAddRelation refItem={node} onSave={onSave} onTabClose={onTabClose} />
+			)}
 			<Table className="connections__overview">
 				<ConnectionsBox
 					node={node}
@@ -79,6 +81,7 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 					direction="incoming"
 					onDelete={onDelete}
 					className="connections__new-value"
+					isEditMode={isEditMode}
 				/>
 				<ConnectionsBox
 					node={node}
@@ -86,6 +89,7 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 					direction="outgoing"
 					onDelete={onDelete}
 					className="connections__new-value"
+					isEditMode={isEditMode}
 				/>
 
 				<ConnectionsBox
@@ -93,12 +97,14 @@ export const Connections = ({ node, id, className, testId }: ConnectionsProps) =
 					data={sortedConnections.relationsIncoming}
 					direction="incoming"
 					onDelete={onDelete}
+					isEditMode={isEditMode}
 				/>
 				<ConnectionsBox
 					node={node}
 					data={sortedConnections.relationsOutgoing}
 					direction="outgoing"
 					onDelete={onDelete}
+					isEditMode={isEditMode}
 				/>
 			</Table>
 		</section>
@@ -120,7 +126,8 @@ const ConnectionsBox = ({
 	node,
 	direction,
 	onDelete,
-	className
+	className,
+	isEditMode
 }: ConnectionsBoxProps) => {
 	const { t } = useTranslation();
 
@@ -172,11 +179,11 @@ const ConnectionsBox = ({
 							</TableCell>
 						)}
 
-						<TableCell
-							width="minimal"
-							className="connections__cell connections__icon-only connections__menu"
-						>
-							{relation && (
+						{isEditMode && relation && (
+							<TableCell
+								width="minimal"
+								className="connections__cell connections__icon-only connections__menu"
+							>
 								<MenuButton
 									optionsPlacement="bottom-end"
 									className="connections__menu-button"
@@ -188,8 +195,8 @@ const ConnectionsBox = ({
 										}
 									]}
 								/>
-							)}
-						</TableCell>
+							</TableCell>
+						)}
 					</TableRow>
 				);
 			})}

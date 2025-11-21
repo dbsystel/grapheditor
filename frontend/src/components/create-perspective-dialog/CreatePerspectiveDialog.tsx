@@ -1,7 +1,9 @@
+import './CreatePerspectiveDialog.scss';
 import { DBButton, DBInput, DBTextarea } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { Modal } from 'src/components/modal/Modal';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { preparePerspectiveDataAndRefreshNodesPosition } from 'src/utils/helpers/perspectives';
@@ -10,8 +12,6 @@ import {
 	CreatePerspectiveDialogForm,
 	CreatePerspectiveDialogProps
 } from './CreatePerspectiveDialog.interfaces';
-import './CreatePerspectiveDialog.scss';
-import { Modal } from 'src/components/modal/Modal';
 
 export const CreatePerspectiveDialog = ({
 	onSuccess,

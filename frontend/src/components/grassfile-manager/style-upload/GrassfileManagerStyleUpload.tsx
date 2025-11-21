@@ -1,6 +1,8 @@
-import { DBInput, DBButton } from '@db-ux/react-core-components';
+import './GrassfileManagerStyleUpload.scss';
+import { DBButton, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ChangeEvent, useRef, useEffect } from 'react';
+import { ChangeEvent, useEffect, useRef } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -12,8 +14,6 @@ import {
 	GrassfileManagerStyleUploadProps,
 	GrassfileManagerUploadDialogForm
 } from './GrassfileManagerStyleUpload.interfaces';
-import './GrassfileManagerStyleUpload.scss';
-import { Controller, useForm } from 'react-hook-form';
 
 export const GrassFileManagerStyleUpload = ({
 	onSuccess,
@@ -65,7 +65,9 @@ export const GrassFileManagerStyleUpload = ({
 			}
 
 			setIsLoading(false);
-			onClose && onClose();
+			if (onClose) {
+				onClose();
+			}
 		}
 	});
 

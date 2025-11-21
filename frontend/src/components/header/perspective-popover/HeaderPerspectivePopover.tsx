@@ -44,6 +44,7 @@ export const HeaderPerspectivePopover = ({
 			open={isMenuOpen}
 			placement="bottom-start"
 			ref={popoverRef}
+			/* spacing="none" */
 			trigger={
 				<DBButton
 					variant="ghost"

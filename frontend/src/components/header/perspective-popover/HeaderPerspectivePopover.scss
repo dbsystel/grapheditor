@@ -1,4 +1,10 @@
 .header {
+	&__perspective-popover {
+		> .db-popover-content {
+			padding: var(--db-spacing-fixed-2xs) !important;
+		}
+	}
+
 	&__perspective-card {
 		border: none;
 

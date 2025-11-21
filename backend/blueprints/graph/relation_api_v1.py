@@ -7,6 +7,8 @@ from blueprints.maintenance.login_api import require_tab_id
 from database import mapper, id_handling
 from database.id_handling import parse_db_id
 from database.utils import abort_with_json
+from database.id_handling import compute_semantic_id, GraphEditorLabel
+from database.mapper import GraphEditorNode, GraphEditorRelation, prepare_relation_patch
 
 blp = Blueprint(
     "Neo4j relations", __name__, description="Works with every neo4j database"
@@ -31,10 +33,12 @@ class Relations(MethodView):
 
         Returns the newly created relation
         """
-        new_rels = current_app.graph_db.create_relations([relation_data])
+        new_rels = current_app.graph_db.create_relations([
+            prepare_relation_patch(relation_data)
+        ])
         if not new_rels:
             abort_with_json(500, "Couldn't create relation.")
-        return next(iter(new_rels.values()))
+        return GraphEditorRelation.from_base_relation(next(iter(new_rels.values())))
 
     @blp.arguments(
         relation_model.RelationQuery, as_kwargs=True, location="query"
@@ -51,7 +55,10 @@ class Relations(MethodView):
 
         Returns a list of relations
         """
-        return current_app.graph_db.fulltext_query_relations(text)
+        return [
+            GraphEditorRelation.from_base_relation(base_rel)
+            for base_rel in current_app.graph_db.query_relations(text)
+        ]
 
 
 @blp.route("/bulk_fetch")
@@ -70,7 +77,11 @@ class RelationsBulkFetch(MethodView):
 
         Return a dictionary mapping node IDs to the corresponding nodes.
         """
-        relations = current_app.graph_db.get_relations_by_ids(ids)
+        base_rels = current_app.graph_db.get_relations_by_ids(ids)
+        relations = {
+            k: GraphEditorRelation.from_base_relation(base_rel)
+            for k, base_rel in base_rels.items()
+        }
 
         return dict(relations=relations)
 
@@ -123,8 +134,9 @@ class RelationsBulkPatch(MethodView):
                 abort_with_json(
                     400, f"Can't patch an unexisting relation: {rid}"
                 )
-            new_rel = current_app.graph_db.update_relation_by_id(rid, patch)
-            result[rid] = new_rel
+            new_rel = current_app.graph_db.update_relation_by_id(
+                rid, prepare_relation_patch(patch))
+            result[rid] = GraphEditorRelation.from_base_relation(new_rel)
 
         return dict(
             relations=result
@@ -140,7 +152,13 @@ class RelationsBulkPost(MethodView):
     @require_tab_id()
     def post(self, relations):
         return {
-            "relations": current_app.graph_db.create_relations(relations)
+            "relations": {
+                k: GraphEditorRelation.from_base_relation(base_rel)
+                for k, base_rel in
+                current_app.graph_db.create_relations(
+                    [prepare_relation_patch(rel_data) for rel_data in relations]
+                ).items()
+            }
         }
 
 
@@ -158,12 +176,12 @@ class Relation(MethodView):
 
         Returns a relation
         """
-        grapheditor_relation = current_app.graph_db.get_relation_by_id(rid)
-        if not grapheditor_relation:
+        base_relation = current_app.graph_db.get_relation_by_id(rid)
+        if not base_relation:
             abort(404)
 
-        grapheditor_relation.update(dict(id=rid))
-        return grapheditor_relation
+        base_relation.id = rid
+        return GraphEditorRelation.from_base_relation(base_relation)
 
     @blp.arguments(
         relation_model.RelationPostSchema,
@@ -185,15 +203,15 @@ class Relation(MethodView):
         if existing_relation is None:
             abort(404)
 
-        grapheditor_relation = current_app.graph_db.update_relation_by_id(
-            rid, json_relation, existing_relation
+        base_relation = current_app.graph_db.update_relation_by_id(
+            rid, prepare_relation_patch(json_relation), existing_relation
         )
 
         # an semantic id (e.g. ns::...) is returned as provided by the client.
         # A neo4j ID can change when updating a type, so we return the new ID.
         if not id_handling.parse_db_id(rid):
-            grapheditor_relation.update(dict(id=rid))
-        return grapheditor_relation
+            base_relation.id = rid
+        return GraphEditorRelation.from_base_relation(base_relation)
 
     @blp.arguments(
         relation_model.RelationBaseSchema,
@@ -214,15 +232,15 @@ class Relation(MethodView):
         existing_relation = current_app.graph_db.get_relation_by_id(rid)
         if existing_relation is None:
             abort(404)
-        grapheditor_relation = current_app.graph_db.update_relation_by_id(
-            rid, json_relation, existing_relation
+        base_relation = current_app.graph_db.update_relation_by_id(
+            rid, prepare_relation_patch(json_relation), existing_relation
         )
 
         # an semantic id (e.g. ns::...) is returned as provided by the client.
         # A neo4j ID can change when updating a type, so we return the new ID.
         if not id_handling.parse_db_id(rid):
-            grapheditor_relation.update(dict(id=rid))
-        return grapheditor_relation
+            base_relation.id = rid
+        return GraphEditorRelation.from_base_relation(base_relation)
 
     @blp.response(200)
     @require_tab_id()
@@ -251,7 +269,7 @@ class RelationsByNodeIds(MethodView):
         example=[relation_model.relation_example],
     )
     @require_tab_id()
-    def post(self, node_ids=None, exclude_relation_types=None):
+    def post(self, node_ids: str|None = None, exclude_relation_types=None):
         """
         Fetch all relations where both source and target node ids are in
         'nodeIds'.
@@ -263,9 +281,13 @@ class RelationsByNodeIds(MethodView):
             exclude_relation_types = []
 
         raw_db_ids = list(map(parse_db_id, node_ids))
-        relations = current_app.graph_db.get_relations_by_node_ids(
-            raw_db_ids, exclude_relation_types
-        )
+        relations = [
+            GraphEditorRelation.from_base_relation(base_rel)
+            for base_rel in
+            current_app.graph_db.get_relations_by_node_ids(
+                raw_db_ids, exclude_relation_types
+            )
+        ]
         return relations
 
 
@@ -279,7 +301,10 @@ class RelationProperties(MethodView):
     @require_tab_id()
     def get(self):
         """Return all relation properties available in the database."""
-        properties = current_app.graph_db.get_all_relation_properties()
+        properties = [
+            compute_semantic_id(pname, GraphEditorLabel.MetaProperty)
+            for pname in current_app.graph_db.get_all_relation_properties()
+        ]
         return dict(properties=properties)
 
 
@@ -293,7 +318,10 @@ class RelationTypes(MethodView):
     @require_tab_id()
     def get(self):
         """Return all relation types from the database."""
-        types = current_app.graph_db.get_all_types()
+        types = [
+            compute_semantic_id(rel_type, GraphEditorLabel.MetaRelation)
+            for rel_type in current_app.graph_db.get_all_types()
+        ]
         return dict(types=types)
 
 
@@ -310,22 +338,16 @@ class RelationDefaultType(MethodView):
         try:
             default_type_id = session["default_type"][g.tab_id]
         except KeyError:
-            return {
-                "node": current_app.graph_db.get_node_by_id(
-                    mapper.DEFAULT_RELATION_TYPE, True
-                )
-            }
+            default_type_id = mapper.DEFAULT_RELATION_TYPE
 
-        default_type = current_app.graph_db.get_node_by_id(
-            default_type_id, True
-        )
-        if not default_type:
-            return {
-                "node": current_app.graph_db.get_node_by_id(
-                    mapper.DEFAULT_RELATION_TYPE, True
-                )
-            }
-        return {"node": default_type}
+        base_node = current_app.graph_db.get_node_by_id(default_type_id)
+        if base_node:
+            node = GraphEditorNode.from_base_node(base_node)
+        else:
+            node = GraphEditorNode.create_pseudo_node(
+                mapper.DEFAULT_RELATION_TYPE
+            )
+        return {"node": node}
 
     @blp.arguments(
         relation_model.RelationDefaultTypePostSchema,

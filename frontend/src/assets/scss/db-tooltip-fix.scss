@@ -1,0 +1,89 @@
+// TODO
+// - temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
+// - UPDATE: the ticket is resolved but the positioning logic is still not working 100% properly
+.db-tooltip-fix {
+	position: absolute !important;
+
+	// possible values:
+	// - bottom(-start,-end)
+	// - left(-start,-end)
+	// - right(-start,-end)
+	// - top(-start,-end)
+	&--bottom {
+		inset-inline: 50% auto !important;
+		inset-block: 100% auto !important;
+		transform: translate(-50%, 0) !important;
+	}
+
+	&--bottom-start {
+		inset-inline: 0 auto !important;
+		inset-block: 100% auto !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--bottom-end {
+		inset-inline: auto 0 !important;
+		inset-block: 100% auto !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--left {
+		inset-inline: auto 100% !important;
+		inset-block: 50% auto !important;
+		transform: translate(0, -50%) !important;
+	}
+
+	&--left-start {
+		inset-inline: auto 100% !important;
+		inset-block: 0 auto !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--left-end {
+		inset-inline: auto 100% !important;
+		inset-block: auto 0 !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--right {
+		inset-inline: 100% auto !important;
+		inset-block: 50% auto !important;
+		transform: translate(0, -50%) !important;
+	}
+
+	&--right-start {
+		inset-inline: 100% auto !important;
+		inset-block: 0 auto !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--right-end {
+		inset-inline: 100% auto !important;
+		inset-block: auto 0 !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--top {
+		inset-inline: 50% auto !important;
+		inset-block: auto 100% !important;
+		transform: translate(-50%, 0) !important;
+	}
+
+	&--top-start {
+		inset-inline: 0 auto !important;
+		inset-block: auto 100% !important;
+		transform: translate(0, 0) !important;
+	}
+
+	&--top-end {
+		inset-inline: auto 0 !important;
+		inset-block: auto 100% !important;
+		transform: translate(0, 0) !important;
+	}
+
+	// TODO decide if we want to show tooltip arrows or not, or at least come to an
+	//  agreement when to use it and when not (tooltip arrow removed for now)
+	&:after {
+		content: none !important;
+	}
+}

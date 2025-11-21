@@ -1,0 +1,14 @@
+// TODO discuss defining all component styles as @layer, and defining their order here
+// Define order of layered styles. The list is not complete.
+@layer
+	// DB UX styles
+	db-ux-core-components,
+	// our component styles
+	main,
+	table,
+	table-cell,
+	single-item,
+	connections,
+	item-properties-table,
+	// our component styles overrides
+	single-item--small;

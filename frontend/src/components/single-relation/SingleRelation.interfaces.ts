@@ -3,6 +3,10 @@ import { GlobalComponentProps } from 'src/types/components';
 
 export type SingleRelationProps = GlobalComponentProps & {
 	relation: Relation;
+	variant?: 'default' | 'small';
+	isEditable?: boolean;
+	shouldShowOpenButton?: boolean;
+	shouldShowCenterButton?: boolean;
 };
 
-export type EditMode = 'none' | 'type' | 'properties';
+export type SingleRelationEditMode = 'none' | 'type' | 'properties';

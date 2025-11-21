@@ -2,7 +2,7 @@ import './SingleRelation.scss';
 import 'src/assets/scss/single-item.scss';
 import {
 	DBAccordion,
-	DBAccordionItem,
+	DBButton,
 	DBIcon,
 	DBNotification,
 	DBSection,
@@ -13,9 +13,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CopyToClipboard } from 'src/components/copy-to-clipboard/CopyToClipboard';
 import { EditSaveBlock } from 'src/components/edit-save-block/EditSaveBlock';
+import { ItemCenterButton } from 'src/components/item-center-button/ItemCenterButton';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { ItemProperties } from 'src/components/item-properties/ItemProperties';
 import { ItemPropertiesHandle } from 'src/components/item-properties/ItemProperties.interfaces';
+import { useItemsDrawerContext } from 'src/components/items-drawer/context/ItemsDrawerContext';
 import { Loading } from 'src/components/loading/Loading';
 import { MenuButton } from 'src/components/menu-button/MenuButton';
 import { RelationTypeChanger } from 'src/components/relation-type-changer/RelationTypeChanger';
@@ -23,33 +25,57 @@ import { RelationTypeChangerHandle } from 'src/components/relation-type-changer/
 import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
 import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
 import { MetaForMeta, Node } from 'src/models/node';
+import { useDrawerStore } from 'src/stores/drawer';
+import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { useSearchStore } from 'src/stores/search';
 import { metaForMetaApi } from 'src/utils/api/metaForMeta';
 import { nodesApi } from 'src/utils/api/nodes';
 import { relationsApi } from 'src/utils/api/relations';
 import { GraphEditorType } from 'src/utils/constants';
+import { GRAPH_PRESENTATION_GRAPH } from 'src/utils/constants';
 import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
 import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
 import { formatItemId, idFormatter } from 'src/utils/idFormatter';
-import { EditMode, SingleRelationProps } from './SingleRelation.interfaces';
+import { SingleRelationEditMode, SingleRelationProps } from './SingleRelation.interfaces';
 
 /**
  * This component contains the logic to present a detailed single relation view.
  */
-export const SingleRelation = ({ relation, id, className, testId }: SingleRelationProps) => {
+export const SingleRelation = ({
+	relation,
+	variant,
+	isEditable,
+	shouldShowCenterButton,
+	shouldShowOpenButton,
+	id,
+	className,
+	testId
+}: SingleRelationProps) => {
 	const { t } = useTranslation();
+	const { isInsideItemsDrawer } = useItemsDrawerContext();
 	const [sourceAndTargetNodes, setSourceAndTargetNodes] = useState<Array<Node>>([]);
 	const [isLoadingSourceAndTargetNodes, setIsLoadingSourceAndTargetNodes] = useState(true);
 	const [isTypeMetaLoading, setIsTypeMetaLoading] = useState(false);
-	const [currentEditMode, setCurrentEditMode] = useState<EditMode>('none');
+	const [currentEditMode, setCurrentEditMode] = useState<SingleRelationEditMode>('none');
 	const [typeMeta, setTypeMeta] = useState<MetaForMeta>({});
 	const [unsavedChangesData, setUnsavedChangesData] = useState<UnsavedChangedModalProps | null>(
 		null
 	);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const rootElementClassName = clsx('single-relation single-item', className);
+	const sigma = useGraphStore((store) => store.sigma);
+	const presentation = useSearchStore((store) => store.presentation);
+	const isCenterButtonDisabled =
+		presentation !== GRAPH_PRESENTATION_GRAPH || !sigma.getGraph().hasEdge(relation.id);
 	const relationTypeHandleRef = useRef<RelationTypeChangerHandle>(null);
 	const relationPropertiesHandleRef = useRef<ItemPropertiesHandle>(null);
+	const rootElementClassName = clsx(
+		'single-relation single-item',
+		{
+			'single-item--small': variant === 'small'
+		},
+		className
+	);
 
 	useEffect(() => {
 		(async () => {
@@ -154,15 +180,23 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 		resetEditModeAndUnsavedChangesData();
 	};
 
+	const openInItemsDrawer = () => {
+		if (isInsideItemsDrawer) {
+			useDrawerStore.getState().addEntry({ item: relation });
+		} else {
+			useDrawerStore.getState().setEntry({ item: relation });
+		}
+	};
+
 	return (
 		<DBSection id={id} className={rootElementClassName} data-testid={testId} spacing="none">
-			<div className="single-item__header db-bg-color-basic-level-1">
+			<div className="single-item__header">
 				<div className="single-item__title">
 					<DBIcon icon="relation" />
 
 					<p className="single-item__title-title">
 						{relation.title}
-						<DBTooltip placement="bottom-end">
+						<DBTooltip className="db-tooltip-fix db-tooltip-fix--bottom">
 							{t('single-relation-relation')}{' '}
 							{idFormatter.parseIdToName(relation.title)}
 						</DBTooltip>
@@ -180,6 +214,18 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 							}
 						]}
 					/>
+
+					<div className="single-item__buttons-right">
+						{shouldShowCenterButton && (
+							<ItemCenterButton item={relation} isDisabled={isCenterButtonDisabled} />
+						)}
+
+						{shouldShowOpenButton && (
+							<DBButton size="small" variant="ghost" onClick={openInItemsDrawer}>
+								{t('single_item_open')}
+							</DBButton>
+						)}
+					</div>
 				</div>
 
 				<div className="single-item__header-id">
@@ -187,8 +233,7 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 					<p className="single-item__header-content">
 						{formatItemId(relation.id)}
 						<DBTooltip
-							id={relation.id}
-							placement="bottom-end"
+							className="db-tooltip-fix db-tooltip-fix--bottom"
 							width="auto"
 							showArrow={false}
 						>
@@ -201,7 +246,11 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 			</div>
 
 			<DBAccordion behavior="multiple" initOpenIndex={[0, 1, 2, 3]} variant="card">
-				<DBAccordionItem headline={t('single-relation-relation')}>
+				<EditSaveBlock
+					isEditable={false}
+					isEditMode={false}
+					headline={t('single-relation-relation')}
+				>
 					{isLoadingSourceAndTargetNodes === false && (
 						<DBSection spacing="none" className="single-relation__relation">
 							{sourceAndTargetNodes.length === 2 ? (
@@ -223,9 +272,10 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 							)}
 						</DBSection>
 					)}
-				</DBAccordionItem>
+				</EditSaveBlock>
 
 				<EditSaveBlock
+					isEditable={isEditable}
 					isEditMode={currentEditMode === 'type'}
 					headline={t('single_relation_type')}
 					onEditClick={onTypeEditClick}
@@ -240,6 +290,7 @@ export const SingleRelation = ({ relation, id, className, testId }: SingleRelati
 				</EditSaveBlock>
 
 				<EditSaveBlock
+					isEditable={isEditable}
 					isEditMode={currentEditMode === 'properties'}
 					headline={t('single_view_properties_title')}
 					onEditClick={onEditPropertiesClick}

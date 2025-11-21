@@ -1,5 +1,6 @@
 """Support for parsing and applying style (.grass) rules."""
 
+import dataclasses
 import math
 import random
 import os
@@ -22,9 +23,9 @@ from RestrictedPython.Eval import (
 from flask import current_app, session, g
 
 from blueprints.display import exceptions
-from database import id_handling
 from database.utils import remove_newlines
 from database.attr_dict import DefaultAttrDict
+from database.base_types import BaseNode, BaseRelation, BaseElement
 
 ppu = pp.unicode
 DEFAULT_STYLE_FILE = "static/style.grass"
@@ -117,13 +118,14 @@ def parse_code_with_result(code):
 
 
 class StyleRule:
-    def __init__(self, grapheditor_type, label, props):
-        self.grapheditor_type = grapheditor_type
+    def __init__(self, object_type, label, props, relation_type = None):
+        self.object_type = object_type
         self.label = label
         self.props = props
+        self.type = relation_type
 
     def __str__(self):
-        res = self.grapheditor_type
+        res = self.object_type
         if self.label:
             res += "." + self.label
         if self.props:
@@ -135,37 +137,33 @@ class StyleRule:
 
     def to_dict(self):
         return {
-            "grapheditor_type": self.grapheditor_type,
+            "object_type": self.object_type,
             "label": self.label,
             "properties": self.props,
         }
 
-    def _is_applicable(self, grapheditor_dict, context):
-        """Whether this rules can be applied to the object described
-        by grapheditor_dict.  Context is a dictionary that may contain
+    def _is_applicable(self, obj: BaseElement, context: dict) -> bool:
+        """Whether this rules can be applied to obj (BaseNode or BaseRelation).
+        Context is a dictionary that may contain
         definitions already parsed in star rules from the GRASS file.
         """
-        grapheditor_type = grapheditor_dict["_grapheditor_type"]
+        object_type = "node" if isinstance(obj, BaseNode) else "relation"
 
-        if self.grapheditor_type != grapheditor_type:
+        if self.object_type != object_type:
             return False
 
         if not self.label or self.label == "*":
-            return self._satisfies_condition(grapheditor_dict, context)
+            return self._satisfies_condition(obj, context)
 
-        if (grapheditor_type == "node") and (
-            self.label in map(id_handling.get_base_id, grapheditor_dict["labels"])
-        ):
-            return self._satisfies_condition(grapheditor_dict, context)
+        if isinstance(obj, BaseNode) and self.label in obj.labels:
+            return self._satisfies_condition(obj, context)
 
-        if (grapheditor_type == "relation") and (
-            self.label == id_handling.get_base_id(grapheditor_dict["type"])
-        ):
-            return self._satisfies_condition(grapheditor_dict, context)
+        if isinstance(obj, BaseRelation) and self.type == obj.type:
+            return self._satisfies_condition(obj, context)
 
         return False
 
-    def _satisfies_condition(self, grapheditor_dict, context):
+    def _satisfies_condition(self, obj: BaseElement, context: dict) -> bool:
         condition = None
         if "condition" in self.props:
             condition = self.props["condition"]
@@ -175,42 +173,39 @@ class StyleRule:
             return True
 
         eval_result = self._safe_eval(
-            textwrap.dedent(condition), grapheditor_dict, context
+            textwrap.dedent(condition), obj, context
         )
         return eval_result
 
-    def _replace_caption_vars(self, caption_template, grapheditor_dict):
+    def _replace_caption_vars(self, caption_template: str, obj: BaseElement) -> str:
         "Replace placeholders (<id>, {name}, etc.) by corresponding values."
         if not caption_template:
             return ""
 
         caption = caption_template
         # first replace the <id> and <type> fields.
-        caption = caption.replace("<id>", grapheditor_dict["id"])
-        if grapheditor_dict["_grapheditor_type"] == "relation":
-            caption = caption.replace("<type>", grapheditor_dict["type"])
+        caption = caption.replace("<id>", obj.id)
+        if isinstance(obj, BaseRelation):
+            caption = caption.replace("<type>", obj.type)
 
-        # variables are placeholders of the form {varname}. We use get_base_id
-        # to use Neo4j attribute names instead of semantic IDs.
+        # variables are placeholders of the form {varname}.
         variables = RE_VAR_REFERENCE.findall(caption)
         for v in variables:
-            for pname in grapheditor_dict["properties"].keys():
-                base_id = id_handling.get_base_id(pname)
-                if v == base_id:
+            for pname in obj.properties.keys():
+                if v == pname:
                     caption = caption.replace(
                         "{" + v + "}",
-                        str(grapheditor_dict["properties"][pname]["value"]),
+                        str(obj.properties[pname]),
                     )
 
         return caption
 
-    def _safe_eval(self, code, grapheditor_dict, context):
+    def _safe_eval(self, code: str, obj: BaseElement, context: dict):
         """Evaluate code and return it's result.
 
         If evaluation fails for some reason, raise a subclass of SafeEvalError.
 
-        - grapheditor_dict: a dictionary representing an grapheditor object (node or
-          relation).
+        - obj: a node or relation object.
 
         - context: a dictionary that may contain definitions already parsed
           in star rules from the GRASS file. It may be updated with definitions
@@ -222,10 +217,6 @@ class StyleRule:
         # pylint: disable=broad-exception-caught
 
         try:
-            props_dict = dict(
-                (id_handling.get_base_id(k), v["value"])
-                for k, v in grapheditor_dict["properties"].items()
-            )
             # parse/transform code and add missing line/column numbers
             tree = ast.fix_missing_locations(parse_code_with_result(code))
             byte_code = compile_restricted(
@@ -235,18 +226,14 @@ class StyleRule:
             if "result" in context:
                 context.pop("result")
 
-            default_grapheditor_dict = DefaultAttrDict(lambda: "", grapheditor_dict)
-            default_props_dict = DefaultAttrDict(lambda: "", props_dict)
-            default_grapheditor_dict['labels'] = [
-                id_handling.get_base_id(label) for label in
-                default_grapheditor_dict['labels']
-            ]
+            default_obj_dict = DefaultAttrDict(lambda: "", dataclasses.asdict(obj))
+            default_props_dict = DefaultAttrDict(lambda: "", obj.properties)
             # add node fields and properties for evaluation context.
             context.update(
                 {
-                    "o": default_grapheditor_dict,
+                    "o": default_obj_dict,
                     # let's make everybody happy
-                    "object": default_grapheditor_dict,
+                    "object": default_obj_dict,
                     "p": default_props_dict,
                     "properties": default_props_dict,
                     "rule": DefaultAttrDict(lambda: "", self.to_dict()),
@@ -269,13 +256,14 @@ class StyleRule:
         # Since we are evaluating restricted python code, we
         # don't want to propagate exceptions upwards.
         except Exception as e:
-            raise exceptions.SafeEvalRuntimeError(repr(e), code, grapheditor_dict)
+            raise exceptions.SafeEvalRuntimeError(repr(e), code, obj)
 
-    def apply(self, grapheditor_dict, context):
-        """Apply this rule to the object described by grapheditor_dict, if possible.
+    def apply(self, obj: BaseElement, context: dict) -> dict:
+        """Apply this rule to the obj, if possible.
+        Return a new dictionary containing updated style properties.
         Update context with eventual definitions found when applying this rule.
         """
-        if self._is_applicable(grapheditor_dict, context):
+        if self._is_applicable(obj, context):
             res_props = {}
 
             for pname, pval in self.props.items():
@@ -288,12 +276,12 @@ class StyleRule:
                     pname == "defaultCaption" and not "caption" in self.props
                 ):
                     res_props[pname] = self._replace_caption_vars(
-                        remove_newlines(pval).strip(), grapheditor_dict
+                        remove_newlines(pval).strip(), obj
                     )
                 # We want to give star rules a higher precedence than non-star.
                 elif pname.endswith("*"):
                     res = self._safe_eval(
-                        textwrap.dedent(pval), grapheditor_dict, context
+                        textwrap.dedent(pval), obj, context
                     )
                     res_props[pname.rstrip("*")] = str(res)
                 else:
@@ -357,12 +345,12 @@ def parse_style(style_text):
         what = "relation" if parsed_rule.what == "relationship" else "node"
 
         rules.append(
-            StyleRule(grapheditor_type=what, label=parsed_rule.label, props=props)
+            StyleRule(object_type=what, label=parsed_rule.label, props=props)
         )
     return rules
 
 
-def fetch_style_rules():
+def fetch_style_rules() -> list[StyleRule]:
     """Fetch all style rules valid in the current session.
 
     These consist of default rules followed by user-defined ones.
@@ -378,7 +366,7 @@ def fetch_style_rules():
     return res
 
 
-def apply_style_rules(obj, style_rules=None):
+def apply_style_rules(obj: BaseElement, style_rules: list[StyleRule]=None) -> BaseElement:
     """Apply style rules in effect on the given object."""
     if not style_rules:
         style_rules = fetch_style_rules()
@@ -386,35 +374,35 @@ def apply_style_rules(obj, style_rules=None):
     if not style_rules:
         return obj
 
-    props = {}
+    style_props = {}
     context = {}
     try:
         for rule in style_rules:
-            new_props = rule.apply(obj, context)
-            if new_props:
-                props.update(new_props)
+            new_style_props = rule.apply(obj, context)
+            if new_style_props:
+                style_props.update(new_style_props)
 
         # we keep the caption logic in the server, so there is no point in
         # passing defaultCaption to the client.
-        if "caption" not in props:
-            if "defaultCaption" in props:
-                props["caption"] = props["defaultCaption"]
+        if "caption" not in style_props:
+            if "defaultCaption" in style_props:
+                style_props["caption"] = style_props["defaultCaption"]
             else:
-                props["caption"] = obj["title"]
+                style_props["caption"] = ""
 
-        props.pop("defaultCaption", None)
+        style_props.pop("defaultCaption", None)
     except exceptions.SafeEvalSyntaxError as e:
-        props["caption"] = (
+        style_props["caption"] = (
             f"ERROR: syntax error: {e.message}. " f'Code: "{e.code}".'
         )
     except exceptions.SafeEvalRuntimeError as e:
-        props["caption"] = (
+        style_props["caption"] = (
             f"ERROR: runtime error: {e.message}. "
             f'Code: "{e.code}".'
             f"Object: {e.element}"
         )
 
-    obj["style"] = props
+    obj.style = style_props
     return obj
 
 

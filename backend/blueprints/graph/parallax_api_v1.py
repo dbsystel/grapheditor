@@ -4,6 +4,7 @@ from flask_smorest import Blueprint
 
 from blueprints.maintenance.login_api import require_tab_id
 from blueprints.graph import parallax_model
+from database.mapper import GraphEditorNode
 from database.utils import abort_with_json
 from database.id_handling import get_base_id, compute_semantic_id, GraphEditorLabel
 
@@ -80,7 +81,7 @@ class Parallax(MethodView):
             )
             for neighbors in nodes_with_neighbors.values():
                 for neighbor_id, neighbor in neighbors.items():
-                    neighbors_map[neighbor_id] = neighbor
+                    neighbors_map[f"id::{neighbor_id}"] = neighbor
 
         if in_rel_types:
             nodes_with_neighbors = current_app.graph_db.get_nodes_neighbors(
@@ -92,7 +93,7 @@ class Parallax(MethodView):
 
             for neighbors in nodes_with_neighbors.values():
                 for neighbor_id, neighbor in neighbors.items():
-                    neighbors_map[neighbor_id] = neighbor
+                    neighbors_map[f"id::{neighbor_id}"] = neighbor
 
         return neighbors_map
 
@@ -162,9 +163,20 @@ class Parallax(MethodView):
         result_nids = [get_base_id(nid) for nid in result_nodes]
         next_steps = self._next_types(result_nids)
         return {
-            'nodes': result_nodes,
-            'properties': current_app.graph_db.get_all_node_properties(result_nids),
-            'labels': current_app.graph_db.get_all_labels(result_nids),
+            'nodes': {
+                k: GraphEditorNode.from_base_node(node)
+                for k, node in result_nodes.items()
+            },
+            'properties': [
+                compute_semantic_id(prop_name, GraphEditorLabel.MetaProperty)
+                for prop_name in
+                current_app.graph_db.get_all_node_properties(result_nids)
+            ],
+            'labels': [
+                compute_semantic_id(label, GraphEditorLabel.MetaLabel)
+                for label in
+                current_app.graph_db.get_all_labels(result_nids)
+            ],
             'incomingRelationTypes': next_steps['incoming'],
             'outgoingRelationTypes': next_steps['outgoing'],
         }

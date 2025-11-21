@@ -74,6 +74,14 @@ class Neo4jConnection:
 
         return bool(val)
 
+    def has_nft_index(self):
+        query_result = self.admin_tx.run("""
+        SHOW FULLTEXT INDEXES YIELD name, state
+        WHERE state = 'ONLINE'
+        RETURN 'nft' IN collect(name)
+        """)
+        return query_result.single().value()
+
     def has_iga_triggers(self):
         """Return whether IGA triggers are installed.
         Used for controlling reset process. Don't call this from a regular

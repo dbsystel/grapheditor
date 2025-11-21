@@ -1,9 +1,9 @@
-import { GrassfileManagerStyleReset } from './GrassfileManagerStyleReset';
 import { render } from 'vitest-browser-react';
+import { GrassfileManagerStyleReset } from './GrassfileManagerStyleReset';
 
 describe('Components - GrassfileManagerStyleReset', () => {
-	test('Render component', () => {
-		const screen = render(<GrassfileManagerStyleReset />);
+	test('Render component', async () => {
+		const screen = await render(<GrassfileManagerStyleReset />);
 
 		const button = screen.getByRole('button').element();
 

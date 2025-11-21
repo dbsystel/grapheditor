@@ -1,0 +1,22 @@
+.item-overview-popover {
+	position: fixed;
+	inset: 0;
+	background: transparent;
+
+	&__popover {
+		block-size: auto;
+		inline-size: auto;
+		transition: none;
+		display: block;
+		position: fixed;
+
+		> article {
+			max-inline-size: none;
+			inset-inline: auto!important;
+			inset-block: auto!important;
+			position: static!important;
+			transform: none!important;
+			padding: var(--db-spacing-fixed-sm);
+		}
+	}
+}

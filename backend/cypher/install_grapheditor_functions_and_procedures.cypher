@@ -26,7 +26,7 @@ CALL apoc.systemdb.execute(
       'joinPropertiesText(elem::ANY) :: STRING',
       'RETURN REDUCE(result = \\'\\',
               prop IN [p IN keys($elem) WHERE p <> \"_ft__tech_\" | p]
-              | result + custom.lowercase(prop) + \":\" + custom.lowercase($elem[prop]) + \"; \") AS answer',
+              | result + custom.lowercase(prop) + \" : \" + custom.lowercase($elem[prop]) + \" ; \") AS answer',
       $dbName,
       false,
       'Join all properties of element (a Node or a Relationship) into a
@@ -36,7 +36,7 @@ CALL apoc.systemdb.execute(
       'joinLabelsText(node::NODE) :: STRING',
       'RETURN REDUCE(result = \\'\\',
                      label IN [l IN labels($node) WHERE l <> \"___tech_\" | l]
-                     | result + custom.lowercase(label) + \"; \") AS answer',
+                     | result + custom.lowercase(label) + \" ; \") AS answer',
       $dbName,
       false,
       'Join all labels into a single string.'
@@ -46,7 +46,7 @@ CALL apoc.systemdb.execute(
       'WITH custom.joinPropertiesText($node) AS propsText,
             custom.joinLabelsText($node) AS labelsText
        CALL apoc.create.addLabels($node, [\"___tech_\"]) YIELD node AS n
-       SET n.`_ft__tech_` = propsText + labelsText + \"id:\" + elementid(n)
+       SET n.`_ft__tech_` = propsText + labelsText + \"id : \" + elementid(n)
        RETURN n AS node',
       $dbName,
       'WRITE',
@@ -55,19 +55,11 @@ CALL apoc.systemdb.execute(
     "CALL apoc.custom.installProcedure(
       'setRelFt(rel::REL) :: (rel::REL)',
       'WITH custom.joinPropertiesText($rel) AS propsText
-       SET $rel.`_ft__tech_` = propsText + type($rel) + \"; id:\" + elementid($rel)
+       SET $rel.`_ft__tech_` = propsText + type($rel) + \"; id : \" + elementid($rel)
        RETURN $rel AS rel',
       $dbName,
       'WRITE',
       'Generate _ft__tech_ property of rel.'
-    )",
-    "CALL apoc.custom.installProcedure(
-        'createRelTypeIndex(relType :: STRING) :: (answer::ANY)',
-        'CALL apoc.cypher.runSchema(\"CREATE TEXT INDEX \" + $relType + \"Index IF NOT EXISTS FOR ()-[r:\" + $relType + \"]->() ON (r.`_ft__tech_`)\", {}) YIELD value
-           RETURN true AS answer',
-        $dbName,
-        'SCHEMA',
-        'Create index on relation type if it does not exist.'
     )"
   ],
   {dbName: dbName}

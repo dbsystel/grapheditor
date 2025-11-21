@@ -1,11 +1,12 @@
 /// <reference types="vitest" />
-/// <reference types="@vitest/browser/providers/playwright" />
+/// <reference types='@vitest/browser-playwright' />
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import checker from 'vite-plugin-checker';
 import svgr from 'vite-plugin-svgr';
 import { defineConfig } from 'vitest/config';
 import { generateSbom, processLicenses, removeDataTestIdAttribute } from './vite.plugins';
+import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
 	plugins: [react(), removeDataTestIdAttribute(), svgr(), checker({ typescript: true }), processLicenses(), generateSbom()],
@@ -34,14 +35,10 @@ export default defineConfig({
 		restoreMocks: true,
 		browser: {
 			enabled: true,
-			provider: 'playwright',
+			provider: playwright(),
 			instances: [
 				{
-					browser: 'chromium',
-					context: {
-						// assign proper navigator.clipboard permissions
-						permissions: ['clipboard-write', 'clipboard-read']
-					}
+					browser: 'chromium'
 				}
 			],
 			viewport: {

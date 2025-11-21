@@ -1,4 +1,3 @@
-import { userEvent } from '@vitest/browser/context';
 import {
 	destroyKeyboardObserver,
 	initializeKeyboardObserver,
@@ -7,6 +6,7 @@ import {
 	isShiftKeyPressed,
 	pressedKeys
 } from 'src/utils/keyboard-observer';
+import { userEvent } from 'vitest/browser';
 
 describe('Utils - Keyboard observer', () => {
 	test('Control key', async () => {

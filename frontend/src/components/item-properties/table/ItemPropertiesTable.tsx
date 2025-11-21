@@ -11,7 +11,10 @@ import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
 import { ITEM_PROPERTY_TYPES } from 'src/utils/constants';
+import { compareTwoStringsForSorting } from 'src/utils/helpers/general';
+import { idFormatter } from 'src/utils/idFormatter';
 import {
+	ItemPropertiesTableEntries,
 	ItemPropertiesTableEntryWithTopFlag,
 	ItemPropertiesTableProps
 } from './ItemPropertiesTable.interfaces';
@@ -33,19 +36,18 @@ export const ItemPropertiesTable = ({
 	const rootElementClassName = clsx('item-properties-table', className);
 	const flatArrayProperties: Array<ItemPropertiesTableEntryWithTopFlag> = [];
 
-	entries.forEach(([property, propertyNode]) => {
+	if (topEntries) {
+		const sortedTopEntries = sortTableEntriesByNodesTitle(topEntries);
+
+		sortedTopEntries.forEach(([property, propertyNode]) => {
+			flatArrayProperties.push([property, propertyNode, true]);
+		});
+	}
+
+	const sortedEntries = sortTableEntriesByNodesTitle(entries);
+
+	sortedEntries.forEach(([property, propertyNode]) => {
 		flatArrayProperties.push([property, propertyNode, false]);
-	});
-
-	flatArrayProperties.sort((a, b) => {
-		const aNodeTitle = a[1].title.toLowerCase();
-		const bNodeTitle = b[1].title.toLowerCase();
-
-		return aNodeTitle.localeCompare(bNodeTitle);
-	});
-
-	topEntries?.forEach(([property, propertyNode]) => {
-		flatArrayProperties.unshift([property, propertyNode, true]);
 	});
 
 	const localOnPropertyRowMouseInteraction = (
@@ -114,11 +116,11 @@ export const ItemPropertiesTable = ({
 							onMouseLeave={onMouseLeave}
 							variant="hoverable"
 						>
-							<TableCell width="full" className="item-properties-table__cell">
+							<TableCell width="auto" className="item-properties-table__cell">
 								<ItemInfo item={propertyNode} />
 							</TableCell>
 							<TableCell
-								width="full"
+								width="auto"
 								className="item-properties-table__cell item-properties-table__textarea"
 							>
 								<ItemPropertiesEditPropertyValue
@@ -127,22 +129,31 @@ export const ItemPropertiesTable = ({
 									isEditMode={isEditMode}
 								/>
 							</TableCell>
-							<TableCell
-								width="minimal"
-								className="item-properties-table__cell item-properties-table__menu"
-							>
-								{isEditMode && !isMissingProperty && (
+							{isEditMode && !isMissingProperty && (
+								<TableCell
+									width="minimal"
+									className="item-properties-table__cell item-properties-table__menu"
+								>
 									<MenuButton
 										className="item-properties-table__menu-button"
-										optionsPlacement="bottom-end"
+										optionsPlacement="bottom-start"
 										options={menuOptions}
 									/>
-								)}
-							</TableCell>
+								</TableCell>
+							)}
 						</TableRow>
 					);
 				})}
 			</TableBody>
 		</Table>
 	);
+};
+
+const sortTableEntriesByNodesTitle = (entries: ItemPropertiesTableEntries) => {
+	return entries.toSorted((a, b) => {
+		const aTitle = idFormatter.parseIdToName(a[1].title);
+		const bTitle = idFormatter.parseIdToName(b[1].title);
+
+		return compareTwoStringsForSorting(aTitle, bTitle);
+	});
 };

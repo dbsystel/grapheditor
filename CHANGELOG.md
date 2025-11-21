@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.11.2
+
+- better sorting of lists
+- improved preview for nodes and relations
+- fulltext search can now support lucene syntax
+- centering of nodes and relations in graph view
+- Bugfixing
+
+
 ## 2025.11.1
 
 - Context menu with many new features

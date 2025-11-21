@@ -2,7 +2,7 @@ import './RelationTypeChanger.scss';
 import { DBTag } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { ItemOverviewTooltip } from 'src/components/item-overview-tooltip/ItemOverviewTooltip';
+import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder/RelationTypeItemFinder';
 import { Node } from 'src/models/node';
 import { relationsApi } from 'src/utils/api/relations';
@@ -104,7 +104,7 @@ export const RelationTypeChanger = ({
 					{selectedType.title}
 
 					{renderTooltip && (
-						<ItemOverviewTooltip item={selectedType} tooltipRef={tooltipRef} />
+						<ItemOverviewPopover item={selectedType} popoverRef={tooltipRef} />
 					)}
 				</DBTag>
 			) : (

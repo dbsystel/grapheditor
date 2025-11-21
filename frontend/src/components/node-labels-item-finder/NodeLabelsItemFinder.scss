@@ -90,4 +90,10 @@
 			}
 		}
 	}
+
+	.db-checkbox {
+		> label {
+			color: var(--db-adaptive-on-bg-basic-emphasis-100-default);
+		}
+	}
 }

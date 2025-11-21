@@ -34,7 +34,7 @@ def is_perspective(nodes, relations):
     # pylint: disable=unused-argument
     return (
         len(nodes) == 1
-        and "MetaLabel::Perspective__tech_" in nodes[0]["labels"]
+        and "Perspective__tech_" in nodes[0].labels
     )
 
 
@@ -117,7 +117,6 @@ def select_actions(nodes, relations):
     for action, predicate in context_action_table.items():
         if predicate(nodes, relations):
             result.append({"action": action.value, "enabled": True})
-
     return result
 
 

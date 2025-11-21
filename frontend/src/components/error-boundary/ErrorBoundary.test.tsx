@@ -1,6 +1,6 @@
-import { userEvent } from '@vitest/browser/context';
 import i18n from 'src/i18n';
 import { expect } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -18,8 +18,8 @@ describe('Components - ErrorBoundary', () => {
 	};
 	let triggerError = true;
 
-	test('Render component', () => {
-		const screen = render(
+	test('Render component', async () => {
+		const screen = await render(
 			<div data-testid="error-boundary-wrapper">
 				<ErrorBoundary testId="error-boundary-wrapper" />
 			</div>
@@ -34,7 +34,7 @@ describe('Components - ErrorBoundary', () => {
 		// mute console error
 		vi.spyOn(console, 'error').mockImplementationOnce(() => null);
 
-		const screen = render(
+		const screen = await render(
 			<div data-testid="error-boundary-wrapper">
 				<ErrorBoundary testId="error-boundary-wrapper">
 					<ReferenceErrorComponent />

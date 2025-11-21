@@ -84,22 +84,20 @@ export const ItemPropertiesAddNewProperty = ({
 				(propertyOption) => propertyOption.id === key
 			);
 
-			if (propertyNode) {
-				onPropertyCreate(
-					{
-						key: semanticId,
-						value: parsedValue,
-						type: type,
-						edit: true
-					},
-					propertyNode
-				);
+			onPropertyCreate(
+				{
+					key: semanticId,
+					value: parsedValue,
+					type: type,
+					edit: true
+				},
+				propertyNode
+			);
 
-				resetField('key');
-				resetField('value');
+			resetField('key');
+			resetField('value');
 
-				setSelectedProperty(null);
-			}
+			setSelectedProperty(null);
 		}
 	};
 
