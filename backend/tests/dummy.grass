@@ -11,3 +11,11 @@ caption*: """
     + ' Bob'
 """;
 }
+
+relationship.likes__dummy_ {
+  color: green;
+  shaft-width: 3px;
+  padding: 3px;
+  text-color-external: #FF00FF;
+  text-color-internal: #00FF00;
+}

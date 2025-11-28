@@ -60,7 +60,7 @@ type SearchStore = {
 	setType: (type: SearchStoreType) => void;
 	setQuery: (query: string) => void;
 	setCypherQueryParameters: (parameters: Record<string, string>) => void;
-	setResult: (result: CypherQuerySearchResult | null, type: SearchResultType) => void;
+	setResult: (result: SearchStoreResult) => void;
 	setIsResultProcessed: (processed: boolean) => void;
 	setNewlyUploadedStyle: (style: string) => void;
 	initialize: () => void;
@@ -144,12 +144,9 @@ export const useSearchStore = create<SearchStore>()(
 				setPresentation: (presentation) => set({ presentation: presentation }),
 				setAlgorithm: (algorithm) => set({ algorithm: algorithm }),
 				setStyle: (style) => set({ style: style }),
-				setResult: (result, type) =>
+				setResult: (result) =>
 					set({
-						result: {
-							data: result,
-							type: type
-						}
+						result: result
 					}),
 				setIsResultProcessed: (processed) => {
 					set({ isResultProcessed: processed });

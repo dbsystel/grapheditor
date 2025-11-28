@@ -1,6 +1,5 @@
 .item-overview-popover {
 	position: fixed;
-	inset: 0;
 	background: transparent;
 
 	&__popover {
@@ -17,6 +16,7 @@
 			position: static!important;
 			transform: none!important;
 			padding: var(--db-spacing-fixed-sm);
+			visibility: inherit;
 		}
 	}
 }

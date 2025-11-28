@@ -50,7 +50,7 @@
 		}
 
 		&__title-title {
-			width: max-content;
+			word-break: break-all;
 			font-size: var(--db-type-headline-font-size-3xs);
 			font-weight: bold;
 			margin: var(--db-spacing-fixed-3xs);
@@ -102,7 +102,7 @@
 		&--small {
 			// "small" LOL
 			max-inline-size: 550px;
-			max-block-size: 550px;
+			max-block-size: min(550px, 80dvh);
 
 			> .db-accordion {
 				> .db-accordion-item {

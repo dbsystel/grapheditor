@@ -203,7 +203,7 @@ export const downloadFile = (options: DownloadFileOptions) => {
 };
 
 export const resetApplicationStates = () => {
-	useSearchStore.getState().setResult(null, '');
+	useSearchStore.getState().setResult({ data: null, type: '' });
 	useClipboardStore.getState().reset();
 	useContextMenuStore.getState().reset();
 	useDrawerStore.getState().reset();

@@ -493,7 +493,8 @@ def test_fulltext_node_empty():
         BASE_URL + "/api/v1/nodes",
         headers=HEADERS,
     )
-    assert response.status_code == 400
+    assert response.status_code == 200
+    assert len(response.json) > 20
 
 
 def test_fulltext_boolean_operators():
@@ -1200,7 +1201,8 @@ def test_fulltext_relation_empty():
         BASE_URL + "/api/v1/relations",
         headers=HEADERS,
     )
-    assert response.status_code == 400
+    assert response.status_code == 200
+    assert len(response.json) > 20
 
 
 def test_all_relation_properties():
@@ -1739,6 +1741,12 @@ def test_style_upload():
     assert response.status_code == 200
     filenames = response.json["filenames"]
     assert file_name in filenames
+
+    response = client.get(
+        BASE_URL + "/api/v1/relations?text=likes__dummy_",
+        headers=HEADERS,
+    )
+    assert response.json[0]["style"]["color"] == "green"
 
     client.get(
         BASE_URL + "/api/v1/styles/reset",

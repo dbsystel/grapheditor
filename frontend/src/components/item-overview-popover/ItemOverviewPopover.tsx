@@ -1,6 +1,6 @@
 import './ItemOverviewPopover.scss';
 import { DBPopover } from '@db-ux/react-core-components';
-import { autoPlacement, autoUpdate, computePosition, offset } from '@floating-ui/react';
+import { autoPlacement, autoUpdate, computePosition, offset, shift } from '@floating-ui/react';
 import clsx from 'clsx';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -83,6 +83,7 @@ export const ItemOverviewPopover = ({
 						placement: 'top',
 						middleware: [
 							offset(popoverOffset || 0),
+							shift({ crossAxis: true }),
 							autoPlacement({
 								allowedPlacements: [
 									'top',
@@ -100,9 +101,22 @@ export const ItemOverviewPopover = ({
 								]
 							})
 						]
-					}).then((b) => {
-						popoverElement.style.top = b.y + 'px';
-						popoverElement.style.left = b.x + 'px';
+					}).then((computedPosition) => {
+						// adjust for bottom placements manually since fixed positioning with bottom won't render
+						// content over our mouse pointer, which would close the popover immediately
+						if (['top', 'top-start', 'top-end'].includes(computedPosition.placement)) {
+							const documentHeight = window.document.documentElement.clientHeight;
+							const distanceFromBottom = documentHeight - computedPosition.y;
+							const yPosition = distanceFromBottom - popoverElement.offsetHeight;
+
+							popoverElement.style.top = '';
+							popoverElement.style.bottom = yPosition + 'px';
+							popoverElement.style.left = computedPosition.x + 'px';
+						} else {
+							popoverElement.style.bottom = '';
+							popoverElement.style.top = computedPosition.y + 'px';
+							popoverElement.style.left = computedPosition.x + 'px';
+						}
 					});
 				},
 				{

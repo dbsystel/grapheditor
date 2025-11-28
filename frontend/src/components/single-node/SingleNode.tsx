@@ -60,8 +60,11 @@ export const SingleNode = ({
 	const sigma = useGraphStore((store) => store.sigma);
 	const { isInsideItemsDrawer } = useItemsDrawerContext();
 	const presentation = useSearchStore((store) => store.presentation);
+	const nodeId = getItemDBId(node);
+	// had to create a "nodeId" variable explicitly, since direct use of node.id
+	// on the LoadPerspective component would cause "missing in props validation" eslint error
 	const isCenterButtonDisabled =
-		presentation !== GRAPH_PRESENTATION_GRAPH || !sigma.getGraph().hasNode(node.id);
+		presentation !== GRAPH_PRESENTATION_GRAPH || !sigma.getGraph().hasNode(nodeId);
 	const [selectedLabelIds, setSelectedLabelIds] = useState<Array<NodeId>>([]);
 	const [labelsMeta, setLabelsMeta] = useState<MetaForMeta | null>(null);
 	const [isLabelsMetaLoading, setIsLabelsMetaLoading] = useState(false);
@@ -144,10 +147,6 @@ export const SingleNode = ({
 	const onPropertyRowMouseLeave = () => {
 		setHighlightedLabelTagIds([]);
 	};
-
-	const nodeId = getItemDBId(node);
-	// had to create a "nodeId" variable explicitly, since direct use of node.id
-	// on the LoadPerspective component would cause "missing in props validation" eslint error
 
 	const LoadPerspectiveButton = () => {
 		if (isNodePerspective(node)) {

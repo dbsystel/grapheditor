@@ -1,6 +1,5 @@
 """Support for parsing and applying style (.grass) rules."""
 
-import dataclasses
 import math
 import random
 import os
@@ -35,7 +34,7 @@ RE_VAR_REFERENCE = re.compile(r"{(.*?)}")
 # Patterns for pyparsing
 WHAT_PAT = pp.Literal("node") | pp.Literal("relationship")
 IDENTCHARS = ppu.identbodychars + ppu.printables + ""
-LABEL_PAT = pp.Word(IDENTCHARS, exclude_chars="{.") | pp.Literal("*")
+LABEL_OR_TYPE_PAT = pp.Word(IDENTCHARS, exclude_chars="{.") | pp.Literal("*")
 PROP_VAL_PAT = pp.Word(IDENTCHARS, exclude_chars='{};"<>')
 PROP_NAME_PAT = pp.Word(ppu.alphas + "-" + ppu.nums + "*" + "_")
 PROP_PAT = pp.Group(
@@ -55,7 +54,7 @@ PROP_PAT = pp.Group(
 )
 
 SELECTOR_PAT = WHAT_PAT("what") + pp.Optional(
-    pp.Suppress(".") + LABEL_PAT("label")
+    pp.Suppress(".") + LABEL_OR_TYPE_PAT("label_or_type")
 )
 
 RULE_PAT = pp.Group(
@@ -66,7 +65,6 @@ RULE_PAT = pp.Group(
 ).set_results_name("rule", list_all_matches=True)
 
 RULES_PAT = pp.OneOrMore(RULE_PAT)
-
 
 def get_luminance(hex_color):
     if hex_color.startswith("#"):
@@ -118,16 +116,15 @@ def parse_code_with_result(code):
 
 
 class StyleRule:
-    def __init__(self, object_type, label, props, relation_type = None):
+    def __init__(self, object_type, label_or_type, props):
         self.object_type = object_type
-        self.label = label
+        self.label_or_type = label_or_type
         self.props = props
-        self.type = relation_type
 
     def __str__(self):
         res = self.object_type
-        if self.label:
-            res += "." + self.label
+        if self.label_or_type:
+            res += "." + self.label_or_type
         if self.props:
             res += "\n{\n"
             for pname, pval in self.props.items():
@@ -138,7 +135,7 @@ class StyleRule:
     def to_dict(self):
         return {
             "object_type": self.object_type,
-            "label": self.label,
+            "label_or_type": self.label_or_type,
             "properties": self.props,
         }
 
@@ -152,13 +149,13 @@ class StyleRule:
         if self.object_type != object_type:
             return False
 
-        if not self.label or self.label == "*":
+        if not self.label_or_type or self.label_or_type == "*":
             return self._satisfies_condition(obj, context)
 
-        if isinstance(obj, BaseNode) and self.label in obj.labels:
+        if isinstance(obj, BaseNode) and self.label_or_type in obj.labels:
             return self._satisfies_condition(obj, context)
 
-        if isinstance(obj, BaseRelation) and self.type == obj.type:
+        if isinstance(obj, BaseRelation) and self.label_or_type == obj.type:
             return self._satisfies_condition(obj, context)
 
         return False
@@ -184,7 +181,7 @@ class StyleRule:
 
         caption = caption_template
         # first replace the <id> and <type> fields.
-        caption = caption.replace("<id>", obj.id)
+        caption = caption.replace("<id>", str(obj.id))
         if isinstance(obj, BaseRelation):
             caption = caption.replace("<type>", obj.type)
 
@@ -225,8 +222,8 @@ class StyleRule:
 
             if "result" in context:
                 context.pop("result")
-
-            default_obj_dict = DefaultAttrDict(lambda: "", dataclasses.asdict(obj))
+            # https: // stackoverflow.com / q / 52229521
+            default_obj_dict = DefaultAttrDict(lambda: "", obj.__dict__.copy())
             default_props_dict = DefaultAttrDict(lambda: "", obj.properties)
             # add node fields and properties for evaluation context.
             context.update(
@@ -345,7 +342,7 @@ def parse_style(style_text):
         what = "relation" if parsed_rule.what == "relationship" else "node"
 
         rules.append(
-            StyleRule(object_type=what, label=parsed_rule.label, props=props)
+            StyleRule(object_type=what, label_or_type=parsed_rule.label_or_type, props=props)
         )
     return rules
 

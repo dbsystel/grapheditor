@@ -1,4 +1,3 @@
-import dataclasses
 from flask import g
 from flask.views import MethodView
 from flask_smorest import Blueprint
@@ -25,7 +24,8 @@ def execute_query(query_text:str, parameters:dict=None):
             val = record.get(key)
             obj = mapper.neoobject2grapheditor(val)
             if isinstance(obj, (mapper.GraphEditorNode, mapper.GraphEditorRelation)):
-                api_record[key] = dataclasses.asdict(obj)
+                # https: // stackoverflow.com / q / 52229521
+                api_record[key] = obj.__dict__.copy()
             else:
                 api_record[key] = obj
         result.append(api_record.items())

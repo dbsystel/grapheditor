@@ -79,7 +79,7 @@ const searchStoreResultObserver = async (result: SearchStoreResult) => {
 		useItemsStore.getState().clearRelations(true);
 		useItemsStore.getState().setNodes(nodesMap.values().toArray());
 		useItemsStore.getState().setRelations(relationsMap.values().toArray());
-
-		useSearchStore.getState().setIsResultProcessed(true);
 	}
+
+	useSearchStore.getState().setIsResultProcessed(true);
 };

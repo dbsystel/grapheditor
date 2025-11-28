@@ -36,7 +36,7 @@ def test_node_rule():
     assert len(result) == 1
     rule = result[0].to_dict()
     assert rule["object_type"] == "node"
-    assert rule["label"] == "Vertrag"
+    assert rule["label_or_type"] == "Vertrag"
     props = rule["properties"]
     assert props["diameter"] == "160px"
     assert props["color"] == "#B4C6E7"
@@ -55,7 +55,7 @@ def test_relationship_rule():
     assert len(result) == 1
     rule = result[0].to_dict()
     assert rule["object_type"] == "relation"
-    assert rule["label"] == "ABZWEIG"
+    assert rule["label_or_type"] == "ABZWEIG"
 
 
 def test_node_rule_with_wildcard():
@@ -72,7 +72,7 @@ def test_node_rule_with_wildcard():
     assert len(result) == 1
     rule = result[0].to_dict()
     assert rule["object_type"] == "node"
-    assert rule["label"] == "*"
+    assert rule["label_or_type"] == "*"
 
 
 def test_relationship_rule_with_wildcard():
@@ -86,7 +86,7 @@ def test_relationship_rule_with_wildcard():
     assert len(result) == 1
     rule = result[0].to_dict()
     assert rule["object_type"] == "relation"
-    assert rule["label"] == "*"
+    assert rule["label_or_type"] == "*"
 
 
 def test_basic_star_property():

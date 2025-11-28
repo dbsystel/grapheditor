@@ -1,7 +1,9 @@
 #! /usr/bin/env python
+import multiprocessing
 import os
 import sys
 import traceback
+import platform
 
 import waitress
 from flask import Flask, abort, request, current_app, g, send_from_directory, render_template
@@ -9,8 +11,10 @@ from flask_cors import CORS
 from flask_smorest import Api
 from werkzeug._reloader import run_with_reloader
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.middleware.profiler import ProfilerMiddleware
 from flask_session import Session
 import neo4j.exceptions
+
 
 from blueprints.display.style_support import load_default_style
 from blueprints.maintenance.info_api_v1 import blp as info_api
@@ -28,7 +32,7 @@ from blueprints.display.style_api_v1 import blp as style_api
 from blueprints.context_menu_api_v1 import blp as context_menu_api
 
 from database.cypher_database import CypherDatabase
-from database.neo4j_connection import neo4j_connect
+from database.neo4j_connection import neo4j_connect, MaxConnectionRetries
 from database.settings import config
 
 basedir = os.path.dirname(__file__)
@@ -100,6 +104,12 @@ Session(app)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_prefix=1, x_for=1, x_host=1)
 
+if config.profile_dir:
+    # An error creating the profile directory cannot be recovered
+    # gracefully, so let it crash if an exception occurs.
+    print(f"Profiling to {config.profile_dir}")
+    os.makedirs(config.profile_dir, exist_ok=True)
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=config.profile_dir)
 
 api = Api(app)
 
@@ -163,6 +173,7 @@ def route_requires_connection():
 
 @app.errorhandler(neo4j.exceptions.ClientError)
 @app.errorhandler(neo4j.exceptions.DriverError)
+@app.errorhandler(MaxConnectionRetries)
 def neo4j_exception_handler(error):
     """Log and propagate Neo4j error messages to the client if possible.
 
@@ -245,15 +256,33 @@ if IS_FROZEN:
 
 def run_server():
     app.debug = False
-    waitress.serve(app, listen=f"0.0.0.0:{config.port}")
+    waitress.serve(app,
+                   listen=f"0.0.0.0:{config.port}",
+                   outbuf_overflow=4194304,
+                   outbuf_high_watermark=33554432,
+                   inbuf_overflow=1048576,
+                   connection_limit=512,
+                   expose_tracebacks=True,
+                   threads=8
+                   )
 
 
 def run_server_debug():
+    print("run_server_debug")
     app.debug = True
-    waitress.serve(app, listen=f"0.0.0.0:{config.port}")
+    waitress.serve(app,
+                   listen=f"0.0.0.0:{config.port}",
+                   outbuf_overflow=4194304,
+                   outbuf_high_watermark=33554432,
+                   inbuf_overflow=1048576,
+                   connection_limit=512,
+                   expose_tracebacks=True,
+                   threads=8)
 
 
 if __name__ == "__main__":
+
+
     if IS_FROZEN:
         print(
             f"Welcome to GraphEditor!\n\n\
@@ -261,10 +290,46 @@ if __name__ == "__main__":
         Swagger: http://localhost:{config.port}/api/swagger"
         )
         run_server()
+
+    # https://stackoverflow.com/questions/70396641/how-to-run-gunicorn-inside-python-not-as-a-command-line
+    elif platform.uname().system.lower()=='linux':
+        print("Detected Linux, Preparing gunicorn")
+        import gunicorn.app.base
+
+        class StandaloneApplication(gunicorn.app.base.BaseApplication):
+            # The example in gunicorn's documentation doesn't override "init"
+            # either, so we disable the lint warning that it's missing.
+            # pylint: disable=abstract-method
+            def __init__(self, flaskapp, gu_options=None):
+                self.options = gu_options or {}
+                self.application = flaskapp
+                super().__init__()
+
+            def load_config(self):
+                gu_config = {key: value for key, value in self.options.items()
+                          if key in self.cfg.settings and value is not None}
+                for key, value in gu_config.items():
+                    self.cfg.set(key.lower(), value)
+
+            def load(self):
+                return self.application
+
+
+        options = {
+            'bind': f"0.0.0.0:{config.port}",
+            'workers': multiprocessing.cpu_count() + 1,
+            # 'threads': number_of_workers(),
+            'timeout': 120,
+        }
+        StandaloneApplication(app, options).run()
+
+
+
     else:
         print(
             f"Welcome to GraphEditor!\n\n\
-        GUI:     http://localhost:8080/\n\
+        GUI (d):     http://localhost:8080/\n\
         Swagger: http://localhost:{config.port}/api/swagger"
+
         )
         run_with_reloader(run_server_debug)

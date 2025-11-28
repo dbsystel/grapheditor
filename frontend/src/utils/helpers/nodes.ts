@@ -170,10 +170,10 @@ export const processPerspective = (perspective: Perspective) => {
 	setPerspectiveName(perspective.name || '');
 	setAlgorithm(GRAPH_LAYOUT_PERSPECTIVE);
 	setIsResultProcessed(false);
-	setResult(
-		buildPerspectiveSearchResult(nodes, relations),
-		GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
-	);
+	setResult({
+		data: buildPerspectiveSearchResult(nodes, relations),
+		type: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
+	});
 };
 
 export const processNodeConnections = (node: Node, connections: Array<NodeConnection>) => {

@@ -51,12 +51,10 @@ async function triggerNextSteps(steps: ParallaxSteps) {
 		.then((response) => {
 			enableParallaxApiCallsOnSearchResultProcessEnd();
 
-			useSearchStore
-				.getState()
-				.setResult(
-					buildSimpleSearchResult(Object.values(response.data.nodes)),
-					GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
-				);
+			useSearchStore.getState().setResult({
+				data: buildSimpleSearchResult(Object.values(response.data.nodes)),
+				type: GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
+			});
 
 			useParallaxStore.getState().setParallaxData(response.data);
 			useParallaxStore.getState().setHistory(steps);
@@ -76,12 +74,10 @@ async function triggerFilters(initialQuery: ParallaxInitialQuery, steps: Paralla
 		.then((response) => {
 			enableParallaxApiCallsOnSearchResultProcessEnd();
 
-			useSearchStore
-				.getState()
-				.setResult(
-					buildSimpleSearchResult(Object.values(response.data.nodes)),
-					GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
-				);
+			useSearchStore.getState().setResult({
+				data: buildSimpleSearchResult(Object.values(response.data.nodes)),
+				type: GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
+			});
 
 			useParallaxStore.getState().setParallaxData(response.data);
 			useParallaxStore.getState().setInitialQuery(initialQuery);
@@ -101,12 +97,10 @@ async function triggerBreadcrumbs(index: number) {
 		.then((response) => {
 			enableParallaxApiCallsOnSearchResultProcessEnd();
 
-			useSearchStore
-				.getState()
-				.setResult(
-					buildSimpleSearchResult(Object.values(response.data.nodes)),
-					GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
-				);
+			useSearchStore.getState().setResult({
+				data: buildSimpleSearchResult(Object.values(response.data.nodes)),
+				type: GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
+			});
 
 			useParallaxStore.getState().setParallaxData(response.data);
 			useParallaxStore.getState().setCurrentHistoryIndex(index);

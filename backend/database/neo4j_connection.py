@@ -6,7 +6,7 @@ from blueprints.display.style_support import select_style, get_selected_style
 from database.settings import config
 from database.utils import abort_with_json
 
-
+MAX_RETRIES = 3
 drivers_lock = Lock()
 db_versions_lock = Lock()
 
@@ -18,6 +18,8 @@ db_versions = dict()
 # the inconsistent-return-statements warning is a false positive
 # pylint: disable=inconsistent-return-statements
 
+class MaxConnectionRetries(Exception):
+    pass
 
 class Neo4jConnection:
     """Proxy for Neo4j connection supporting transaction-based operations."""
@@ -26,6 +28,7 @@ class Neo4jConnection:
         self.host = host
         self.username = username
         self.database = database
+        self.password = password
         self._driver = self._setup_driver(host, username, password)
 
     def has_ft(self):
@@ -38,8 +41,8 @@ class Neo4jConnection:
 
         # Running has_ft with admin_tx in /dev/reset caused a problem
         # where the checks for completion of installation steps never returned
-        # true. The problem is because the install functions run with self.tx,
-        # and one cannot see if they succeded from within self.admin_tx.
+        # true. The problem is because the install functions run with self._tx,
+        # and one cannot see if they succeded from within self._admin_tx.
         val = False
         show_procedures_result = self.run("""
             SHOW PROCEDURES YIELD name
@@ -75,11 +78,11 @@ class Neo4jConnection:
         return bool(val)
 
     def has_nft_index(self):
-        query_result = self.admin_tx.run("""
+        query_result = self.run("""
         SHOW FULLTEXT INDEXES YIELD name, state
         WHERE state = 'ONLINE'
         RETURN 'nft' IN collect(name)
-        """)
+        """, _as_admin=True)
         return query_result.single().value()
 
     def has_iga_triggers(self):
@@ -106,27 +109,8 @@ class Neo4jConnection:
             return False
         return False
 
-    def fetch_version(self):
-        """Return Neo4j Version used by this connection."""
-        key = self._hash()
-        with db_versions_lock:
-            if key in db_versions:
-                return db_versions[key]
-
-        result = self.run(
-        """
-        CALL dbms.components() YIELD versions RETURN versions[0] AS version
-        """
-        ).single()
-        if result:
-            with db_versions_lock:
-                vers = result["version"]
-                db_versions[key] = vers
-                return vers
-        abort_with_json(500, "Error fetching database version")
-
     @property
-    def tx(self):
+    def _tx(self):
         """We work transaction based"""
         if not hasattr(g, "neo4j_transaction"):
             g.neo4j_session = self._driver.session(database=self.database)
@@ -134,7 +118,7 @@ class Neo4jConnection:
         return g.neo4j_transaction
 
     @property
-    def admin_tx(self):
+    def _admin_tx(self):
         """This transaction is NOT comitted"""
         if not hasattr(g, "neo4j_admin_transaction"):
             g.neo4j_admin_session = self._driver.session(
@@ -145,10 +129,14 @@ class Neo4jConnection:
             )
         return g.neo4j_admin_transaction
 
-    def run(self, query, **params):
+    def run(self, query, _as_admin=False, **params):
         """
         Run the query within the transaction
         """
+        if _as_admin:
+            tx = self._admin_tx
+        else:
+            tx = self._tx
         if config.debug:
             out = query
             for k, v in params.items():
@@ -161,24 +149,33 @@ class Neo4jConnection:
                     r = repr(v)
                 out = out.replace(f"${k}", r)
             current_app.logger.debug(out)
-        try:
-            return self.tx.run(query, **params)
-        except neo4j.exceptions.ClientError as e:
-            if e.code == "Neo.ClientError.Database.DatabaseNotFound":
-                current_app.logger.error(
-                    f"Error using database {self.database}. "
-                )
-                if "login_data" in session and g.tab_id in session["login_data"]:
-                    session["login_data"][g.tab_id]["selected_database"] = None
-                    self.database = None
+        retry_count = 0
+        while retry_count < MAX_RETRIES:
+            try:
+                return tx.run(query, **params)
+            except neo4j.exceptions.ClientError as e:
+                if e.code == "Neo.ClientError.Database.DatabaseNotFound":
+                    current_app.logger.error(
+                        f"Error using database {self.database}. "
+                    )
+                    if "login_data" in session and g.tab_id in session["login_data"]:
+                        session["login_data"][g.tab_id]["selected_database"] = None
+                        self.database = None
+                    raise
                 raise
-            raise
+            except neo4j.exceptions.SessionExpired:
+                retry_count += 1
+                current_app.logger.warn(f"""
+                Connection to {self.host} as {self.username} expired, retrying ({retry_count}).
+                """)
+                self._setup_driver(self.host, self.username, self.password)
+
 
     def commit(self):
         """
         Commit the transaction. Shouldn't be called directly.
         """
-        self.tx.commit()
+        self._tx.commit()
         del g.neo4j_transaction
 
     @staticmethod
@@ -235,7 +232,7 @@ class Neo4jConnection:
         query = "SHOW DATABASES"
         result = [
             {"name": row["name"], "status": row["currentStatus"]}
-            for row in self.admin_tx.run(query)
+            for row in self.run(query, _as_admin=True)
             if row["name"] != "system"
         ]
         return result
@@ -245,13 +242,13 @@ class Neo4jConnection:
 
         status = None
         if name:
-            result = self.admin_tx.run(f"SHOW DATABASE {name}").single()
+            result = self.run(f"SHOW DATABASE {name}", _as_admin=True).single()
             if result:
                 self.database = result.get("name", None)
                 status = result.get("currentStatus", "")
         else:
-            self.database = self.admin_tx.run(
-                "CALL db.info() YIELD name"
+            self.database = self.run(
+                "CALL db.info() YIELD name", _as_admin=True
             ).single().get("name", None)
             # fetching database name and currentStatus in a single operation
             # is not possible. Issuing a separate "SHOW DATABASE" call is
@@ -310,7 +307,6 @@ def neo4j_connect():
         if tab_id:
             g.tab_id = tab_id
             g.conn = fetch_connection_by_id(tab_id)
-            g.cypher_id = cypher_id_getter()
             return g.conn
     except neo4j.exceptions.DriverError as e:
         abort_with_json(401, f"Error connecting to Neo4j: {e}")
@@ -361,12 +357,3 @@ def set_current_database_name(name):
     login_data = session["login_data"][g.tab_id]
     login_data["selected_database"] = name
     g.conn.database = login_data.get(name, None)
-
-
-def cypher_id_getter():
-    version = g.conn.fetch_version()
-    major = version.split(".")[0]
-    getter = "elementid"
-    if int(major) < 5:
-        getter = "id"
-    return getter

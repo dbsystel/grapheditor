@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.11.3
+
+- dropped neo4j 4.x support
+- speed improvements
+- fixes to styling
+- use gunicorn on unix
+- fix crashes
+
 ## 2025.11.2
 
 - better sorting of lists

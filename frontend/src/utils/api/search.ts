@@ -28,7 +28,7 @@ async function executeSearch() {
 		return;
 	}
 
-	useSearchStore.getState().setResult(null, '');
+	useSearchStore.getState().setResult({ data: null, type: '' });
 	useSearchStore.getState().setIsLoading(true);
 
 	useDrawerStore.getState().reset();
@@ -69,6 +69,6 @@ async function executeSearch() {
 		}
 	} finally {
 		useSearchStore.getState().setIsLoading(false);
-		useSearchStore.getState().setResult(responseResult, searchResultType);
+		useSearchStore.getState().setResult({ data: responseResult, type: searchResultType });
 	}
 }
