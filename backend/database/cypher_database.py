@@ -126,9 +126,7 @@ class CypherDatabase(GraphDatabase):
                          filters:dict|None=None) -> dict[str, BaseNode]:
         """Fetch multiple nodes by id from the database.
         Return a dictionary of original IDs to nodes.
-        If an ID is not found and replace_by_pseudo_node is True, the ID is
-        mapped to a pseudo-node. Otherwise leave the id out of the resulting
-        map.
+        If an ID is not found, leave it out of the resulting map.
 
         filters is an optional dictionary containing a "labels" field with
         a list of labels and/or a "properties" field containing pairs of

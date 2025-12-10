@@ -58,10 +58,10 @@ export const LoadGraph = () => {
 		sigma.addListener('downStage', unHighlightRelations);
 
 		return () => {
-			setIsGraphRendered(false);
 			sigma.getMouseCaptor().removeListener('mousedown', disableAutoscale);
 			sigma.removeListener('downStage', unHighlightNodes);
 			sigma.removeListener('downStage', unHighlightRelations);
+			setIsGraphRendered(false);
 		};
 	}, []);
 

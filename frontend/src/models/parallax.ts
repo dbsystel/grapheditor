@@ -1,11 +1,10 @@
-import { ItemPropertyKey } from 'src/models/item';
-import { Node, NodeId, NodeLabelId, NodeLabels } from 'src/models/node';
+import { Node, NodeId, NodeLabels } from 'src/models/node';
 import { RelationType } from 'src/models/relation';
 
 export type ParallaxData = {
 	nodes: Record<NodeId, Node>;
-	properties: Array<ItemPropertyKey>;
-	labels: Array<NodeLabelId>;
+	properties: Array<Node>;
+	labels: Array<Node>;
 	incomingRelationTypes: Record<RelationType, ParallaxRelationCountType>;
 	outgoingRelationTypes: Record<RelationType, ParallaxRelationCountType>;
 };

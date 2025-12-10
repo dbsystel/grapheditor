@@ -4,7 +4,7 @@ import pytest
 
 # pylint falsely thinks find_db_or_start_testcontainer and logged_in are not
 # used, but they are passed as fixture to tests.
-# pylint: disable=unused-import
+# pylint: disable=unused-import, import-error
 from setup import (
     BASE_URL,
     HEADERS,
@@ -41,6 +41,17 @@ def test_favicon():
     with open(absolute_path, mode="rb") as file:
         assert response.data == file.read()
 
+def test_favicon_from_file_api():
+    response = client.get(BASE_URL + "/api/files/favicon.png", follow_redirects=True)
+    assert response.status_code == 200
+    absolute_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            os.path.join("..", "static", "favicon.png"),
+        )
+    )
+    with open(absolute_path, mode="rb") as file:
+        assert response.data == file.read()
 
 def test_fulltext_without_ft():
     """Run on an uninitialized database.

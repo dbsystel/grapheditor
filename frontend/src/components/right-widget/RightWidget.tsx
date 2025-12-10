@@ -7,7 +7,12 @@ import { ItemsDrawer } from 'src/components/items-drawer/ItemsDrawer';
 import { ParallaxNextSteps } from 'src/components/parallax-next-steps/ParallaxNextSteps';
 import { RightWidgetProps } from './RightWidget.interfaces';
 
-export const RightWidget = ({ id, className, testId }: RightWidgetProps) => {
+export const RightWidget = ({
+	shouldRenderNextSteps = true,
+	id,
+	className,
+	testId
+}: RightWidgetProps) => {
 	const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
 	const rootElementClassName = clsx('right-widget', className, {
 		'right-widget--collapsed': isCollapsed
@@ -19,20 +24,24 @@ export const RightWidget = ({ id, className, testId }: RightWidgetProps) => {
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<DBDrawer
-				id="right-widget__drawer"
-				data-testid={testId}
-				closeButtonText=""
-				backdrop="none"
-				open={true}
-				direction="right"
-				drawerHeader={<DrawerHead toggleDrawer={toggleDrawer} isCollapsed={isCollapsed} />}
-				spacing="none"
-			>
-				<ErrorBoundary>
-					<ParallaxNextSteps />
-				</ErrorBoundary>
-			</DBDrawer>
+			{shouldRenderNextSteps && (
+				<DBDrawer
+					id="right-widget__drawer"
+					data-testid={testId}
+					closeButtonText=""
+					backdrop="none"
+					open={true}
+					direction="right"
+					drawerHeader={
+						<DrawerHead toggleDrawer={toggleDrawer} isCollapsed={isCollapsed} />
+					}
+					spacing="none"
+				>
+					<ErrorBoundary>
+						<ParallaxNextSteps />
+					</ErrorBoundary>
+				</DBDrawer>
+			)}
 			<ItemsDrawer id="items-drawer" />
 		</div>
 	);

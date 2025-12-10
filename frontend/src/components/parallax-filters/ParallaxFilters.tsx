@@ -3,14 +3,16 @@ import { DBButton, DBCustomSelect, DBIcon, DBInput } from '@db-ux/react-core-com
 import clsx from 'clsx';
 import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ItemInfo } from 'src/components/item-info/ItemInfo';
 import { Loading } from 'src/components/loading/Loading';
 import { NodeLabelId } from 'src/models/node';
 import { ParallaxFilters as ParallaxFiltersType } from 'src/models/parallax';
 import { useParallaxStore } from 'src/stores/parallax';
 import { parallaxApi } from 'src/utils/api/parallax';
 import { clone } from 'src/utils/helpers/general';
+import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 import { idFormatter } from 'src/utils/idFormatter';
-import { ParallaxFiltersLabelsDropdown, ParallaxFiltersProps } from './ParallaxFilters.interfaces';
+import { ParallaxFiltersProps } from './ParallaxFilters.interfaces';
 
 export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps) => {
 	const { t } = useTranslation();
@@ -19,14 +21,13 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 	const currentParallaxHistoryIndex = useParallaxStore((store) => store.currentHistoryIndex);
 	const initialParallaxQuery = useParallaxStore((store) => store.initialQuery);
 	const isParallaxLoading = useParallaxStore((store) => store.isLoading);
+	const [, setRenderKey] = useState(window.crypto.randomUUID());
 	// can't manage this state with "defaultValue" prop as we did with the DBInput component (probably
 	// because we are not managing the "key" prop)
-	const [labelsFilterDropdown, setLabelsFilterDropdown] = useState<ParallaxFiltersLabelsDropdown>(
-		{
-			options: [],
-			values: []
-		}
-	);
+	const [labelsFilterDropdown, setLabelsFilterDropdown] = useState<
+		Array<{ label: string; value: NodeLabelId }>
+	>([]);
+	// TODO refactor to use separate states for properties and labels values
 	const filtersRef = useRef<ParallaxFiltersType>({ properties: {}, labels: [] });
 	const rootElementClassName = clsx('parallax-filters', className);
 
@@ -41,22 +42,21 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 		}
 
 		if (parallaxData) {
-			setLabelsFilterDropdown({
-				options: parallaxData.labels.map((labelId) => {
+			setLabelsFilterDropdown(
+				parallaxData.labels.map((labelNode) => {
 					return {
-						label: idFormatter.parseIdToName(labelId),
-						value: labelId
+						label: idFormatter.parseIdToName(labelNode.title),
+						value: getNodeSemanticIdOrId(labelNode)
 					};
-				}),
-				values: filtersRef.current.labels
-			});
+				})
+			);
 		}
 	}, [currentParallaxHistoryIndex, initialParallaxQuery, parallaxHistory]);
 
 	const applyPropertyFilters = () => {
 		const initialQuery = clone(initialParallaxQuery);
 		const propertyFilters = filtersRef.current.properties;
-		const labelFilters = labelsFilterDropdown.values;
+		const labelFilters = filtersRef.current.labels;
 		const history = clone(parallaxHistory);
 		const currentHistoryIndex = useParallaxStore.getState().currentHistoryIndex;
 		const propertyFiltersWithValues: Record<string, string> = {};
@@ -82,10 +82,21 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 	};
 
 	const onLabelsFilterChange = (values: Array<NodeLabelId>) => {
-		setLabelsFilterDropdown({
-			options: labelsFilterDropdown.options,
-			values: values
-		});
+		filtersRef.current.labels = values;
+		reRender();
+	};
+
+	const reRender = () => {
+		setRenderKey(window.crypto.randomUUID());
+	};
+
+	const reset = () => {
+		filtersRef.current = {
+			properties: {},
+			labels: []
+		};
+
+		applyPropertyFilters();
 	};
 
 	const labelsTitle = t('parallax_filters_labels_title');
@@ -96,6 +107,7 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 	const labelSelectNoResultsText = t('parallax_filters_select_no_results_text');
 	const labelSelectSelectAllLabel = t('parallax_filters_select_select_all_label');
 	const noParallaxDataMessage = t('parallax_next_steps_no_parallax_data_message');
+	const resetButtonTitle = t('parallax_filters_reset_button_title');
 
 	return (
 		<Loading isLoading={isParallaxLoading} renderChildrenWhileLoading={true}>
@@ -108,8 +120,8 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 					<div className="parallax-filters__content">
 						<h6>{labelsTitle}</h6>
 						<DBCustomSelect
-							options={labelsFilterDropdown.options}
-							values={labelsFilterDropdown.values}
+							options={labelsFilterDropdown}
+							values={filtersRef.current.labels}
 							showLabel={false}
 							placeholder={labelSelectPlaceholder}
 							showSearch={true}
@@ -126,9 +138,10 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 
 						<h6>{propertiesTitle}</h6>
 						<div className="parallax-filters__filters">
-							{parallaxData.properties.map((propertyId, index) => {
-								const label = idFormatter.parseIdToName(propertyId);
-								const defaultValue = filtersRef.current.properties[propertyId];
+							{parallaxData.properties.map((propertyNode, index) => {
+								const propertyId = getNodeSemanticIdOrId(propertyNode);
+								const defaultValue =
+									filtersRef.current.properties[propertyId] || '';
 
 								const onChange = (event: ChangeEvent<HTMLInputElement>) => {
 									if (event.target.value.trim()) {
@@ -137,6 +150,8 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 									} else {
 										delete filtersRef.current.properties[propertyId];
 									}
+
+									reRender();
 								};
 
 								return (
@@ -144,9 +159,11 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 										className="parallax-filters__filter"
 										key={propertyId + '-' + index}
 									>
+										<ItemInfo item={propertyNode} />
 										<DBInput
-											defaultValue={defaultValue}
-											label={label}
+											value={defaultValue}
+											label=""
+											showLabel={false}
 											placeholder=""
 											validation="no-validation"
 											onChange={onChange}
@@ -154,13 +171,20 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 									</div>
 								);
 							})}
-							<DBButton
-								onClick={applyPropertyFilters}
-								variant="brand"
-								disabled={isParallaxLoading || !parallaxData}
-							>
-								{applyButtonTitle}
-							</DBButton>
+							<div className="parallax-filters__buttons">
+								<DBButton variant="ghost" icon="cross" onClick={reset}>
+									{resetButtonTitle}
+								</DBButton>
+
+								<DBButton
+									onClick={applyPropertyFilters}
+									variant="brand"
+									disabled={isParallaxLoading || !parallaxData}
+									icon="check"
+								>
+									{applyButtonTitle}
+								</DBButton>
+							</div>
 						</div>
 					</div>
 				)}

@@ -12,6 +12,7 @@ import { ParaQueryEditorProps } from './ParaQueryEditor.interfaces';
 export const ParaQueryEditor = ({
 	paraQuery,
 	onParameterChange,
+	defaultParameterValues,
 	id,
 	className,
 	testId
@@ -60,10 +61,14 @@ export const ParaQueryEditor = ({
 			onParameterChange(parameterKey, event.target.value);
 		};
 
+		const defaultValue = defaultParameterValues
+			? defaultParameterValues[parameterKey]
+			: parameter.default_value;
+
 		return (
 			<DBInput
 				label={parameter.help_text}
-				defaultValue={parameter.default_value}
+				defaultValue={defaultValue}
 				onChange={onChange}
 				dataList={parameter.suggestions}
 				validation="no-validation"

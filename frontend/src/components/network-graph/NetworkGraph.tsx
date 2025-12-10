@@ -85,6 +85,7 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	}, []);
 
 	useEffect(() => {
+		// TODO this probably needs to be checked only once
 		const renderingCapabilities = checkBrowserRenderingCapabilities();
 
 		if (renderingCapabilities.softwareRendering && !isRenderingCapabilitiesWarningShown) {

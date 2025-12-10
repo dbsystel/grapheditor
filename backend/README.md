@@ -86,6 +86,29 @@ To run it, do following:
   disable  auto-formatting using the `#fmt: ...` syntax, in case applying formatting
   rules make the code less readable.
 
+# Profiling
+
+In order to enable profiling, you can set the variable `GUI_PROFILE_DIR`, for example:
+
+```bash
+GUI_PROFILE_DIR=".profiler" python3 main.py
+```
+
+During execution the web server generates a `.prof` file in `$GUI_PROFILE_DIR` for each
+request it receives.
+
+There are several tools to visualize profile files, for example:
+
+```bash
+pyprof2calltree -i <INPUT.prof> -o <OUTPUT>.out
+kcachegrind <OUTPUT>.out
+```
+or https://jiffyclub.github.io/snakeviz/
+
+```
+snakeviz <INPUT.prof>
+```
+
 # Troubleshooting 
 
 ## Docker setup in wsl2

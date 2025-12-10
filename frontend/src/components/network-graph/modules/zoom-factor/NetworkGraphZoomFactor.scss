@@ -1,20 +1,20 @@
-@use "../../NetworkGraph.variables";
+@use '../../NetworkGraph.variables';
 
 #{NetworkGraph.$network-graph-root-element-selector} {
+	&__zoom-factor-title {
+		display: flex;
+		justify-content: space-between;
+		font: var(--db-type-body-xs);
+	}
 	&__zoom-factor-content {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		gap: 10px;
+		gap: var(--db-spacing-fixed-md);
 
 		input {
 			flex-grow: 1;
 			cursor: pointer;
 		}
-	}
-
-	&__zoom-factor-top-block {
-		display: flex;
-		justify-content: space-between;
-		font: var(--db-type-body-xs);
 	}
 }

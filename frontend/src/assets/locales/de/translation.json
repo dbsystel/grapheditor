@@ -218,10 +218,13 @@
 	"visual_result_object_table": "Objekttabelle",
 	"visual_result_table": "Ergebnistabelle",
 	"graph_zoom_speed": "Zoomgeschwindigkeit ",
+	"graph_zoom_speed_reset": "Zurücksetzen",
 	"graph_default_node_labels_label": "Neue Knoten Labels",
 	"graph_default_node_labels_placeholder": "Wählen Sie Labels für neue Knoten",
 	"graph_default_relation_type_label": "Neue Relation Typ",
 	"graph_default_relation_type_placeholder": "Wählen Sie den Typ für neue Relationen",
+	"graph_font_size_title": "Schriftgröße in %",
+	"graph_font_size_reset": "Zurücksetzen",
 	"grassfile_manager_confirm_delete_style_message": "Möchten Sie das Stylesheet \"{{styleName}}\" wirklich löschen?",
 	"grassfile_manager_file_label": "Graph Stylesheet (GraSS)",
 	"grassfile_manager_file_upload_title": "Stylesheet hochladen",
@@ -298,6 +301,7 @@
 	"parallax_filters_labels_title": "Labels",
 	"parallax_filters_properties_title": "Eigenschaften",
 	"parallax_filters_apply_button_title": "Anwenden",
+	"parallax_filters_reset_button_title": "Reset",
 	"para_queries_dropdown_no_results": "Keine passenden ParaQueries gefunden",
 	"para_queries_dropdown_loading": "ParaQueries werden geladen",
 	"para_queries_dropdown_placeholder": "ParaQuery auswählen",
@@ -309,5 +313,10 @@
 	"theme_light": "Hell",
 	"theme_dark": "Dunkel",
 	"settings": "Einstellungen",
-	"links": "Links"
+	"links": "Links",
+	"customer_logo_alt_text": "Bitte stellen Sie ein gültiges .png-Logo zur Verfügung.",
+	"customer_logo_title_text": "Ihr Logo",
+	"homepage_title": "IGA Startseite",
+	"homepage_queries_title": "IGA Abfragen",
+	"homepage_graph_title": "IGA Graph"
 }

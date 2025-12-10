@@ -228,8 +228,9 @@ When working with global state, please don't mix one state properties or methods
 
 `@db-ux/react-core-components` come with a whitelabel theme. If you want to use another theme, you can generate one via <br>
 https://design-system.deutschebahn.com/theme-builder/main/customization or you can manually create one by simply overwriting existing <br>
-CSS variables. The newly generated theme files should be added to the `src/assets/themes` directory and included into the main SCSS <br>
-file (`src/assets/scss/main.scss`).
+CSS variables. Generated css can be placed in <br>
+file (`src/assets/scss/main.scss`)<br>
+No theme builder export support yet.
 
 ### Icon Fonts
 
@@ -356,11 +357,15 @@ Team GraphEditor. Responsible frontend developers:
 
 ## TODOs
 
-1. Revert `skipLibCheck` in `tsconfig.json` to `false` once Sigma.js reaches stable v3.
-2. Consider utilizing useEffect's cleanup function to abort ongoing/duplicate API requests
-3. Consider `subscribeWithSelector` for granular store changes subscription
-4. Switch nodes and relations to classes
-5. The `useTranslation` renders twice on first component re-render, investigate
-6. Consider increasing Error.stackTraceLimit to infinity (default is 10).
-7. Change API functions keys to more meaningful names (e.g. instead of "postNode" use something like "createCode")
-8. Consider using the `exactOptionalPropertyTypes` TS option (https://devblogs.microsoft.com/typescript/announcing-typescript-4-4/#exact-optional-property-types-(--exactoptionalpropertytypes))
+1. Resolve all TODOs in the codebase
+2. Revert `skipLibCheck` in `tsconfig.json` to `false` once Sigma.js reaches stable v3.
+3. Consider utilizing useEffect's cleanup function to abort ongoing/duplicate API requests
+4. Consider `subscribeWithSelector` for granular store changes subscription
+5. Consider switching nodes and relations to classes
+6. The `useTranslation` renders twice on first component re-render, investigate
+7. Consider increasing Error.stackTraceLimit to infinity (default is 10).
+8. Change API functions keys to more meaningful names (e.g. instead of "postNode" use something like "createCode")
+9. Consider using the `exactOptionalPropertyTypes` TS option (https://devblogs.microsoft.com/typescript/announcing-typescript-4-4/#exact-optional-property-types-(--exactoptionalpropertytypes))
+10. Refactor URL parameters workflow (define how we deal with URL parameters and their changes, create a helper function to create clean URLs and similar)
+11. Add loading states to components when fetching data from backend
+12. Add e2e tests with Playwright

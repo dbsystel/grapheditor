@@ -13,3 +13,4 @@ disable=
 good-names=f,d,i,j,k,l,x,y,v,r,tx,n,p,ns,s,e,sk,db,ppu
 
 max-line-length=100
+msg-template={abspath}:{line}: [{msg_id}({symbol}), {obj}] {msg}

@@ -2,14 +2,22 @@ import { DBCustomSelect } from '@db-ux/react-core-components';
 import { CustomSelectOptionType } from '@db-ux/react-core-components/dist/components/custom-select/model';
 import { GeneralEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { ParaQueryEditor } from 'src/components/para-query-editor/ParaQueryEditor';
 import { NodeId } from 'src/models/node';
 import { ParaQuery } from 'src/models/paraquery';
 import { useGraphStore } from 'src/stores/graph';
 import { useSearchStore } from 'src/stores/search';
-import { searchApi } from 'src/utils/api/search';
+import { paraQueriesApi } from 'src/utils/api/paraQueries';
+import {
+	GLOBAL_SEARCH_NODE_ID_KEY,
+	GLOBAL_SEARCH_PARAMETERS_KEY,
+	GLOBAL_SEARCH_TYPE_KEY,
+	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY
+} from 'src/utils/constants';
+import { isObject, isString } from 'src/utils/helpers/general';
 import { useGetParaQueries } from 'src/utils/hooks/useGetParaQueries';
 import { ParaQueriesProps } from './ParaQueries.interfaces';
 
@@ -18,8 +26,13 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 	const [options, setOptions] = useState<Array<CustomSelectOptionType>>([]);
 	const [values, setValues] = useState<Array<NodeId>>([]);
 	const [selectedParaQuery, setSelectedParaQuery] = useState<ParaQuery | null>(null);
+	const [defaultParameterValues, setDefaultParameterValues] = useState<Record<string, string>>(
+		{}
+	);
+	const [searchParams] = useSearchParams();
 	const paraQueriesRef = useRef<Record<NodeId, ParaQuery>>({});
 	const parametersRef = useRef<Record<string, string>>({});
+	const shouldPreselectByIdRef = useRef('');
 	const rootElementClassName = clsx('para-queries', className);
 
 	const { reFetch, isLoading } = useGetParaQueries({
@@ -33,9 +46,55 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 
 			setOptions(newOptions);
 			paraQueriesRef.current = response.data.paraqueries;
+
+			if (shouldPreselectByIdRef.current) {
+				const preselectedQuery = response.data.paraqueries[shouldPreselectByIdRef.current];
+				const parameters = useSearchStore
+					.getState()
+					.getUrlSearchParameter(GLOBAL_SEARCH_PARAMETERS_KEY);
+
+				// preselect the para-query in the dropdown from the URL by its ID
+				setValues([shouldPreselectByIdRef.current]);
+
+				// preselect the para-query from the URL
+				if (preselectedQuery) {
+					setSelectedParaQuery(preselectedQuery);
+				}
+
+				// use any parameters from the URL to prefill the parameter values
+				if (parameters) {
+					const parsedParameters = JSON.parse(parameters);
+
+					if (isObject(parsedParameters)) {
+						const stringParams: Record<string, string> = {};
+
+						for (const [key, value] of Object.entries(parsedParameters)) {
+							if (isString(key) && isString(value)) {
+								stringParams[key] = value;
+							}
+						}
+
+						parametersRef.current = stringParams;
+					}
+					setDefaultParameterValues(JSON.parse(parameters));
+				}
+
+				shouldPreselectByIdRef.current = '';
+			}
 		},
 		onError: () => {}
 	});
+
+	useEffect(() => {
+		const type = useSearchStore.getState().getUrlSearchParameter(GLOBAL_SEARCH_TYPE_KEY);
+		const nodeId = useSearchStore.getState().getUrlSearchParameter(GLOBAL_SEARCH_NODE_ID_KEY);
+
+		if (type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY && nodeId) {
+			// initialize the component with values from URL
+			shouldPreselectByIdRef.current = nodeId;
+			reFetch();
+		}
+	}, [searchParams]);
 
 	const onDropdownToggle = (event: GeneralEvent<HTMLDetailsElement>) => {
 		if ('newState' in event && event.newState === 'open') {
@@ -67,10 +126,7 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 		if (selectedParaQuery) {
 			useGraphStore.getState().clearPerspective();
 
-			useSearchStore.getState().setQuery(selectedParaQuery.cypher);
-			useSearchStore.getState().setCypherQueryParameters(parametersRef.current);
-
-			searchApi.executeSearch();
+			paraQueriesApi.executeParaQuery(selectedParaQuery.cypher, parametersRef.current);
 		}
 	};
 
@@ -103,6 +159,7 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 				<ParaQueryEditor
 					paraQuery={selectedParaQuery}
 					onParameterChange={onParameterChange}
+					defaultParameterValues={defaultParameterValues}
 				/>
 			)}
 		</div>

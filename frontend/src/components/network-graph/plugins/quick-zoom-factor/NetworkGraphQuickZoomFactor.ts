@@ -8,7 +8,7 @@ export const NetworkGraphQuickZoomFactor = () => {
 		sigma,
 		zoomFactor,
 		setZoomFactor,
-		zoomFactorIncrementBy,
+		zoomFactorStep: zoomFactorIncrementBy,
 		zoomFactorMin,
 		zoomFactorMax
 	} = useGraphStore((store) => store);

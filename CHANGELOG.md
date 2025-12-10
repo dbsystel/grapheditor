@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025.12.1
+
+- Startpage with customizable queries
+- Multi tenancy for
+  - Startpage
+  - Style file
+  - Translations
+  - Logos
+- Hover for properties filter
+- Reset button for properties filter
+- Default theme styling improvement
+- Bug fixes around expired sessions
+
+
 ## 2025.11.3
 
 - dropped neo4j 4.x support

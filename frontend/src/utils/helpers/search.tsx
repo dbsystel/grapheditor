@@ -4,8 +4,15 @@ import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrappe
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useItemsStore } from 'src/stores/items';
+import { SearchStoreType } from 'src/stores/search';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
-import { NOT_AVAILABLE_SIGN } from 'src/utils/constants';
+import {
+	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
+	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
+	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
+	NOT_AVAILABLE_SIGN
+} from 'src/utils/constants';
 import { isObject, isPrimitive, isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
@@ -155,4 +162,13 @@ export const buildSimpleSearchResult = (nodes: Array<Node>, relations?: Array<Re
 	}
 
 	return result;
+};
+
+export const isValidSearchType = (value: unknown): value is SearchStoreType => {
+	return (
+		value === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT ||
+		value === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
+		value === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY ||
+		value === GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
+	);
 };

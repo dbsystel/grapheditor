@@ -11,9 +11,36 @@
 	@include meta.load-css('@db-ux/core-components/build/styles/rollup.scss');
 }
 
+/* changes to whitelabel theme must be placed here */
 @layer main {
 	:root {
 		--db-icon-font-family: 'grapheditor-icon-font';
+		
+		/* changed brandcolor (red/uglyblue) */
+		--db-brand-0: #030f1a;
+  		--db-brand-1: #061927;
+  		--db-brand-2: #0b2638;
+  		--db-brand-3: #12334b;
+  		--db-brand-4: #18415d;
+  		--db-brand-5: #1f4f71;
+  		--db-brand-6: #29638c;
+  		--db-brand-7: #367daf;
+  		--db-brand-8: #4397d3;
+  		--db-brand-9: #61b2f2;
+  		--db-brand-10: #a0cbf6;
+  		--db-brand-11: #d2e4fa;
+  		--db-brand-12: #e4effc;
+  		--db-brand-13: #edf4fd;
+  		--db-brand-14: #f6fafe;
+  		--db-brand-origin-base: #1d4a6a; /* This is just to resolve the original origin color */
+  		--db-brand-origin-light-default: #1d4a6a;
+  		--db-brand-origin-light-hovered: #04121e;
+  		--db-brand-origin-light-pressed: #12334a;
+  		--db-brand-origin-dark-default: #1d4a6a;
+  		--db-brand-origin-dark-hovered: #04121e;
+  		--db-brand-origin-dark-pressed: #12334a;
+  		--db-brand-on-origin-light-default: #f6fafe;
+  		--db-brand-on-origin-dark-default: #f6fafe;
 	}
 
 	#root {

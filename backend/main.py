@@ -1,8 +1,9 @@
 #! /usr/bin/env python
+import pprint
+
 import multiprocessing
 import os
 import sys
-import traceback
 import platform
 
 import waitress
@@ -13,8 +14,6 @@ from werkzeug._reloader import run_with_reloader
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from flask_session import Session
-import neo4j.exceptions
-
 
 from blueprints.display.style_support import load_default_style
 from blueprints.maintenance.info_api_v1 import blp as info_api
@@ -32,16 +31,37 @@ from blueprints.display.style_api_v1 import blp as style_api
 from blueprints.context_menu_api_v1 import blp as context_menu_api
 
 from database.cypher_database import CypherDatabase
-from database.neo4j_connection import neo4j_connect, MaxConnectionRetries
+from database.neo4j_connection import neo4j_connect
 from database.settings import config
 
-basedir = os.path.dirname(__file__)
+from utils import basedir, get_customized_file_dir
+
 root_folder = os.path.dirname(
     os.path.abspath(__file__)
 )  # Example: current directory
 sys.path.append(root_folder)
 IS_FROZEN = getattr(sys, "frozen", False)
 api_prefix = os.environ.get("GUI_API_PREFIX", "")
+
+def custom_name():
+    return request.headers.get("X-Custom","default")
+
+
+def debug_text():
+    return f"""
+
+        <pre>
+
+        {request.url}
+
+        {request.headers}
+
+        {pprint.pformat(dict(os.environ), indent=2)}
+
+        </pre>
+    """
+
+
 
 # accessing _MEIPASS seems to be the way for dealing with frozen:
 # pylint: disable=protected-access
@@ -77,6 +97,9 @@ app.config["OPENAPI_REDOC_PATH"] = "/redoc"
 app.config["OPENAPI_REDOC_URL"] = (
     "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"
 )
+
+
+
 app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger"
 app.config["OPENAPI_SWAGGER_UI_URL"] = (
     "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
@@ -98,6 +121,8 @@ CORS(
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8081",
         "http://127.0.0.1:8000",
+        "http://127.0.0.1:8008",
+        "http://localhost:8008"
     ],
 )
 Session(app)
@@ -171,29 +196,6 @@ def route_requires_connection():
     )
 
 
-@app.errorhandler(neo4j.exceptions.ClientError)
-@app.errorhandler(neo4j.exceptions.DriverError)
-@app.errorhandler(MaxConnectionRetries)
-def neo4j_exception_handler(error):
-    """Log and propagate Neo4j error messages to the client if possible.
-
-    As usual, the user can enable sending detailed error messages to
-    the client by setting the GUI_DEV_MODE or GUI_SEND_ERROR_MESSAGES env
-    vars.
-    """
-    # In case a TransactionError is caused by another exception like
-    # a CypherSyntaxError, we want to show it's contents too
-    message = f"{repr(error)}\n{repr(error.__cause__)}"
-
-    # we also log the stacktrace (and should consider doing this on other
-    # places too)
-    current_app.logger.error(f"{message}\n{traceback.format_exc()}")
-
-    if config.dev_mode or config.send_error_messages:
-        return {"message": message}, 400
-    return "Bad request", 400
-
-
 @app.before_request
 def load_metamodels():
     if route_requires_connection():
@@ -228,7 +230,7 @@ def index():
 def favicon():
     # Returns the favicon
     return send_from_directory(
-        os.path.join(basedir, "static"), "favicon.png"
+        get_customized_file_dir("static"), "favicon.png"
     )
 
 
@@ -245,6 +247,25 @@ def assets(path):
 @app.route(f"{api_prefix}/images/<path:path>")
 def images(path):
     return send_from_directory(os.path.join(basedir, "gui", "images"), path)
+
+if config.dev_mode:
+    print("iga_debug_info configured")
+
+    @app.route(f"{api_prefix}/api/iga_debug_info")
+    @app.route(f"{api_prefix}/api/iga_debug_info/<path:subpath>")
+    def debug_info(subpath=""):
+        return f"""
+    
+        <pre>
+        {subpath}
+    """ + debug_text()
+
+
+
+@app.route(f"{api_prefix}/api/files/<string:filename>")
+def files(filename):
+    customized_filedir = get_customized_file_dir()
+    return send_from_directory(customized_filedir, filename)
 
 
 if IS_FROZEN:
@@ -294,6 +315,8 @@ if __name__ == "__main__":
     # https://stackoverflow.com/questions/70396641/how-to-run-gunicorn-inside-python-not-as-a-command-line
     elif platform.uname().system.lower()=='linux':
         print("Detected Linux, Preparing gunicorn")
+
+        # pylint: disable=import-error
         import gunicorn.app.base
 
         class StandaloneApplication(gunicorn.app.base.BaseApplication):

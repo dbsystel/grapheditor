@@ -5,7 +5,7 @@ GraphEditor and vice-versa
 import copy
 from dataclasses import dataclass
 from typing import Optional
-import re
+from flask import current_app
 import neo4j
 
 from blueprints.display.style_support import apply_style_rules
@@ -503,4 +503,16 @@ def _dict_to_cypher_part(d):
     return s
 
 
-prop_name_pat = re.compile(r"^(\w|-)+$")
+def get_grapheditor_nodes_by_ids(ids: list[str]) -> list[GraphEditorNode]:
+    """Given a list of IDs, return a list of the corresponding grapheditor nodes.
+    If an ID is missing, put a pseudo node into the list.
+    The resulting list should keep the order of the IDs.
+    """
+    nodes = current_app.graph_db.get_nodes_by_ids(ids=ids)
+    result = []
+    for nid in ids:
+        if node := nodes.get(nid, None):
+            result.append(GraphEditorNode.from_base_node(node))
+        else:
+            result.append(GraphEditorNode.create_pseudo_node(nid))
+    return result

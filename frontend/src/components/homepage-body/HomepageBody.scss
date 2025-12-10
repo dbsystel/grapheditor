@@ -1,0 +1,57 @@
+@use "@db-ux/core-foundations/build/styles/helpers";
+
+.homepage-body {
+	grid-area: content;
+	grid-column: 1 / span 3;
+	margin: var(--db-spacing-fixed-2xl) var(--db-spacing-fixed-2xl) 0;
+	position: relative;
+	z-index: 0;
+	display: grid;
+	grid-template-rows: auto 1fr;
+
+	&__header-line {
+		display: flex;
+		align-items: center;
+	}
+
+	&__logo {
+		max-width: 70px;
+		max-height: 50px;
+		margin-right: var(--db-spacing-fixed-xl);
+	}
+
+	&__content {
+		display: flex;
+		gap: var(--db-spacing-fixed-3xl);
+		overflow: auto;
+		margin: 0 var(--db-spacing-fixed-xl);
+
+		> * {
+			flex: 1;
+		}
+	}
+
+	&__queries {
+		overflow: auto;
+	}
+
+	&__graph-block {
+		display: flex;
+		flex-direction: column;
+	}
+
+	&__graph-title-block {
+		display: flex;
+		align-items: center;
+		gap: var(--db-spacing-fixed-md);
+	}
+
+	&__graph-card {
+		flex: 1;
+	}
+
+	&__queries-block {
+		display: flex;
+		flex-direction: column;
+	}
+}

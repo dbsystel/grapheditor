@@ -33,4 +33,5 @@ config = AttrDict(
     log_level=os.environ.get("GUI_LOGLEVEL", "INFO"),
     dev_mode=os.environ.get("GUI_DEV_MODE", "1") == "1",
     send_error_messages=os.environ.get("GUI_SEND_ERROR_MESSAGES", "1") == "1",
+    gui_custom_files_dir=os.getenv("GUI_CUSTOM_FILES_DIR","static/custom")
 )

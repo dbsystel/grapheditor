@@ -1,6 +1,7 @@
 import { MultiDirectedGraph } from 'graphology';
-import { PropsWithChildren, useCallback, useEffect, useState } from 'react';
+import { PropsWithChildren, useEffect, useRef, useState } from 'react';
 import Sigma from 'sigma';
+import { clearCanvasContexts } from 'src/components/network-graph/helpers';
 import {
 	GraphEditorSigmaNodeAttributes,
 	GraphEditorSigmaRelationAttributes
@@ -26,48 +27,14 @@ import {
 
 export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 	const setSigma = useGraphStore((store) => store.setSigma);
-	const sigma = useGraphStore((store) => store.sigma);
+	const setIsSigmaReady = useGraphStore((store) => store.setIsSigmaReady);
 	const resetButExclude = useGraphStore((store) => store.resetButExclude);
 	const [graphSigmaIsSet, setGraphSigmaIsSet] = useState(false);
+	const containerRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
-		return () => {
-			resetButExclude(['perspectiveId', 'perspectiveName']);
-		};
-	}, []);
+		const element = containerRef.current;
 
-	useEffect(() => {
-		return () => {
-			/**
-			 * Because the "kill" Sigma.js method just sets its canvas collections
-			 * to an empty object (this.canvasContexts = {}; this.webGLContexts = {};),
-			 * those contexts remain in the memory for some time until the garbage
-			 * collector clears them. Since we might create new Sigma instances
-			 * until the GC does its cleaning, we have to manually clear those
-			 * contexts.
-			 */
-			const canvases = sigma.getCanvases();
-			const canvasElements = Object.values(canvases);
-
-			canvasElements.forEach((canvasElement) => {
-				// it seems Sigma.js is currently using only two types of
-				// contexts: WebGL2 and 2D
-				const webGL2Context = canvasElement.getContext('webgl2');
-				const twoDContext = canvasElement.getContext('2d');
-
-				if (webGL2Context) {
-					webGL2Context.getExtension('WEBGL_lose_context')?.loseContext();
-				}
-				if (twoDContext) {
-					twoDContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
-				}
-			});
-
-			sigma.kill();
-		};
-	}, [sigma]);
-
-	const onRefChange = useCallback((element: HTMLDivElement | null) => {
 		if (element) {
 			const sigma = new Sigma<
 				GraphEditorSigmaNodeAttributes,
@@ -102,6 +69,7 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 			});
 
 			setSigma(sigma);
+			setIsSigmaReady(true);
 
 			// assign sigma to the StateManager
 			StateManager.getInstance().setSigma(sigma);
@@ -110,10 +78,32 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 
 			(window as any).sigma = sigma;
 		}
+
+		return () => {
+			if (useGraphStore.getState().isSigmaReady) {
+				const sigmaToClear = useGraphStore.getState().sigma;
+				/**
+				 * Because the "kill" Sigma.js method just sets its canvas collections
+				 * to an empty object (this.canvasContexts = {}; this.webGLContexts = {};),
+				 * those contexts remain in the memory for some time until the garbage
+				 * collector clears them. Since we might create new Sigma instances
+				 * until the GC does its cleaning, we have to manually clear those
+				 * contexts.
+				 */
+				const canvases = sigmaToClear.getCanvases();
+				const canvasElements = Object.values(canvases);
+
+				clearCanvasContexts(canvasElements);
+
+				sigmaToClear.kill();
+
+				resetButExclude(['perspectiveId', 'perspectiveName']);
+			}
+		};
 	}, []);
 
 	return (
-		<div className="network-graph__container" ref={onRefChange}>
+		<div className="network-graph__container" ref={containerRef}>
 			{graphSigmaIsSet && children}
 		</div>
 	);

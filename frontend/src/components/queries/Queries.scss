@@ -1,0 +1,11 @@
+.queries {
+	display: flex;
+	flex-direction: column;
+	gap: var(--db-spacing-fixed-sm);
+
+	&__card-content {
+		display: flex;
+		gap: var(--db-spacing-fixed-md);
+		justify-content: space-between;
+	}
+}

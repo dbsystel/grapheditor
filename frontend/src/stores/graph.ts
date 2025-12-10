@@ -1,8 +1,10 @@
 import { DEFAULT_EDGE_CURVATURE, indexParallelEdgesIndex } from '@sigma/edge-curve';
+import { getNodesInViewport } from '@sigma/utils';
 import { MultiDirectedGraph } from 'graphology';
 import { Attributes } from 'graphology-types';
 import Sigma from 'sigma';
 import {
+	clearCanvasContexts,
 	getNodeGraphData,
 	getRelationColor,
 	getRelationGraphData
@@ -14,7 +16,17 @@ import {
 } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { Node, NodeId } from 'src/models/node';
 import { Relation, RelationId } from 'src/models/relation';
-import { GRAPH_DEFAULT_ZOOMING_RATIO, GRAPH_SELECTED_EDGE_COLOR } from 'src/utils/constants';
+import {
+	GRAPH_DEFAULT_EDGE_LABEL_SIZE,
+	GRAPH_DEFAULT_FONT_SIZE_FACTOR,
+	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX,
+	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN,
+	GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP,
+	GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD,
+	GRAPH_DEFAULT_NODE_LABEL_SIZE,
+	GRAPH_HIDE_ALL_LABELS_THRESHOLD,
+	GRAPH_SELECTED_EDGE_COLOR
+} from 'src/utils/constants';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { create } from 'zustand';
@@ -25,6 +37,8 @@ type GraphStore = {
 	sigma: GraphEditorSigma;
 	// TODO maybe use a more abstract name?
 	setSigma: (sigma: GraphEditorSigma) => void;
+	isSigmaReady: boolean;
+	setIsSigmaReady: (isSigmaReady: boolean) => void;
 	isGraphRendered: boolean;
 	setIsGraphRendered: (isGraphRendered: boolean) => void;
 	perspectiveId: string | null;
@@ -79,10 +93,18 @@ type GraphStore = {
 	) => void;
 	removeRelation: (relationId: RelationId) => void;
 	zoomFactor: number;
-	setZoomFactor: (zoomFactor: number) => void;
+	setZoomFactor: (newZoomFactor: number) => void;
 	zoomFactorMin: number;
 	zoomFactorMax: number;
-	zoomFactorIncrementBy: number;
+	zoomFactorStep: number;
+	setLabelFontSizeFactor: (labelFontSizeFactor: number) => void;
+	increaseLabelFontSizeFactor: () => void;
+	decreaseLabelFontSizeFactor: () => void;
+	resetLabelFontSizeFactor: () => void;
+	resizeLabels: () => void;
+	toggleLabelsVisibility: () => void;
+	labelFontSizeFactor: number;
+	labelsRendered: boolean;
 	resetButExclude: (excludeKeys: Array<keyof InitialState>) => void;
 	reset: () => void;
 	nodeSizeFactor: number;
@@ -95,6 +117,7 @@ type GraphStore = {
 type InitialState = Omit<
 	GraphStore,
 	| 'setSigma'
+	| 'setIsSigmaReady'
 	| 'setIsGraphRendered'
 	| 'clearPerspective'
 	| 'setIsLoading'
@@ -121,6 +144,13 @@ type InitialState = Omit<
 	| 'addRelations'
 	| 'removeRelation'
 	| 'setZoomFactor'
+	| 'getZoomFactor'
+	| 'toggleLabelsVisibility'
+	| 'setLabelFontSizeFactor'
+	| 'resetLabelFontSizeFactor'
+	| 'increaseLabelFontSizeFactor'
+	| 'decreaseLabelFontSizeFactor'
+	| 'resizeLabels'
 	| 'resetButExclude'
 	| 'reset'
 	| 'getNodeSizeFactor'
@@ -146,8 +176,14 @@ const getInitialState: () => InitialState = () => {
 		allowInvalidContainer: true
 	});
 
+	const canvases = initialFakeSigmaInstance.getCanvases();
+	const canvasElements = Object.values(canvases);
+
+	clearCanvasContexts(canvasElements);
+
 	return {
 		sigma: initialFakeSigmaInstance,
+		isSigmaReady: false,
 		isGraphRendered: false,
 		isLoading: false,
 		perspectiveId: null,
@@ -156,10 +192,12 @@ const getInitialState: () => InitialState = () => {
 		defaultRelationType: null,
 		highlightedNodeIds: new Map(),
 		highlightedRelationIds: new Map(),
+		zoomFactor: 2,
 		zoomFactorMin: 1.1,
 		zoomFactorMax: 3,
-		zoomFactorIncrementBy: 0.1,
-		zoomFactor: GRAPH_DEFAULT_ZOOMING_RATIO,
+		zoomFactorStep: 0.1,
+		labelFontSizeFactor: 1,
+		labelsRendered: true,
 		nodeSizeFactor: 1,
 		isRenderingCapabilitiesWarningShown: false
 	};
@@ -181,6 +219,9 @@ const getInitialState: () => InitialState = () => {
 export const useGraphStore = create<GraphStore>((set, get) => {
 	return {
 		...getInitialState(),
+		setIsSigmaReady: (isSigmaReady) => {
+			set({ isSigmaReady: isSigmaReady });
+		},
 		setIsGraphRendered: (isGraphRendered) => {
 			set({ isGraphRendered: isGraphRendered });
 		},
@@ -418,10 +459,10 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 				get().sigma.getGraph().dropEdge(relationId);
 			}
 		},
-		setZoomFactor: (zoomFactor) => {
-			set({ zoomFactor: zoomFactor });
+		setZoomFactor: (newZoomFactor) => {
+			set({ zoomFactor: newZoomFactor });
 
-			get().sigma.updateSetting('zoomingRatio', () => zoomFactor);
+			get().sigma.updateSetting('zoomingRatio', () => newZoomFactor);
 		},
 		reset: () => {
 			set(getInitialState());
@@ -449,6 +490,73 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 		},
 		setIsRenderingCapabilitiesWarningShown: (isRenderingCapabilitiesWarningShown) => {
 			set({ isRenderingCapabilitiesWarningShown: isRenderingCapabilitiesWarningShown });
+		},
+		toggleLabelsVisibility: () => {
+			const sigma = get().sigma;
+			// TODO check if fixable somehow else
+			// getNodesInViewport hardcoded Sigma as type
+			const nodesInViewport = getNodesInViewport(sigma as unknown as Sigma);
+			const nodeLabelsInViewport = sigma.getNodeDisplayedLabels();
+			const relationLabelsInViewport = sigma.getEdgeDisplayedLabels();
+
+			if (
+				nodeLabelsInViewport.size + relationLabelsInViewport.size >
+					GRAPH_HIDE_ALL_LABELS_THRESHOLD ||
+				nodesInViewport.length > GRAPH_HIDE_ALL_LABELS_THRESHOLD
+			) {
+				if (get().labelsRendered) {
+					get().labelsRendered = false;
+					sigma.setSetting('labelRenderedSizeThreshold', 10000000);
+				}
+			} else {
+				if (!get().labelsRendered) {
+					get().labelsRendered = true;
+					sigma.setSetting(
+						'labelRenderedSizeThreshold',
+						GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD
+					);
+				}
+			}
+		},
+		setLabelFontSizeFactor: (factor: number) => {
+			set({ labelFontSizeFactor: factor });
+			get().resizeLabels();
+		},
+		increaseLabelFontSizeFactor: () => {
+			if (get().labelFontSizeFactor < GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX) {
+				set({
+					labelFontSizeFactor:
+						get().labelFontSizeFactor + GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP
+				});
+			}
+			get().resizeLabels();
+		},
+		decreaseLabelFontSizeFactor: () => {
+			if (get().labelFontSizeFactor > GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN) {
+				set({
+					labelFontSizeFactor:
+						get().labelFontSizeFactor - GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP
+				});
+			}
+			get().resizeLabels();
+		},
+		resetLabelFontSizeFactor() {
+			set({
+				labelFontSizeFactor: GRAPH_DEFAULT_FONT_SIZE_FACTOR
+			});
+			get().resizeLabels();
+		},
+		resizeLabels: () => {
+			const camera = get().sigma.getCamera();
+			get().sigma.updateSetting(
+				'labelSize',
+				() => (GRAPH_DEFAULT_NODE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
+			);
+			get().sigma.updateSetting(
+				'edgeLabelSize',
+				() => (GRAPH_DEFAULT_EDGE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
+			);
+			get().toggleLabelsVisibility();
 		}
 	};
 });

@@ -17,7 +17,7 @@ import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
 import {
-	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES,
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
 	GRAPH_LAYOUT_PERSPECTIVE,
 	GraphEditorTypeSimplified
 } from 'src/utils/constants';
@@ -166,13 +166,14 @@ export const processPerspective = (perspective: Perspective) => {
 
 	unHighlightNodes();
 	unHighlightRelations();
+	// TODO check the PerspectiveFinder component, there is a hook with perspectiveId dependency
 	setPerspectiveId(perspective.id);
 	setPerspectiveName(perspective.name || '');
 	setAlgorithm(GRAPH_LAYOUT_PERSPECTIVE);
 	setIsResultProcessed(false);
 	setResult({
 		data: buildPerspectiveSearchResult(nodes, relations),
-		type: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
+		type: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 	});
 };
 

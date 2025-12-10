@@ -4,12 +4,12 @@ import { ToggleGroupOption } from 'src/components/toggle-group/ToggleGroup.inter
 import { useGraphStore } from 'src/stores/graph';
 import { SearchStoreType, useSearchStore } from 'src/stores/search';
 import {
-	GLOBAL_SEARCH_PARAMETER_KEY,
+	GLOBAL_SEARCH_QUERY_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
-	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES,
-	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES,
+	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
 	GRAPH_LAYOUT_FORCE_ATLAS_2
 } from 'src/utils/constants';
 import { SearchOptionsProps } from './SearchOptions.interfaces';
@@ -29,7 +29,7 @@ export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => 
 		setType(newType);
 
 		const urlType = getUrlSearchParameter(GLOBAL_SEARCH_TYPE_KEY);
-		const urlQuery = getUrlSearchParameter(GLOBAL_SEARCH_PARAMETER_KEY);
+		const urlQuery = getUrlSearchParameter(GLOBAL_SEARCH_QUERY_KEY);
 
 		if (newType === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
 			if (urlType === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT && urlQuery) {
@@ -62,12 +62,12 @@ export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => 
 			icon: 'magnifying_glass'
 		},
 		{
-			value: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES,
+			value: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
 			label: t('global_search_perspective'),
 			icon: 'scan_eye'
 		},
 		{
-			value: GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES,
+			value: GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 			label: 'ParaQueries',
 			icon: 'pen'
 		}

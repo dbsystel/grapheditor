@@ -4,7 +4,7 @@ from flask_smorest import Blueprint
 
 from blueprints.maintenance.login_api import require_tab_id
 from blueprints.graph import parallax_model
-from database.mapper import GraphEditorNode
+from database.mapper import GraphEditorNode, get_grapheditor_nodes_by_ids
 from database.utils import abort_with_json
 from database.id_handling import get_base_id, compute_semantic_id, GraphEditorLabel
 
@@ -30,6 +30,7 @@ def _normalize_filters(filters):
     if 'labels' in filters:
         result['labels'] = [get_base_id(label) for label in filters['labels']]
     return result
+
 
 @blp.route("")
 class Parallax(MethodView):
@@ -162,21 +163,28 @@ class Parallax(MethodView):
         result_nodes = self._apply_steps(nodes, steps or [])
         result_nids = [get_base_id(nid) for nid in result_nodes]
         next_steps = self._next_types(result_nids)
+
+        prop_sem_ids = [
+            compute_semantic_id(prop_name, GraphEditorLabel.MetaProperty)
+            for prop_name in
+            current_app.graph_db.get_all_node_properties(result_nids)
+        ]
+        prop_nodes = get_grapheditor_nodes_by_ids(prop_sem_ids)
+
+        label_sem_ids = [
+            compute_semantic_id(label, GraphEditorLabel.MetaLabel)
+                for label in
+                current_app.graph_db.get_all_labels(result_nids)
+        ]
+        label_nodes = get_grapheditor_nodes_by_ids(label_sem_ids)
+
         return {
             'nodes': {
                 k: GraphEditorNode.from_base_node(node)
                 for k, node in result_nodes.items()
             },
-            'properties': [
-                compute_semantic_id(prop_name, GraphEditorLabel.MetaProperty)
-                for prop_name in
-                current_app.graph_db.get_all_node_properties(result_nids)
-            ],
-            'labels': [
-                compute_semantic_id(label, GraphEditorLabel.MetaLabel)
-                for label in
-                current_app.graph_db.get_all_labels(result_nids)
-            ],
+            'properties': prop_nodes,
+            'labels': label_nodes,
             'incomingRelationTypes': next_steps['incoming'],
             'outgoingRelationTypes': next_steps['outgoing'],
         }

@@ -129,5 +129,8 @@ export const endpoints = {
 	},
 	getParaQueriesPath: () => {
 		return '/v1/paraquery';
+	},
+	getHomepageDataPath: () => {
+		return 'files/homepage.json';
 	}
 } as const;

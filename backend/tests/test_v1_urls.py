@@ -12,6 +12,7 @@ import uuid
 import pytest
 from flask import g
 
+# pylint: disable=import-error
 from helpers import (
     fetch_node_by_id,
     fetch_sample_node,
@@ -28,7 +29,7 @@ from helpers import (
 
 # pylint falsely thinks find_db_or_start_testcontainer and logged_in
 # are not used, but they are passed as fixture to tests.
-# pylint: disable=unused-import
+# pylint: disable=unused-import, import-error
 from setup import (
     login,
     BASE_URL,
@@ -2298,12 +2299,18 @@ def test_parallax_without_filters():
         "MetaProperty::_ft__tech_",
         "MetaProperty::_uuid__tech_",
         "MetaProperty::description__tech_",
-        "MetaProperty::name__tech_"]) == set(response.json["properties"])
+        "MetaProperty::name__tech_"]) == set(
+            node["semanticId"]
+            for node in response.json["properties"]
+        )
 
     assert set([
         "MetaLabel::MetaLabel__tech_",
         "MetaLabel::___tech_"
-    ]) == set(response.json["labels"])
+    ]) == set(
+        node["semanticId"]
+        for node in response.json["labels"]
+    )
 
     # Test single step.
     response = client.post(

@@ -1,3 +1,5 @@
+import { clearCanvasContexts } from 'src/components/network-graph/helpers';
+
 export const checkBrowserRenderingCapabilities = () => {
 	// consider https://www.npmjs.com/package/detect-gpu
 	const canvas = document.createElement('canvas');
@@ -34,6 +36,8 @@ export const checkBrowserRenderingCapabilities = () => {
 					result.softwareRendering = false;
 				}
 			}
+
+			clearCanvasContexts([canvas]);
 		}
 	} catch {
 		/* empty */

@@ -18,9 +18,6 @@ db_versions = dict()
 # the inconsistent-return-statements warning is a false positive
 # pylint: disable=inconsistent-return-statements
 
-class MaxConnectionRetries(Exception):
-    pass
-
 class Neo4jConnection:
     """Proxy for Neo4j connection supporting transaction-based operations."""
 
@@ -169,6 +166,7 @@ class Neo4jConnection:
                 Connection to {self.host} as {self.username} expired, retrying ({retry_count}).
                 """)
                 self._setup_driver(self.host, self.username, self.password)
+        abort_with_json(400, "Max connection retries limit reached")
 
 
     def commit(self):
@@ -242,7 +240,7 @@ class Neo4jConnection:
 
         status = None
         if name:
-            result = self.run(f"SHOW DATABASE {name}", _as_admin=True).single()
+            result = self.run(f"SHOW DATABASE `{name}`", _as_admin=True).single()
             if result:
                 self.database = result.get("name", None)
                 status = result.get("currentStatus", "")

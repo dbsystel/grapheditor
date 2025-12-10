@@ -1,11 +1,11 @@
 import { isAxiosError } from 'axios';
 import { useDrawerStore } from 'src/stores/drawer';
-import { SearchResultType, useSearchStore } from 'src/stores/search';
+import { SearchResultType, SearchStoreType, useSearchStore } from 'src/stores/search';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
 import {
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
-	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES
+	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY
 } from 'src/utils/constants';
 import { getFullTextSearch } from 'src/utils/fetch/getFullTextSearch';
 import { postCypherQuerySearch } from 'src/utils/fetch/postCypherQuerySearch';
@@ -18,10 +18,15 @@ export const searchApi = {
 	executeSearch: executeSearch
 };
 
-async function executeSearch() {
-	const query = useSearchStore.getState().query;
-	const cypherQueryParameters = useSearchStore.getState().cypherQueryParameters;
-	const type = useSearchStore.getState().type;
+async function executeSearch(parameters?: {
+	query?: string;
+	type?: SearchStoreType;
+	cypherQueryParameters?: Record<string, string>;
+}) {
+	const query = parameters?.query || useSearchStore.getState().query;
+	const cypherQueryParameters =
+		parameters?.cypherQueryParameters || useSearchStore.getState().cypherQueryParameters;
+	const type = parameters?.type || useSearchStore.getState().type;
 	let searchResultType: SearchResultType = '';
 
 	if (!query.trim()) {
@@ -36,10 +41,10 @@ async function executeSearch() {
 	let responseResult: CypherQuerySearchResult = [];
 
 	try {
-		// if cypher query search or para-queries
+		// if cypher query search or para-query
 		if (
 			type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
-			type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES
+			type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY
 		) {
 			const response = await searchApi.postCypherQuerySearch({
 				queryText: query || '',

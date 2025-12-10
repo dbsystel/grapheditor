@@ -1,0 +1,64 @@
+{
+  "title": "homepage_title",
+  "queriesTitle": "Meine Abfragen",
+  "queriesList": [
+    {
+      "type": "full-text",
+      "query": "alice",
+      "title": "full-text example",
+      "description": "Updates the status of a specific order to 'shipped'."
+    },
+    {
+      "type": "para-query",
+      "queryParameters": {
+        "label": "MetaProperty__tech_"
+      },
+      "title": "para-query example",
+      "description": "Return all nodes of a certain type",
+      "nodeId": "id::4:bb368931-775e-4eb9-a9fd-a06c3b6efc14:25"
+    },
+    {
+      "type": "cypher-query",
+      "query": "match (a) where not a:Perspective__tech_ optional match (a)-[r]->(b) where not  b:Perspective__tech_ and  type(r) <> \"pos__tech_\" return * limit 30",
+      "title": "cypher-query example",
+      "description": "Default cypher query with limit 30"
+    },
+    {
+      "type": "perspective",
+      "title": "perspective example",
+      "description": "A saved perpspective",
+      "nodeId": "id::4:bb368931-775e-4eb9-a9fd-a06c3b6efc14:30"
+    },
+    {
+      "type": "full-text",
+      "query": "alice",
+      "title": "full-text example",
+      "description": "Updates the status of a specific order to 'shipped'."
+    },
+    {
+      "type": "full-text",
+      "query": "alice",
+      "title": "full-text example",
+      "description": "Updates the status of a specific order to 'shipped'."
+    },
+    {
+      "type": "full-text",
+      "query": "alice",
+      "title": "full-text example",
+      "description": "Updates the status of a specific order to 'shipped'."
+    },
+    {
+      "type": "full-text",
+      "query": "alice",
+      "title": "full-text example",
+      "description": "Updates the status of a specific order to 'shipped'."
+    }
+  ],
+  "graphTitle": "Graphdarstellung einer Abfrage",
+  "graphQuery":     {
+    "type": "cypher-query",
+    "query": "match (a) where not a:Perspective__tech_ optional match (a)-[r]->(b) where not  b:Perspective__tech_ and  type(r) <> \"pos__tech_\" return * limit 300",
+    "title": "cypher-query example",
+    "description": "Fetches all active users from the users table."
+  }
+}

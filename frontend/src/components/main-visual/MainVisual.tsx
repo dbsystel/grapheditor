@@ -24,7 +24,7 @@ const NetworkGraph = lazy(() =>
 
 /**
  * A main visual results page.
- * It will try and fetch query results on each GLOBAL_SEARCH_PARAMETER_KEY search
+ * It will try and fetch query results on each GLOBAL_SEARCH_QUERY_KEY search
  * parameter change.
  */
 export const MainVisual = ({ id, className, testId }: MainVisualProps) => {

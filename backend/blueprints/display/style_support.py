@@ -26,8 +26,11 @@ from database.utils import remove_newlines
 from database.attr_dict import DefaultAttrDict
 from database.base_types import BaseNode, BaseRelation, BaseElement
 
+from utils import get_customized_file_dir
+
+
 ppu = pp.unicode
-DEFAULT_STYLE_FILE = "static/style.grass"
+
 
 # Regular expressions
 RE_VAR_REFERENCE = re.compile(r"{(.*?)}")
@@ -290,9 +293,11 @@ class StyleRule:
 def load_default_style():
     """Load default grass file."""
 
+    default_style_file = os.path.join(get_customized_file_dir(),"style.grass")
+
     try:
         with open(
-            os.path.join(os.environ["GRAPHEDITOR_BASEDIR"], DEFAULT_STYLE_FILE),
+            os.path.join(os.environ["GRAPHEDITOR_BASEDIR"], default_style_file),
             "rb",
         ) as file:
             if file:
@@ -301,7 +306,7 @@ def load_default_style():
                 g.DEFAULT_STYLE_RULES = []
     except (pp.ParseException, FileNotFoundError) as e:
         current_app.logger.error(
-            f"error processing style file {DEFAULT_STYLE_FILE}: {e}"
+            f"error processing style file {default_style_file}: {e}"
         )
 
 

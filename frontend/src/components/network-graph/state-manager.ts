@@ -562,8 +562,6 @@ export class StateManager {
 		const state = this.getSelectedState();
 
 		if (state.transitionTo.includes(newState)) {
-			//console.log('from', this.currentState, 'to', newState);
-
 			state.callbacks.forEach((callback) => {
 				if (callback.afterCallback && !callback.afterCallbackExecuted) {
 					callback.afterCallbackExecuted = true;

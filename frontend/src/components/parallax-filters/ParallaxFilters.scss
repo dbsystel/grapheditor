@@ -19,6 +19,7 @@
 
 	&__filter {
 		display: flex;
+		flex-direction: column;
 		font-size: 12px;
 
 		&:not(:last-child) {
@@ -43,5 +44,11 @@
 			margin-top: var(--db-spacing-fixed-sm);
 			align-self: flex-end;
 		}
+	}
+
+	&__buttons {
+		display: flex;
+		column-gap: var(--db-spacing-fixed-sm);
+		justify-content: end;
 	}
 }

@@ -9,7 +9,7 @@ import { useGraphStore } from 'src/stores/graph';
 import { SearchStoreSearchType, useSearchStore } from 'src/stores/search';
 import { searchApi } from 'src/utils/api/search';
 import {
-	GLOBAL_SEARCH_PARAMETER_KEY,
+	GLOBAL_SEARCH_QUERY_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
@@ -82,16 +82,16 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 	const triggerSearch = () => {
 		const searchQuery = getValue();
 
+		clearPerspective();
 		// update search store
 		setQuery(searchQuery);
-		clearPerspective();
 		addHistoryEntry(type, searchQuery);
 		searchApi.executeSearch();
 
 		setSearchParameters({
 			...Object.fromEntries(searchParams),
 			[GLOBAL_SEARCH_TYPE_KEY]: type,
-			[GLOBAL_SEARCH_PARAMETER_KEY]: searchQuery
+			[GLOBAL_SEARCH_QUERY_KEY]: searchQuery
 		});
 	};
 

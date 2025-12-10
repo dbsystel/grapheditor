@@ -1,17 +1,20 @@
 import { ItemPropertyType } from 'src/models/item';
 
-export const GLOBAL_SEARCH_PARAMETER_KEY = 'q';
+export const GLOBAL_SEARCH_QUERY_KEY = 'q';
 export const GLOBAL_SEARCH_TYPE_KEY = 'type';
 export const GLOBAL_SEARCH_PRESENTATION_KEY = 'presentation';
 export const GLOBAL_SEARCH_ALGORITHM_KEY = 'algorithm';
+export const GLOBAL_SEARCH_NODE_ID_KEY = 'node_id';
+export const GLOBAL_SEARCH_PARAMETERS_KEY = 'parameters';
+
 export const GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE =
 	'match (a) where not a:Perspective__tech_ optional match (a)-[r]->(b) where not  b:Perspective__tech_ and  type(r) <> "pos__tech_" return * limit 300';
 export const GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE = '';
 
 export const GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY = 'cypher-query';
 export const GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT = 'full-text';
-export const GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES = 'perspectives';
-export const GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES = 'para-queries';
+export const GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE = 'perspective';
+export const GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY = 'para-query';
 export const GLOBAL_SEARCH_TYPE_VALUE_PARALLAX = 'parallax';
 
 export const GRAPH_PRESENTATION_GRAPH = 'graph';
@@ -127,8 +130,12 @@ export const GRAPH_DEFAULT_EDGE_LABEL_FONT = 'Arial';
 export const GRAPH_DEFAULT_EDGE_LABEL_WEIGHT = 'normal';
 export const GRAPH_DEFAULT_EDGE_MIN_THICKNESS = 1.2;
 export const GRAPH_DEFAULT_ZOOMING_RATIO = 2.0;
+export const GRAPH_DEFAULT_FONT_SIZE_FACTOR = 1;
+export const GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX = 100;
+export const GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN = 0.1;
+export const GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP = 0.1;
 export const GRAPH_DEFAULT_LABEL_LIGHT_COLOR = '#ffffff';
-export const GRAPH_DEFAULT_LABEL_DARK_COLOR = '#000000';
+export const GRAPH_DEFAULT_LABEL_DARK_COLOR = '#1c1818ff';
 export const GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD = 0;
 
 export const GRAPH_SELECTED_EDGE_COLOR = DB_COLOR;

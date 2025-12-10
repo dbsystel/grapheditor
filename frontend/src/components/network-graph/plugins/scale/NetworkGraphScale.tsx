@@ -1,28 +1,22 @@
-import { getNodesInViewport } from '@sigma/utils';
 import { useEffect, useRef } from 'react';
-import Sigma from 'sigma';
 import { CameraState, WheelCoords } from 'sigma/types';
 import { calculateNodeGraphSize } from 'src/components/network-graph/helpers';
 import { StateManager } from 'src/components/network-graph/state-manager';
 import { useGraphStore } from 'src/stores/graph';
-import {
-	GRAPH_DEFAULT_EDGE_LABEL_SIZE,
-	GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD,
-	GRAPH_DEFAULT_NODE_LABEL_SIZE,
-	GRAPH_HIDE_ALL_LABELS_THRESHOLD
-} from 'src/utils/constants';
+import { GRAPH_DEFAULT_FONT_SIZE_FACTOR } from 'src/utils/constants';
 
 export const NetworkGraphScale = () => {
 	const sigma = useGraphStore((store) => store.sigma);
 	const getNodeSizeFactor = useGraphStore((store) => store.getNodeSizeFactor);
 	const setNodeSizeFactor = useGraphStore((store) => store.setNodeSizeFactor);
-
+	const toggleLabelsVisibility = useGraphStore((store) => store.toggleLabelsVisibility);
+	const resizeLabels = useGraphStore((store) => store.resizeLabels);
+	const increaseLabelFontSizeFactor = useGraphStore((store) => store.increaseLabelFontSizeFactor);
+	const decreaseLabelFontSizeFactor = useGraphStore((store) => store.decreaseLabelFontSizeFactor);
 	const defaultDataRef = useRef({
-		nodeLabelSize: sigma.getSetting('labelSize') || GRAPH_DEFAULT_NODE_LABEL_SIZE,
-		relationLabelSize: sigma.getSetting('edgeLabelSize') || GRAPH_DEFAULT_EDGE_LABEL_SIZE,
-		cameraRatio: sigma.getCamera().ratio,
-		labelsRendered: true,
-		labelSizeFactor: 1
+		labelFontSizeFactor:
+			useGraphStore((store) => store.labelFontSizeFactor) || GRAPH_DEFAULT_FONT_SIZE_FACTOR,
+		cameraRatio: sigma.getCamera().ratio
 	});
 	const toggleLabelsVisibilityTimeoutRef = useRef(0);
 
@@ -35,33 +29,6 @@ export const NetworkGraphScale = () => {
 			StateManager.getInstance().off('SCALE', onScale);
 		};
 	}, []);
-
-	const toggleLabelsVisibility = () => {
-		// TODO check if fixable somehow else
-		// getNodesInViewport hardcoded Sigma as type
-		const nodesInViewport = getNodesInViewport(sigma as unknown as Sigma);
-		const nodeLabelsInViewport = sigma.getNodeDisplayedLabels();
-		const relationLabelsInViewport = sigma.getEdgeDisplayedLabels();
-
-		if (
-			nodeLabelsInViewport.size + relationLabelsInViewport.size >
-				GRAPH_HIDE_ALL_LABELS_THRESHOLD ||
-			nodesInViewport.length > GRAPH_HIDE_ALL_LABELS_THRESHOLD
-		) {
-			if (defaultDataRef.current.labelsRendered) {
-				defaultDataRef.current.labelsRendered = false;
-				sigma.setSetting('labelRenderedSizeThreshold', 10000000);
-			}
-		} else {
-			if (!defaultDataRef.current.labelsRendered) {
-				defaultDataRef.current.labelsRendered = true;
-				sigma.setSetting(
-					'labelRenderedSizeThreshold',
-					GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD
-				);
-			}
-		}
-	};
 
 	const onCameraUpdate = (state: CameraState) => {
 		// camera zoom in/out - resize labels on each camera ratio (zoom) change
@@ -80,19 +47,6 @@ export const NetworkGraphScale = () => {
 				50
 			);
 		}
-	};
-
-	const resizeLabels = () => {
-		const camera = sigma.getCamera();
-		const { nodeLabelSize, relationLabelSize, labelSizeFactor } = defaultDataRef.current;
-
-		sigma.updateSetting('labelSize', () => (nodeLabelSize / camera.ratio) * labelSizeFactor);
-		sigma.updateSetting(
-			'edgeLabelSize',
-			() => (relationLabelSize / camera.ratio) * labelSizeFactor
-		);
-
-		toggleLabelsVisibility();
 	};
 
 	const onScale = (event: WheelCoords) => {
@@ -118,14 +72,12 @@ export const NetworkGraphScale = () => {
 	const onLabelScale = (event: WheelCoords) => {
 		// scroll up / zoom in
 		if (event.delta > 0) {
-			defaultDataRef.current.labelSizeFactor += 0.1;
+			increaseLabelFontSizeFactor();
 		}
 		// scroll down / zoom out
 		else {
-			defaultDataRef.current.labelSizeFactor -= 0.1;
+			decreaseLabelFontSizeFactor();
 		}
-
-		resizeLabels();
 	};
 
 	const onNodeScale = (event: WheelCoords) => {

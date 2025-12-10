@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios';
+import { useApplicationStore } from 'src/stores/application';
 import { useClipboardStore } from 'src/stores/clipboard';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useDrawerStore } from 'src/stores/drawer';
@@ -210,4 +211,17 @@ export const resetApplicationStates = () => {
 	useGraphStore.getState().reset();
 	useItemsStore.getState().reset();
 	useParallaxStore.getState().reset();
+	useApplicationStore.getState().reset();
+};
+
+export const goToHomepageView = () => {
+	useApplicationStore.getState().setIsHomepageView(true);
+};
+
+export const isHomepageView = () => {
+	return useApplicationStore.getState().isHomepageView;
+};
+
+export const goToApplicationView = () => {
+	useApplicationStore.getState().setIsHomepageView(false);
 };

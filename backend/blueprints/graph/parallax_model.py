@@ -50,12 +50,8 @@ class ParallaxPostResponseSchema(Schema):
         keys = fields.Str(),
         values = fields.Nested(node_model.NodeSchema)
     )
-    properties = fields.List(fields.Str(
-        metadata={"description": "Semantic IDs of properties in returned set."}
-    ))
-    labels = fields.List(fields.Str(
-        metadata={"description": "Semantic IDs of labels in returned set."}
-    ))
+    properties = fields.List(fields.Nested(node_model.NodeSchema()))
+    labels = fields.List(fields.Nested(node_model.NodeSchema()))
     incomingRelationTypes = fields.Dict(
         keys=fields.Str(),
         values=fields.Nested(RelationTypeInfo())

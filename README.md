@@ -37,10 +37,17 @@ Exiting main features are:
 - Rectangular nodes
 - Support for styling files (.grass) that can contain python snippets for dynamic styling
 - Support for fulltext search (optional)
+- Parameterized queries - build your own query forms using the graph to query the graph
+- Custom start page with query shortcuts
+- Multi tenancy support
 
-## Screenshot
+## Screenshot & video
 
 ![GraphEditor.png](GraphEditor.png)
+
+There is also a video from the nodes2025 conference, showing release 2025.11.1:
+
+- https://www.youtube.com/watch?v=nc1cAtnjvcQ
 
 ## Architecture
 

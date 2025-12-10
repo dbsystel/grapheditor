@@ -44,6 +44,7 @@ export type MetaNode = Overwrite<
 /**
  * See the comment above.
  */
+// TODO check if this type is correct or not
 export type PseudoNode = Overwrite<
 	Node,
 	{

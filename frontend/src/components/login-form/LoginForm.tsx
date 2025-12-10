@@ -5,6 +5,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Form } from 'src/components/form/Form';
 import { FormRow } from 'src/components/form-row/FormRow';
+import { Logo } from 'src/components/logo/Logo';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { usersApi } from 'src/utils/api/users';
@@ -36,6 +37,7 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
+			<Logo className="login-form__logo" />
 			<Form
 				onSubmit={handleSubmit(onSubmit)}
 				disableImplicitSubmission={false}

@@ -4,6 +4,7 @@ import { useParallaxStore } from 'src/stores/parallax';
 import { useSearchStore } from 'src/stores/search';
 import { GLOBAL_SEARCH_TYPE_VALUE_PARALLAX } from 'src/utils/constants';
 import { postParallax } from 'src/utils/fetch/postParallax';
+import { isHomepageView } from 'src/utils/helpers/general';
 import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 
 export const parallaxApi = {
@@ -111,7 +112,8 @@ async function wrapParallaxTrigger(callback: () => Promise<void>) {
 	if (
 		useParallaxStore.getState().isLoading ||
 		useParallaxStore.getState().apiTriggerType === 'none' ||
-		useParallaxStore.getState().shouldPreventApiCall
+		useParallaxStore.getState().shouldPreventApiCall ||
+		isHomepageView()
 	) {
 		return;
 	}

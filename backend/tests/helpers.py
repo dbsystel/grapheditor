@@ -1,6 +1,7 @@
 import io
 import os
 
+# pylint: disable=import-error
 from setup import BASE_URL, HEADERS
 
 # pylint complains that portions of blueprints.* and this test are duplicate.

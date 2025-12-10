@@ -10,11 +10,11 @@
 		align-items: center;
 		width: 100%;
 		margin-bottom: var(--db-spacing-fixed-md);
+	}
 
-		> div {
-			display: flex;
-			align-items: center;
-		}
+	&__block {
+		display: flex;
+		align-items: center;
 	}
 
 	&__divider {
@@ -24,5 +24,12 @@
 
 	&__search-button {
 		font-weight: 400;
+	}
+
+	&__logo {
+		max-width: 35px;
+		max-height: 25px;
+		margin-right: var(--db-spacing-fixed-md);
+		cursor: pointer;
 	}
 }

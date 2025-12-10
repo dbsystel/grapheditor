@@ -488,3 +488,22 @@ export const getCoordinatesPointRelativeToTargetPoint = (
 		y: target.y + (current.y - source.y)
 	};
 };
+
+export function clearCanvasContexts(canvases: Array<HTMLCanvasElement>) {
+	canvases.forEach((canvasElement) => {
+		const webGLContext =
+			canvasElement.getContext('webgl') || canvasElement.getContext('experimental-webgl');
+		const webGL2Context = canvasElement.getContext('webgl2');
+		const twoDContext = canvasElement.getContext('2d');
+
+		if (webGLContext && webGLContext instanceof WebGLRenderingContext) {
+			webGLContext.getExtension('WEBGL_lose_context')?.loseContext();
+		}
+		if (webGL2Context) {
+			webGL2Context.getExtension('WEBGL_lose_context')?.loseContext();
+		}
+		if (twoDContext) {
+			twoDContext.clearRect(0, 0, canvasElement.width, canvasElement.height);
+		}
+	});
+}

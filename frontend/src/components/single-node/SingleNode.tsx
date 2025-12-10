@@ -227,7 +227,7 @@ export const SingleNode = ({
 		}
 	};
 
-	const renderPseudoNodeWarning = isPseudoNode(node);
+	const renderPseudoNodeWarning = isPseudoNode(node) || !node.dbId;
 
 	return (
 		<DBSection id={id} className={rootElementClassName} data-testid={testId} spacing="none">

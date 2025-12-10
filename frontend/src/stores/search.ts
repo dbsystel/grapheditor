@@ -5,14 +5,14 @@ import {
 	GLOBAL_SEARCH_ALGORITHM_KEY,
 	GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE,
 	GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE,
-	GLOBAL_SEARCH_PARAMETER_KEY,
 	GLOBAL_SEARCH_PRESENTATION_KEY,
+	GLOBAL_SEARCH_QUERY_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
-	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES,
+	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_PARALLAX,
-	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES,
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
 	GRAPH_LAYOUT_FORCE_ATLAS_2,
 	GRAPH_PRESENTATION_GRAPH
 } from 'src/utils/constants';
@@ -31,9 +31,9 @@ export type LayoutModuleType =
 export type SearchResultType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARALLAX
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY
 	| '';
 
 export type SearchStoreResult = {
@@ -100,8 +100,8 @@ export type SearchStoreHistoryItem = Array<string>;
 export type SearchStoreType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVES
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERIES;
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
+	| typeof GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY;
 
 // search store search types
 export type SearchStoreSearchType =
@@ -173,8 +173,9 @@ export const useSearchStore = create<SearchStore>()(
 					const params = get().getUrlSearchParameters();
 
 					const type = params.get(GLOBAL_SEARCH_TYPE_KEY);
-					const query = params.get(GLOBAL_SEARCH_PARAMETER_KEY);
+					const query = params.get(GLOBAL_SEARCH_QUERY_KEY);
 					const presentation = params.get(GLOBAL_SEARCH_PRESENTATION_KEY);
+					// TODO use type-guard instead of type assertion
 					const algorithm = params.get(GLOBAL_SEARCH_ALGORITHM_KEY) as LayoutModuleType;
 
 					set({
@@ -264,6 +265,7 @@ export const useSearchStore = create<SearchStore>()(
 						});
 					}
 				},
+				// TODO move to helpers
 				isSearchType: (type): type is SearchStoreSearchType => {
 					return (
 						type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
