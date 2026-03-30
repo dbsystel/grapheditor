@@ -1,7 +1,7 @@
 import i18n from 'src/i18n';
 import { MetaForMeta } from 'src/models/node';
 import { testNodes } from 'src/tests/data/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { expect } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ItemProperties } from './ItemProperties';

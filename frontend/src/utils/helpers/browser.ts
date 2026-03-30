@@ -1,3 +1,4 @@
+import { ChangeEvent } from 'react';
 import { clearCanvasContexts } from 'src/components/network-graph/helpers';
 
 export const checkBrowserRenderingCapabilities = () => {
@@ -44,4 +45,17 @@ export const checkBrowserRenderingCapabilities = () => {
 	}
 
 	return result;
+};
+
+export const preventCursorJumptToEnd = async (event: ChangeEvent<HTMLInputElement>) => {
+	const targetSelectionStart = event.target.selectionStart || 0;
+	const targetSelectionEnd = event.target.selectionEnd || 0;
+
+	async function dummyAsyncFunction() {
+		/* dummy to wait for react to flush state changes and other qued stuff to be done */
+	}
+
+	await dummyAsyncFunction();
+
+	event.target.setSelectionRange(targetSelectionStart - 1, targetSelectionEnd - 1);
 };

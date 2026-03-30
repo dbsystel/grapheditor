@@ -1,12 +1,7 @@
 import './Breadcrumbs.scss';
 import clsx from 'clsx';
-import { Fragment, MouseEvent, useEffect, useState } from 'react';
-import { idFormatter } from 'src/utils/idFormatter';
-import { Breadcrumb, BreadcrumbsProps } from './Breadcrumbs.interfaces';
-
-const breadcrumbDelimiter = (
-	<span data-icon="chevron_right" className="breadcrumbs__delimiter"></span>
-);
+import { Breadcrumb } from 'src/components/breadcrumb/Breadcrumb';
+import { BreadcrumbsProps } from './Breadcrumbs.interfaces';
 
 export const Breadcrumbs = ({
 	breadcrumbs,
@@ -16,42 +11,6 @@ export const Breadcrumbs = ({
 	testId
 }: BreadcrumbsProps) => {
 	const rootElementClassName = clsx('breadcrumbs', className);
-	const [localActiveBreadcrumbIndex, setLocalActiveBreadcrumbIndex] = useState(
-		activeBreadcrumbIndex || 0
-	);
-
-	useEffect(() => {
-		if (activeBreadcrumbIndex !== undefined) {
-			setLocalActiveBreadcrumbIndex(activeBreadcrumbIndex);
-		}
-	}, [activeBreadcrumbIndex]);
-
-	const getBreadcrumbComponent = (breadcrumb: Breadcrumb, index: number) => {
-		const breadcrumbProps = {
-			className: 'breadcrumbs__item',
-			title: idFormatter.parseIdToName(breadcrumb.title || ''),
-			onClick: (event: MouseEvent<HTMLSpanElement>) => {
-				setLocalActiveBreadcrumbIndex(index);
-
-				if (breadcrumb.onClick) {
-					breadcrumb.onClick(event);
-				}
-			}
-		};
-
-		const renderDelimiter = index < breadcrumbs.length - 1;
-
-		if (localActiveBreadcrumbIndex === index) {
-			breadcrumbProps.className += ' breadcrumbs__item--active';
-		}
-
-		return (
-			<>
-				<span {...breadcrumbProps}>{idFormatter.parseIdToName(breadcrumb.text)}</span>
-				{renderDelimiter && breadcrumbDelimiter}
-			</>
-		);
-	};
 
 	if (breadcrumbs.length === 0) {
 		return null;
@@ -59,10 +18,15 @@ export const Breadcrumbs = ({
 
 	return (
 		<nav id={id} className={rootElementClassName} data-testid={testId} aria-label="breadcrumb">
-			{breadcrumbs.map((item, index) => {
-				const component = getBreadcrumbComponent(item, index);
-
-				return <Fragment key={index}>{component}</Fragment>;
+			{breadcrumbs.map((breadcrumb, index) => {
+				return (
+					<Breadcrumb
+						key={index}
+						isActive={activeBreadcrumbIndex === index}
+						shouldRenderDelimiter={index < breadcrumbs.length - 1}
+						breadcrumb={breadcrumb}
+					/>
+				);
 			})}
 		</nav>
 	);

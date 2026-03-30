@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { getParaQueries, GetParaQueriesResponse } from 'src/utils/fetch/getParaQueries';
+import { api } from 'src/utils/api/api';
+import { GetParaQueriesResponse } from 'src/utils/fetch/getParaQueries';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UseGetParaQueriesParameters = {
@@ -23,6 +24,6 @@ export const useGetParaQueries = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getParaQueries
+		fetchFunction: api.paraQueries.fetch.getParaQueries
 	});
 };

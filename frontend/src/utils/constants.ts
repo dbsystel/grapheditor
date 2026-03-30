@@ -1,4 +1,10 @@
-import { ItemPropertyType } from 'src/models/item';
+import { DBSelectOptionType } from '@db-ux/react-core-components';
+import {
+	ItemPropertyDynamicBasedOnType,
+	ItemPropertyDynamicType,
+	ItemPropertyType,
+	ItemPropertyTypeBasedOnType
+} from 'src/models/item';
 
 export const GLOBAL_SEARCH_QUERY_KEY = 'q';
 export const GLOBAL_SEARCH_TYPE_KEY = 'type';
@@ -8,7 +14,7 @@ export const GLOBAL_SEARCH_NODE_ID_KEY = 'node_id';
 export const GLOBAL_SEARCH_PARAMETERS_KEY = 'parameters';
 
 export const GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE =
-	'match (a) where not a:Perspective__tech_ optional match (a)-[r]->(b) where not  b:Perspective__tech_ and  type(r) <> "pos__tech_" return * limit 300';
+	'match (a) optional match (a)-[r]->(b) return * limit 300';
 export const GLOBAL_SEARCH_FULL_TEXT_DEFAULT_SEARCH_VALUE = '';
 
 export const GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY = 'cypher-query';
@@ -30,42 +36,71 @@ export const GRAPH_LAYOUT_NOVERLAP = 'noverlap';
 
 export const GRAPH_STYLE_DEFAULT_VALUE = 'Default';
 
-export const ITEM_PROPERTY_TYPES: Array<ItemPropertyType> = [
-	'boolean',
-	'date',
-	'duration',
-	'float',
-	'integer',
-	'list_boolean',
-	'list_date',
-	'list_duration',
-	'list_float',
-	'list_integer',
-	'list_local_datetime',
-	'list_local_time',
-	'list_point',
-	'list_string',
-	'list_zoned_time',
-	'local_datetime',
-	'local_time',
-	'point',
-	'string',
-	'zoned_time'
-];
+export const ITEM_PROPERTY_TYPES_MAPPED: {
+	[K in ItemPropertyType]: ItemPropertyTypeBasedOnType<K>;
+} = {
+	boolean: 'boolean',
+	cartesian_2d: 'cartesian_2d',
+	cartesian_3d: 'cartesian_3d',
+	date: 'date',
+	datetime: 'datetime',
+	duration: 'duration',
+	float: 'float',
+	integer: 'integer',
+	list: 'list',
+	string: 'string',
+	time: 'time',
+	wgs84_2d: 'wgs84_2d',
+	wgs84_3d: 'wgs84_3d'
+};
 
-// temporary allow only the next 3 types
-export const ALLOWED_ITEM_PROPERTY_TYPES: Array<ItemPropertyType> = [
-	'boolean',
-	'float',
-	'integer',
-	'string'
-];
+export const ITEM_PROPERTY_DYNAMIC_TYPES_MAPPED: {
+	[K in ItemPropertyDynamicType]: ItemPropertyDynamicBasedOnType<K>;
+} = {
+	map: 'map',
+	list: 'list',
+	unknown: 'unknown',
+	path: 'path'
+};
 
-export const ALLOWED_ITEM_PROPERTY_TYPE_OPTIONS = ALLOWED_ITEM_PROPERTY_TYPES.map((type) => {
-	return {
-		value: type
-	};
-});
+export const ITEM_PROPERTY_TYPES = Object.values(ITEM_PROPERTY_TYPES_MAPPED);
+
+export const ITEM_PROPERTY_DYNAMIC_TYPES = Object.values(ITEM_PROPERTY_DYNAMIC_TYPES_MAPPED);
+
+export const ITEM_PROPERTY_TYPE_OPTIONS_WITH_LIST_SUBTYPES: Array<DBSelectOptionType> =
+	ITEM_PROPERTY_TYPES.map((itemPropertyType) => {
+		return {
+			label: itemPropertyType,
+			value: itemPropertyType,
+			options:
+				itemPropertyType === 'list'
+					? ITEM_PROPERTY_TYPES.filter((listItemType) => listItemType !== 'list').map(
+							(listItemType) => {
+								const text = `list_${listItemType}`;
+
+								return {
+									label: text,
+									value: text
+								};
+							}
+						)
+					: undefined
+		};
+	});
+
+export const ITEM_PROPERTY_TYPE_OPTIONS: Array<DBSelectOptionType> =
+	ITEM_PROPERTY_TYPE_OPTIONS_WITH_LIST_SUBTYPES.filter((option) => option.value !== 'list');
+
+export const ITEM_PROPERTY_TYPE_OPTIONS_FLAT = ITEM_PROPERTY_TYPE_OPTIONS_WITH_LIST_SUBTYPES.reduce<
+	Array<DBSelectOptionType>
+>((accumulator, currentOption) => {
+	if (currentOption.options) {
+		const subOptions = currentOption.options;
+		return [...accumulator, ...subOptions];
+	} else {
+		return [...accumulator, currentOption];
+	}
+}, []);
 
 /**
  * Use regular object rather than enum due to better IDEA support.
@@ -146,9 +181,12 @@ export const GRAPH_ARROW_HEAD_WIDENESS_TO_THICKNESS_RATIO = 3.5;
 export const GRAPH_RENDER_HTML_LABELS_THRESHOLD = 200;
 export const GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM = 0.3; // higher number means greater zoom-out
 
-export const ITEM_OVERVIEW_TIMEOUT_MILLISECONDS = 700;
+export const ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS = 700;
+export const ITEM_OVERVIEW_MOUSE_LEAVE_TIMEOUT_MILLISECONDS = 100;
+export const ITEM_OVERVIEW_OFFSET = 5;
 
 export const NOT_AVAILABLE_SIGN = 'N/A';
 
 export const APP_LANGUAGES = Object.freeze<['en', 'de', 'cimode']>(['en', 'de', 'cimode']);
 export const APP_STORAGE_KEY_PREFIX = '_app_';
+export const SSO_HOST_STORAGE_KEY = APP_STORAGE_KEY_PREFIX + 'sso-host';

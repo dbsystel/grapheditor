@@ -1,0 +1,19 @@
+.add-new-property {
+	display: flex;
+	flex-direction: column;
+	row-gap: var(--db-spacing-fixed-2xs);
+
+	> .db-button {
+		border: 1px solid var(--db-neutral-on-bg-basic-emphasis-60-default);
+		background: var(--db-adaptive-bg-basic-transparent-semi-default);
+		align-self: flex-end;
+	}
+
+	.textarea-autosize {
+		background-color: var(--db-adaptive-bg-basic-level-1-default);
+	}
+
+	&__plus-button {
+		margin-bottom: var(--db-spacing-fixed-lg);
+	}
+}

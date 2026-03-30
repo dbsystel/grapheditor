@@ -1,6 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import { api } from 'src/utils/api/api';
 import {
-	postPerspective,
 	PostPerspectiveParameters,
 	PostPerspectiveResponse
 } from 'src/utils/fetch/postPerspective';
@@ -47,7 +47,7 @@ export const usePostPerspective = ({
 							relationIds: parameters.relationIds
 						};
 
-			return postPerspective(params);
+			return api.perspectives.fetch.postPerspective(params);
 		}
 	});
 };

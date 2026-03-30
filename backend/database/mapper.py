@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from typing import Optional
 from flask import current_app
 import neo4j
+from neo4j.spatial import CartesianPoint, WGS84Point
 
 from blueprints.display.style_support import apply_style_rules
-from database.utils import find_a_value
+from database.utils import abort_with_json, find_a_value
 from database.settings import config
 from database.id_handling import (
     compute_semantic_id, get_base_id, GraphEditorLabel, semantic_id_parts
@@ -50,6 +51,9 @@ pythontype2json = dict(
     list="list",
     dict="dict",
     tuple="tuple",
+    Date="date",
+    Time="time",
+    DateTime="datetime"
 )
 special_properties = [
     "MetaProperty::name",
@@ -67,6 +71,7 @@ METALABELS = {e.name for e in GraphEditorLabel}
 
 # all tech labels
 TECH_LABELS = METALABELS.union({"___tech_"})
+
 
 @dataclass
 class GraphEditorElement():
@@ -121,7 +126,7 @@ class GraphEditorNode(GraphEditorElement):
             id=nid,
             element_id=nid,
             properties={
-                get_base_id(k): v["value"]
+                get_base_id(k): grapheditorproperty2neo(v["value"])
                 for k, v in self.properties.items()
             },
             style="", # ignored
@@ -241,19 +246,20 @@ def get_relation_title(relation):
     return f"{relation.type}"
 
 
+# pylint: disable=too-many-branches
+# single dispatch on type, so complexity is not high.
 def neoobject2grapheditor(obj):
     """Converts arbitrary neo4j data to a dictionary where 'type'
     is the grapheditor typo, and 'contents' the corresponding grapheditor
     data structure"""
-    result = None
+    type_name = type(obj).__name__
+
     if isinstance(obj, neo4j.graph.Node):
         result = GraphEditorNode.from_neo_node(obj)
     elif isinstance(obj, neo4j.graph.Relationship):
         result = GraphEditorRelation.from_neo_relation(obj)
     elif isinstance(obj, neo4j.graph.Path):
-        result: list[GraphEditorElement] = [
-            GraphEditorNode.from_neo_node(obj.start_node)
-        ]
+        path_parts = [GraphEditorNode.from_neo_node(obj.start_node)]
 
         # We need to consider that paths might not be directed. E.g. a path can
         # go to a node, and the next relation doesn't start with the current
@@ -262,24 +268,83 @@ def neoobject2grapheditor(obj):
         current_node_id = obj.start_node.id
 
         for rel in obj:
-            result.append(GraphEditorRelation.from_neo_relation(rel))
+            path_parts.append(GraphEditorRelation.from_neo_relation(rel))
 
             if rel.start_node.id == current_node_id:
                 current_node = rel.end_node
             else:
                 current_node = rel.start_node
 
-            result.append(GraphEditorNode.from_neo_node(current_node))
+            path_parts.append(GraphEditorNode.from_neo_node(current_node))
             current_node_id = current_node.id
-    elif isinstance(obj, (neo4j.time.DateTime, neo4j.time.Time, neo4j.time.DateTime)):
-        result = obj.to_native()
+        result = {
+            "type": "path",
+            "value": path_parts
+        }
     elif isinstance(obj, list):
-        result = list(map(neoobject2grapheditor, obj))
+        result = {
+            'type': 'list',
+            'value': list(map(neoobject2grapheditor, obj))
+        }
     elif isinstance(obj, dict):
-        result = {k: neoobject2grapheditor(v) for (k, v) in obj.items()}
-    else:
-        result = obj
+        result = {
+            'type': 'map',
+            'value': {
+                k: neoobject2grapheditor(v) for (k, v) in obj.items()
+            }
+        }
+    elif type_name in ['DateTime', 'Date', 'Time']:
+        result = {
+            'type': pythontype2json.get(type_name, "unknown"),
+            'value': obj.iso_format()
+        }
+    elif isinstance(obj, neo4j.time.Duration):
+        result = {
+            'type': 'duration',
+            'value': str(obj)
+        }
+    elif isinstance(obj, neo4j.spatial.Point):
+        point = {}
+        # spatial types can contain different properties, depending
+        # on coordinate system (see
+        # https://neo4j.com/docs/cypher-manual/current/values-and-types/spatial/).
+        # We return a dict containing the set of properties found, and the
+        # Spatial Reference System Identifier (srid) used.
 
+        point_type = None
+
+        if isinstance(obj, neo4j.spatial.WGS84Point):
+            # even though a WGS84Point contains x, y and z, we decided
+            # not to include them in the response, since they are aliases
+            # to longitude, latitude and height.
+            for key in ['latitude', 'longitude', 'height']:
+                if hasattr(obj, key):
+                    val = getattr(obj, key)
+                    point[key] = val
+            if hasattr(obj, 'height'):
+                point_type = 'wgs84_3d'
+            else:
+                point_type = 'wgs84_2d'
+        elif isinstance(obj, neo4j.spatial.CartesianPoint):
+            for key in ['x', 'y', 'z']:
+                if hasattr(obj, key):
+                    val = getattr(obj, key)
+                    point[key] = val
+            if hasattr(obj, 'z'):
+                point_type = 'cartesian_3d'
+            else:
+                point_type = 'cartesian_2d'
+        else:
+            abort_with_json(500, f"Invalid point type {repr(obj)}")
+        result = {
+            'type': point_type,
+            'value': point
+        }
+    else:
+        result = {
+            'type': pythontype2json.get(type_name, "unknown"),
+            'value': obj
+        }
     return result
 
 
@@ -289,7 +354,7 @@ def prepare_node_patch(node_data: dict):
         node_data['labels'] = [get_base_id(label) for label in labels]
     if props := node_data.get('properties', None):
         node_data['properties'] = {
-            get_base_id(k): v['value']
+            get_base_id(k): grapheditorproperty2neo(v)
             for k, v in props.items()
         }
     return node_data
@@ -302,7 +367,7 @@ def prepare_relation_patch(rel_data: dict):
         rel_data['type'] = get_base_id(rel_type)
     if props := rel_data.get('properties', None):
         rel_data['properties'] = {
-            get_base_id(k): v['value']
+            get_base_id(k): grapheditorproperty2neo(v)
             for k, v in props.items()
         }
     if source_id := rel_data.get('source_id', None):
@@ -341,6 +406,44 @@ def is_metalabel(label):
     return label in METALABELS
 
 
+def grapheditorproperty2neo(obj: dict):
+    otype = obj['type']
+    oval = obj['value']
+    try:
+        if otype == "datetime":
+            val = neo4j.time.DateTime.from_iso_format(oval)
+        elif otype == "date":
+            # no decimal part, so using python's native Date type as
+            # intermediate value suffices.
+            val = neo4j.time.Date.parse(oval)
+        elif otype == "duration":
+            val = neo4j.time.Duration.from_iso_format(oval)
+        elif otype == "time":
+            val = neo4j.time.Time.from_iso_format(oval)
+        elif otype == "list":
+            val = [grapheditorproperty2neo(v) for v in oval]
+        elif otype == "map":
+            val = {
+                k: grapheditorproperty2neo(v)
+                for k, v in oval.items()
+            }
+        elif otype == "cartesian_2d":
+            val = CartesianPoint((oval['x'], oval['y']))
+        elif otype == "cartesian_3d":
+            val = CartesianPoint((oval['x'], oval['y'], oval['z']))
+        elif otype == "wgs84_2d":
+            val = WGS84Point((oval['longitude'], oval['latitude']))
+        elif otype == "wgs84_3d":
+            val = WGS84Point((oval['longitude'], oval['latitude'], oval['height']))
+        else:
+            val = oval
+    except (ValueError, OverflowError) as e:
+        msg = f"Error converting object to neo4j {obj}: {repr(e)}."
+        current_app.logger.error(msg)
+        abort_with_json(400, msg)
+    return val
+
+
 def neoproperties2grapheditor(obj: BaseElement, semantic_id: str|None=None) -> dict:
     """Extract properties and attributes from a neo4j object.
     Return a dictionary containing properties and description-related
@@ -366,7 +469,6 @@ def neoproperties2grapheditor(obj: BaseElement, semantic_id: str|None=None) -> d
     properties = {}
 
     for key, value in obj.properties.items():
-        prop_type = pythontype2json.get(type(value).__name__, "unknown")
         if key == "_ft__tech_":
             # we don't pass _ft__tech_ to the frontend
             continue
@@ -374,15 +476,20 @@ def neoproperties2grapheditor(obj: BaseElement, semantic_id: str|None=None) -> d
             key,
             metalabel=GraphEditorLabel.MetaProperty
         )
-        py_val = value
-        if type(value).__name__ in ['DateTime', 'Date', 'Time']:
-            # convert to a python value so that jsonify can work with it.
-            py_val = value.to_native()
-        properties[prop_id] = {
-            "edit": True,
-            "type": prop_type,
-            "value": py_val
-        }
+        py_val = neoobject2grapheditor(value)
+        # Properties can't be a node or relation, so we ignore that case.
+        # If the property is a dictionary, it already contains a 'type',
+        # and a 'value' entry, so we add the (for now) hard-coded 'edit'
+        # attribute.
+        # Otherwise we wrap the native type with these attributes.
+        if isinstance(py_val, dict):
+            py_val.update({"edit": True})
+        else:
+            py_val = {
+                'type': pythontype2json.get(type(py_val).__name__, "unknown"),
+                'value': py_val
+            }
+        properties[prop_id] = py_val
 
     new_properties = dict(
         sorted(
@@ -476,18 +583,19 @@ def get_internal_id(idstr: str):
 
 def python_value_to_cypher(v):
     if isinstance(v, (int, float)):
-        return f"{v}"
-    if isinstance(v, str):
-        return f"'{v}'"
-    if isinstance(v, list):
+        result = f"{v}"
+    elif isinstance(v, str):
+        result = f"'{v}'"
+    elif isinstance(v, list):
         # str(list(map...)) doesn't work correctly.
         # It returns string with escaped quotes
         converted_vals = [python_value_to_cypher(x) for x in v]
-        return f"[{', '.join(converted_vals)}]"
-    if isinstance(v, dict):
-        return _dict_to_cypher_part(v)
-
-    raise ValueError(f"can't convert {v} to cypher")
+        result = f"[{', '.join(converted_vals)}]"
+    elif isinstance(v, dict):
+        result = _dict_to_cypher_part(v)
+    else:
+        raise ValueError(f"can't convert {v} to cypher")
+    return result
 
 
 def _dict_to_cypher_part(d):

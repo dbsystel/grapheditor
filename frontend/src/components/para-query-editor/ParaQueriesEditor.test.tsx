@@ -7,9 +7,12 @@ import { render } from 'vitest-browser-react';
 describe('Components - ParaQueriesEditor', () => {
 	test('ParaQuery is rendered', async () => {
 		const paraQueries = clone(testParaQueries);
-		const paraQuery = paraQueries['id::4:bb368931-775e-4eb9-a9fd-a06c3b6efc14:0'];
+		const paraQuery = Object.values(paraQueries).at(0);
 		const onParameterChange = vi.fn();
 
+		if (!paraQuery) {
+			throw new Error('No test para-queries');
+		}
 		const screen = await render(
 			<ParaQueryEditor paraQuery={paraQuery} onParameterChange={onParameterChange} />
 		);

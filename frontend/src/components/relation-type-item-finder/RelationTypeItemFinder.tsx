@@ -5,7 +5,7 @@ import { Node } from 'src/models/node';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
 import { generateNode, nodeContainsSearchTerm } from 'src/utils/helpers/nodes';
 import { useGetRelationsTypesNodes } from 'src/utils/hooks/useGetRelationsTypesNodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { RelationTypeItemFinderProps } from './RelationTypeItemFinder.interfaces';
 
 export const RelationTypeItemFinder = ({
@@ -31,7 +31,9 @@ export const RelationTypeItemFinder = ({
 	const rootElementClassName = clsx('relation-type-item-finder', className);
 
 	const { isLoading: isRelationsTypesLoading } = useGetRelationsTypesNodes({
-		onSuccess: (nodes) => {
+		onSuccess: (response) => {
+			const nodes = Object.values(response.data.nodes);
+
 			setRelationTypes(nodes);
 			setFilteredRelationTypes(nodes);
 		}
@@ -64,9 +66,11 @@ export const RelationTypeItemFinder = ({
 		// no exact match option: create a new node, add it to options list and
 		// filtered options list
 		else {
-			const newOption = generateNode(
-				idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_RELATION, searchTerm)
+			const semanticId = idFormatter.formatSemanticId(
+				GraphEditorTypeSimplified.META_RELATION,
+				searchTerm
 			);
+			const newOption = generateNode(semanticId);
 
 			setFilteredRelationTypes([...filteredRelationTypes, newOption]);
 			setRelationTypes(() => {

@@ -1,6 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import { api } from 'src/utils/api/api';
 import {
-	postDatabaseCurrent,
 	PostDatabaseCurrentParameters,
 	PostDatabaseCurrentResponse
 } from 'src/utils/fetch/postDatabaseCurrent';
@@ -29,7 +29,7 @@ export const usePostDatabaseCurrent = ({
 		onError: onError,
 		onFinally: onFinally,
 		fetchFunction: (parameters?: PostDatabaseCurrentParameters) => {
-			return postDatabaseCurrent({ name: parameters?.name || name });
+			return api.databases.fetch.postDatabaseCurrent({ name: parameters?.name || name });
 		}
 	});
 };

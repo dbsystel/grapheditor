@@ -30,9 +30,10 @@ export const GlobalSearchResultsObjectTable = ({
 	}
 
 	const tableContent = getSearchResultTableContent(result.data);
+	const numberOfHeadCells = tableContent.headCells.length;
 
 	const style = {
-		gridTemplateColumns: `repeat(${tableContent.headCells.length},  minmax(min-content, 300px))`
+		gridTemplateColumns: `repeat(${numberOfHeadCells},  minmax(min-content, ${numberOfHeadCells === 1 ? '100%' : '300px'}))`
 	};
 
 	return (

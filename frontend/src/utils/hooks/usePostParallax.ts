@@ -1,5 +1,5 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { parallaxApi } from 'src/utils/api/parallax';
+import { api } from 'src/utils/api/api';
 import { PostParallaxParameters, PostParallaxResponse } from 'src/utils/fetch/postParallax';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
@@ -41,7 +41,7 @@ export const usePostParallax = ({
 							steps: parameters.steps
 						};
 
-			return parallaxApi.postParallax(params);
+			return api.parallax.fetch.postParallax(params);
 		}
 	});
 };

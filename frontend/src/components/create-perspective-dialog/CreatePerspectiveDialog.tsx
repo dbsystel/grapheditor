@@ -4,10 +4,15 @@ import clsx from 'clsx';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Modal } from 'src/components/modal/Modal';
-import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
+import { GraphEditorTypeSimplified } from 'src/utils/constants';
+import { eventBus } from 'src/utils/event-bus';
+import { patchNodesAndUpdateApplication } from 'src/utils/helpers/nodes';
 import { preparePerspectiveDataAndRefreshNodesPosition } from 'src/utils/helpers/perspectives';
+import { useGetPerspective } from 'src/utils/hooks/useGetPerspective';
 import { usePostPerspective } from 'src/utils/hooks/usePostPerspective';
+import { idFormatter } from 'src/utils/id-formatter';
 import {
 	CreatePerspectiveDialogForm,
 	CreatePerspectiveDialogProps
@@ -18,14 +23,16 @@ export const CreatePerspectiveDialog = ({
 	id,
 	className,
 	testId,
-	closeFunction
+	closeFunction,
+	isEditMode = false
 }: CreatePerspectiveDialogProps) => {
 	const rootElementClassName = clsx('create-perspective-dialog', className);
 	const { t } = useTranslation();
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const isLoading = useGraphStore((store) => store.isLoading);
-	const setIsLoading = useGraphStore((store) => store.setIsLoading);
-	const { control, handleSubmit } = useForm<CreatePerspectiveDialogForm>({
+	const isLoading = usePerspectiveStore((store) => store.isLoading);
+	const setIsLoading = usePerspectiveStore((store) => store.setIsLoading);
+	const perspective = usePerspectiveStore((store) => store.perspective);
+	const { control, handleSubmit, reset } = useForm<CreatePerspectiveDialogForm>({
 		mode: 'onSubmit',
 		reValidateMode: 'onChange',
 		defaultValues: {
@@ -55,6 +62,22 @@ export const CreatePerspectiveDialog = ({
 		}
 	});
 
+	useGetPerspective(
+		{
+			executeImmediately: !!perspective?.id && isEditMode,
+			perspectiveId: perspective?.id || '',
+			onSuccess: (response) => {
+				if (isEditMode) {
+					reset({
+						name: response.data.name,
+						description: response.data.description || ''
+					});
+				}
+			}
+		},
+		[perspective, isEditMode, reset]
+	);
+
 	const validationFunction = (value: string) => {
 		if (value.trim().length === 0) {
 			return t('validation_required');
@@ -66,35 +89,81 @@ export const CreatePerspectiveDialog = ({
 		validate: validationFunction
 	};
 
-	const createPerspective = (formData: CreatePerspectiveDialogForm) => {
-		const { nodePositions, relationIds } = preparePerspectiveDataAndRefreshNodesPosition();
+	const createPerspective = async (formData: CreatePerspectiveDialogForm) => {
+		if (!isEditMode) {
+			const { nodePositions, relationIds } = preparePerspectiveDataAndRefreshNodesPosition();
 
-		if (!Object.keys(nodePositions).length) {
-			addNotification({
-				title: t('notifications_warning_perspective_create_no_nodes'),
-				type: 'warning'
-			});
+			if (!Object.keys(nodePositions).length) {
+				addNotification({
+					title: t('notifications_warning_perspective_create_no_nodes'),
+					type: 'warning'
+				});
 
-			return;
-		}
+				return;
+			}
 
-		if (formData.name) {
+			if (formData.name) {
+				setIsLoading(true);
+
+				reFetch({
+					name: formData.name,
+					description: formData.description || '',
+					nodePositions: nodePositions,
+					relationIds: relationIds
+				});
+			}
+		} else if (isEditMode && perspective) {
 			setIsLoading(true);
 
-			reFetch({
-				name: formData.name,
-				description: formData.description || '',
-				nodePositions: nodePositions,
-				relationIds: relationIds
-			});
+			const patchedNodes = await patchNodesAndUpdateApplication(
+				[
+					{
+						id: perspective.id,
+						properties: {
+							[idFormatter.formatSemanticId(
+								GraphEditorTypeSimplified.META_PROPERTY,
+								'name',
+								'tech'
+							)]: {
+								edit: true,
+								type: 'string',
+								value: formData.name
+							},
+							[idFormatter.formatSemanticId(
+								GraphEditorTypeSimplified.META_PROPERTY,
+								'description',
+								'tech'
+							)]: {
+								edit: true,
+								type: 'string',
+								value: formData.description || ''
+							}
+						}
+					}
+				],
+				false
+			);
+
+			eventBus.publish('nodesUpdate', { nodes: Object.values(patchedNodes) });
+
+			closeFunction();
+			setIsLoading(false);
 		}
 	};
 
 	return (
 		<Modal
 			isOpen={true}
-			headline={t('header_create_new_perspective_title')}
-			description={t('header_create_new_perspective_description')}
+			headline={
+				isEditMode
+					? t('header_edit_perspective_title')
+					: t('header_create_new_perspective_title')
+			}
+			description={
+				isEditMode
+					? t('header_edit_perspective_description')
+					: t('header_create_new_perspective_description')
+			}
 			onClose={closeFunction}
 		>
 			<form onSubmit={handleSubmit(createPerspective)} className={rootElementClassName}>
@@ -145,6 +214,7 @@ export const CreatePerspectiveDialog = ({
 					>
 						{t('header_create_new_perspective_stop_button')}
 					</DBButton>
+
 					<DBButton
 						type="submit"
 						id={id}
@@ -153,7 +223,9 @@ export const CreatePerspectiveDialog = ({
 						icon="check"
 						variant="brand"
 					>
-						{t('header_create_new_perspective_save_button')}
+						{isEditMode
+							? t('header_edit_perspective_save_button')
+							: t('header_create_new_perspective_save_button')}
 					</DBButton>
 				</div>
 			</form>

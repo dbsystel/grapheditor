@@ -1,108 +1,18 @@
-import { ReactNode } from 'react';
-import { ItemInfo } from 'src/components/item-info/ItemInfo';
-import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrapper';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
-import { useItemsStore } from 'src/stores/items';
-import { SearchStoreType } from 'src/stores/search';
+import {
+	AlgorithmType,
+	algorithmTypes,
+	SearchStoreSearchType,
+	SearchStoreType
+} from 'src/stores/search';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
 import {
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
-	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
-	NOT_AVAILABLE_SIGN
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
-import { isObject, isPrimitive, isString } from 'src/utils/helpers/general';
-import { isNode } from 'src/utils/helpers/nodes';
-import { isRelation } from 'src/utils/helpers/relations';
-import { idFormatter } from 'src/utils/idFormatter';
-
-type RenderContentProps = {
-	content: unknown;
-	applyMarkdown?: boolean;
-};
-
-/**
- * This component should render output as markdown only if the initial input (the "content" prop) is
- * of type "string". By the "initial input" we mean the input originally given to the component, before
- * recursive calls.
- */
-export const RenderContent = ({ content, applyMarkdown }: RenderContentProps): ReactNode => {
-	const getStoreItem = useItemsStore((store) => store.getStoreItem);
-	let contentToRender: ReactNode = null;
-
-	// if content type is primitive
-	if (isPrimitive(content)) {
-		if (content === '' || content === null) {
-			const cellContent = content === '' ? '""' : 'null';
-
-			contentToRender = cellContent;
-		} else if (typeof content === 'string') {
-			contentToRender = idFormatter.parseIdToName(content);
-		} else {
-			contentToRender = content;
-		}
-	}
-	// if content type is object
-	else if (isObject(content)) {
-		// if relation or node
-		if (isRelation(content) || isNode(content)) {
-			const item = getStoreItem(content.id);
-
-			if (item) {
-				contentToRender = <ItemInfo item={item} />;
-			} else {
-				contentToRender = NOT_AVAILABLE_SIGN;
-			}
-		}
-		// some other object (record), loop through entries
-		else {
-			const objectContent: Array<ReactNode> = ['{'];
-			for (const [key, value] of Object.entries(content)) {
-				objectContent.push(
-					<span key={key}>
-						{key}:
-						<RenderContent key={key} content={value} />
-					</span>
-				);
-			}
-			objectContent.push('}');
-
-			return objectContent;
-		}
-	}
-	// array, loop through it
-	else if (Array.isArray(content)) {
-		const finalContent: Array<ReactNode> = ['['];
-
-		content.forEach((contentItem, index) => {
-			finalContent.push(<RenderContent key={index} content={contentItem} />);
-
-			if (index < content.length - 1) {
-				finalContent.push(', ');
-			}
-		});
-
-		finalContent.push(']');
-
-		return finalContent;
-	}
-	// not sure what it is, just render a formatted JSON string
-	else {
-		contentToRender = (
-			<pre className="global-search-results-table__pre">
-				{JSON.stringify(content, null, 2)}
-			</pre>
-		);
-	}
-
-	if (applyMarkdown && isString(contentToRender)) {
-		return <MarkdownWrapper>{contentToRender}</MarkdownWrapper>;
-	}
-
-	return contentToRender;
-};
 
 export const buildPerspectiveSearchResult = (
 	nodes: Map<string, Node>,
@@ -145,19 +55,16 @@ export const buildSimpleSearchResult = (nodes: Array<Node>, relations?: Array<Re
 	const result: CypherQuerySearchResult = [];
 
 	for (let i = 0, l = length; i < l; i++) {
-		result[i] = [
-			['', ''],
-			['', '']
-		];
+		result[i] = [];
 
 		const node = nodes.at(i);
 		const relation = relations?.at(i);
 
 		if (node) {
-			result[i][0] = ['Node', node];
+			result[i].push(['Node', node]);
 		}
 		if (relation) {
-			result[i][1] = ['Relation', relation];
+			result[i].push(['Relation', relation]);
 		}
 	}
 
@@ -170,5 +77,16 @@ export const isValidSearchType = (value: unknown): value is SearchStoreType => {
 		value === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
 		value === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY ||
 		value === GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
+	);
+};
+
+export const isValidAlgorithmType = (value: unknown): value is AlgorithmType => {
+	return algorithmTypes.some((type) => type === value);
+};
+
+export const isCypherQueryOrFullText = (value: unknown): value is SearchStoreSearchType => {
+	return (
+		value === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
+		value === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
 	);
 };

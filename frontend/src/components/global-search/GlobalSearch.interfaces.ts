@@ -7,4 +7,6 @@ export type GlobalSearchProps = GlobalComponentProps & {
 
 export type GlobalSearchRef = {
 	triggerSearch: () => void;
+	searchFunction: () => void;
+	redirectToApplication: () => void;
 };

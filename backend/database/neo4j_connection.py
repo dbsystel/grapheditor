@@ -3,8 +3,9 @@ import neo4j
 from flask import current_app, g, request, session
 
 from blueprints.display.style_support import select_style, get_selected_style
+from database.auth import ensure_valid_token
 from database.settings import config
-from database.utils import abort_with_json
+from database.utils import abort_with_json, split_statements
 
 MAX_RETRIES = 3
 drivers_lock = Lock()
@@ -14,6 +15,7 @@ connections = dict()
 drivers = dict()
 db_versions = dict()
 
+
 # We use abort and abort_with_json to break out from a function, so
 # the inconsistent-return-statements warning is a false positive
 # pylint: disable=inconsistent-return-statements
@@ -21,12 +23,27 @@ db_versions = dict()
 class Neo4jConnection:
     """Proxy for Neo4j connection supporting transaction-based operations."""
 
-    def __init__(self, *, host, username, password, database=None):
+    # pylint: disable=too-many-positional-arguments,too-many-arguments
+    def __init__(self, host, username=None, password=None, database=None, token=None):
         self.host = host
         self.username = username
         self.database = database
         self.password = password
-        self._driver = self._setup_driver(host, username, password)
+        self.token = token
+        self._driver = self._setup_driver()
+
+
+    @classmethod
+    def from_login_data(cls, login_data: dict):
+        conn = cls(
+            host=login_data["host"], # mandatory
+            username=login_data.get("username"),
+            password=login_data.get("password"),
+            token=session.get("oidc_auth_token"),
+            database=login_data.get("selected_database"),
+        )
+        return conn
+
 
     def has_ft(self):
         """Return if grapheditor functions/procedures are installed and running.
@@ -126,31 +143,37 @@ class Neo4jConnection:
             )
         return g.neo4j_admin_transaction
 
-    def run(self, query, _as_admin=False, **params):
-        """
-        Run the query within the transaction
-        """
-        if _as_admin:
-            tx = self._admin_tx
-        else:
-            tx = self._tx
+    def _log_query(self, query:str, **params):
+        out = query
+        for k, v in params.items():
+            if isinstance(v, dict):
+                data = ",".join(
+                    f"{key}:{repr(value)}" for key, value in v.items()
+                )
+                r = f"{{{data}}}"
+            else:
+                r = repr(v)
+            out = out.replace(f"${k}", r)
+        current_app.logger.debug(out)
+
+    def _run_statement(self, statement, _as_admin=False, **params):
+        """Run a single cypher query and return its result.
+        It's an error if the query contains multiple statements."""
         if config.debug:
-            out = query
-            for k, v in params.items():
-                if isinstance(v, dict):
-                    data = ",".join(
-                        f"{key}:{repr(value)}" for key, value in v.items()
-                    )
-                    r = f"{{{data}}}"
-                else:
-                    r = repr(v)
-                out = out.replace(f"${k}", r)
-            current_app.logger.debug(out)
+            self._log_query(statement, **params)
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
-                return tx.run(query, **params)
-            except neo4j.exceptions.ClientError as e:
+                if _as_admin:
+                    tx = self._admin_tx
+                else:
+                    tx = self._tx
+                return tx.run(statement, **params)
+            except neo4j.exceptions.AuthError as e:
+                msg = f"Authentication error: {repr(e)}"
+                current_app.logger.error(msg)
+                abort_with_json(401, msg)
+            except neo4j.exceptions.Neo4jError as e:
                 if e.code == "Neo.ClientError.Database.DatabaseNotFound":
                     current_app.logger.error(
                         f"Error using database {self.database}. "
@@ -159,14 +182,38 @@ class Neo4jConnection:
                         session["login_data"][g.tab_id]["selected_database"] = None
                         self.database = None
                     raise
+                elif e.code == "Neo.ClientError.Security.AuthorizationExpired":
+                    msg = f"AuthorizationExpired error: {repr(e)}"
+                    current_app.logger.error(msg)
+                    # Force regenerating token for connection.
+                    self._setup_driver()
                 raise
-            except neo4j.exceptions.SessionExpired:
+            except (neo4j.exceptions.ServiceUnavailable,
+                    neo4j.exceptions.SessionExpired,
+                    OSError) as e:
                 retry_count += 1
                 current_app.logger.warn(f"""
-                Connection to {self.host} as {self.username} expired, retrying ({retry_count}).
+                Error connecting to {self.host} as {self.username}: {repr(e)}.
+                Retrying ({retry_count}).
                 """)
-                self._setup_driver(self.host, self.username, self.password)
-        abort_with_json(400, "Max connection retries limit reached")
+                self._setup_driver()
+        if retry_count >= MAX_RETRIES:
+            abort_with_json(400, "Can't run statement.")
+
+
+    def run(self, query, _as_admin=False, **params):
+        """
+        Run the query within the transaction.
+        Supports multistatement queries (separated by ';'). In that case,
+        run them all and return the result of the last query. If any
+        statement fails, the whole transaction is aborted.
+        """
+        result = None
+        statements = split_statements(query)
+        for statement in statements:
+            result = self._run_statement(statement, _as_admin, **params)
+
+        return result
 
 
     def commit(self):
@@ -210,40 +257,62 @@ class Neo4jConnection:
                     g.neo4j_transaction.rollback()
             del g.neo4j_transaction
 
-    def _hash(self):
-        return hash((self.host, self.username))
+    def cache_key(self):
+        id_token = self.token["id_token"] if self.token else None
+        return (self.host, self.username, self.password, id_token)
 
-    def _setup_driver(self, host: str, username: str, password: str) -> neo4j.Driver:
+    def _setup_driver(self) -> neo4j.Driver:
         # Setting up a driver is expensive, and they should be reused.
         # Let's cache those.
-        key = self._hash()
+
+        # Call ensure_valid_token before computing key of this connection,
+        # otherwise an old connection with an expired token may be used.
+        if self.token:
+            self.token = ensure_valid_token()
+        key = self.cache_key()
         with drivers_lock:
+            driver = None
             if key not in drivers:
-                current_app.logger.debug(f"connecting to {host} as {username}")
-                drivers[key] = neo4j.GraphDatabase.driver(
-                    host, auth=(username, password)
-                )
-            return drivers[key]
+                if self.password:
+                    current_app.logger.debug(f"connecting to {self.host} as {self.username}")
+                    driver = neo4j.GraphDatabase.driver(
+                        self.host, auth=(self.username, self.password)
+                    )
+                    drivers[key] = driver
+                elif self.token:
+                    current_app.logger.debug(f"connecting to {self.host} using stored token.")
+                    driver = neo4j.GraphDatabase.driver(
+                        self.host, auth=neo4j.bearer_auth(self.token["id_token"])
+                    )
+                    # compute cache_key again, since we have a new token.
+                    drivers[self.cache_key()] = driver
+                else:
+                    abort_with_json(401, "Incomplete Neo4jConnection instance.")
+            else:
+                driver = drivers[key]
+            return driver
 
     def get_databases(self):
         """Return all databases available."""
         query = "SHOW DATABASES"
         result = [
-            {"name": row["name"], "status": row["currentStatus"]}
+            {"name": row["name"], "status": row["currentStatus"], "type": row["type"]}
             for row in self.run(query, _as_admin=True)
             if row["name"] != "system"
         ]
         return result
 
-    def get_database(self, name):
+    def get_database(self, name: str | None):
         """Return database info."""
 
+        db_type = ""
         status = None
         if name:
             result = self.run(f"SHOW DATABASE `{name}`", _as_admin=True).single()
             if result:
-                self.database = result.get("name", None)
+                self.database = result.get("name")
                 status = result.get("currentStatus", "")
+                db_type = result.get("type", "")
         else:
             self.database = self.run(
                 "CALL db.info() YIELD name", _as_admin=True
@@ -259,7 +328,7 @@ class Neo4jConnection:
             status = "online"
 
         if self.database and status:
-            return {"name": self.database, "status": status}
+            return {"name": self.database, "status": status, "type": db_type}
         return None
 
     def is_database_available(self, name):
@@ -277,23 +346,6 @@ def hash_connection_data(login_data, db):
         + login_data["password"]
         + str(db)
     )
-
-
-def fetch_connection(login_data, db):
-    hash_val = hash_connection_data(login_data, db)
-    if hash_val in connections:
-        conn = connections[hash_val]
-        current_app.logger.debug("reusing existing connection")
-    else:
-        conn = Neo4jConnection(
-            host=login_data["host"],
-            username=login_data["username"],
-            password=login_data["password"],
-            database=db,
-        )
-        connections[hash_connection_data(login_data, db)] = conn
-        current_app.logger.debug("creating new connection")
-    return conn
 
 
 def neo4j_connect():
@@ -320,7 +372,8 @@ def fetch_connection_by_id(tab_id):
                 "Reusing login credentials from last tab ID"
             )
             last_tab_id = session["last_tab_id"]
-            if last_tab_id not in session["login_data"]:
+
+            if "login_data" in session and last_tab_id not in session["login_data"]:
                 abort_with_json(401, "No connection data for last_tab_id in session.")
             # for now we don't persist connections per se, only login info.
             # Connections are reused anyway (see _setup_driver).
@@ -332,18 +385,13 @@ def fetch_connection_by_id(tab_id):
             abort_with_json(401, "missing last_tab_id in session")
     session["last_tab_id"] = tab_id
     login_data = session["login_data"][tab_id]
-    g.login_data = login_data
-    cur_db = get_current_datatabase_name()
-    conn = fetch_connection(login_data, cur_db)
-    conn.database = login_data.get("selected_database", None)
+    conn = Neo4jConnection.from_login_data(login_data)
     return conn
 
 
 def get_current_datatabase_name():
     try:
-        return session["login_data"][g.tab_id].get(
-            "selected_database", None
-        )
+        return session["login_data"][g.tab_id].get("selected_database")
     except KeyError:
         return None
 
@@ -354,4 +402,4 @@ def set_current_database_name(name):
 
     login_data = session["login_data"][g.tab_id]
     login_data["selected_database"] = name
-    g.conn.database = login_data.get(name, None)
+    g.conn.database = login_data.get(name)

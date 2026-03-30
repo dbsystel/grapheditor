@@ -15,6 +15,7 @@ import { Relation, RelationId } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
 import {
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
@@ -25,7 +26,7 @@ import { deleteNodes } from 'src/utils/fetch/deleteNodes';
 import { patchNodes } from 'src/utils/fetch/patchNodes';
 import { isObject } from 'src/utils/helpers/general';
 import { buildPerspectiveSearchResult } from 'src/utils/helpers/search';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 export const isNode = (data: unknown): data is Node => {
 	if (isObject(data) && '_grapheditor_type' in data && data._grapheditor_type === 'node') {
@@ -133,30 +134,30 @@ export const labelsContainMetaLabels = (labels: Array<string>) => {
 };
 
 export const generateNode = (id: string, data?: Omit<Partial<Node>, 'id'>): Node => {
+	const title = data?.title || idFormatter.parseIdToName(id);
+
 	return {
 		id: id,
 		dbId: id,
-		// TODO use a correct value instead of empty string
-		semanticId: labelsContainMetaLabels(data?.labels || []) ? '' : null,
+		semanticId: data?.semanticId,
 		_grapheditor_type: 'node',
 		description: data?.description || 'Long description',
 		// backend also sends English longDescription only
 		longDescription: data?.longDescription || 'Description',
 		labels: data?.labels || [],
 		properties: data?.properties || {},
-		title: data?.title || idFormatter.parseIdToName(id),
+		title: title,
 		style: data?.style || {}
 	};
 };
 
-// TODO migrate to a observer
 export const processPerspective = (perspective: Perspective) => {
 	const nodes: Map<string, Node> = new Map(Object.entries(perspective.nodes));
 	const relations: Map<string, Relation> = new Map();
 
 	const { setAlgorithm, setIsResultProcessed, setResult } = useSearchStore.getState();
-	const { setPerspectiveId, setPerspectiveName, unHighlightNodes, unHighlightRelations } =
-		useGraphStore.getState();
+	const { unHighlightNodes, unHighlightRelations } = useGraphStore.getState();
+	const setPerspective = usePerspectiveStore.getState().setPerspective;
 
 	// map relations properly since GET /api/v1/perspectives currently
 	// returns an object which keys are short ID form, and not the long one
@@ -166,9 +167,7 @@ export const processPerspective = (perspective: Perspective) => {
 
 	unHighlightNodes();
 	unHighlightRelations();
-	// TODO check the PerspectiveFinder component, there is a hook with perspectiveId dependency
-	setPerspectiveId(perspective.id);
-	setPerspectiveName(perspective.name || '');
+	setPerspective(perspective);
 	setAlgorithm(GRAPH_LAYOUT_PERSPECTIVE);
 	setIsResultProcessed(false);
 	setResult({
@@ -279,16 +278,21 @@ export async function deleteNodesAndUpdateApplication(nodeIds: Array<NodeId>) {
 	const successTitle = isOnlyOneNodeToDelete
 		? 'notifications_success_node_delete'
 		: 'notifications_success_nodes_delete_title';
+	const translationVariables = isOnlyOneNodeToDelete ? { id: nodeIds.at(0) } : undefined;
 
-	if (window.confirm(i18n.t(confirmMessage, { id: nodeIds.at(0) }))) {
+	if (window.confirm(i18n.t(confirmMessage, translationVariables))) {
 		// on server we only need to remove nodes, their relations will be implicitly removed
 		const nodesDeletionResponse = await deleteNodes({ nodeIds: nodeIds });
 		const isDeletionSuccessful = nodesDeletionResponse.data.num_deleted === nodeIds.length;
 
 		itemsStore.removeNodes(nodeIds);
 
-		// TODO check if data.num_deleted === 0
-		if (isDeletionSuccessful) {
+		if (nodesDeletionResponse.data.num_deleted === 0) {
+			addNotification({
+				title: i18n.t('notifications_info_nodes_delete_no_nodes_deleted'),
+				type: 'informational'
+			});
+		} else if (isDeletionSuccessful) {
 			addNotification({
 				title: i18n.t(successTitle),
 				type: 'successful'
@@ -307,7 +311,10 @@ export async function deleteNodesAndUpdateApplication(nodeIds: Array<NodeId>) {
 	}
 }
 
-export async function patchNodesAndUpdateApplication(nodes: Array<PatchNode>) {
+export async function patchNodesAndUpdateApplication(
+	nodes: Array<PatchNode>,
+	storeNodesInStore = true
+) {
 	const notificationsStore = useNotificationsStore.getState();
 	const itemsStore = useItemsStore.getState();
 
@@ -321,7 +328,10 @@ export async function patchNodesAndUpdateApplication(nodes: Array<PatchNode>) {
 			? 'notifications_success_node_update'
 			: 'notifications_success_nodes_update';
 
-	itemsStore.setNodes(serverNodes);
+	// the items store must contain only nodes which are to be displayed in the graph/tables
+	if (storeNodesInStore) {
+		itemsStore.setNodes(serverNodes);
+	}
 
 	if (isPatchSuccessful) {
 		addNotification({

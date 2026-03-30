@@ -18,20 +18,25 @@ import {
 } from 'src/utils/helpers/relations';
 
 export const relationsApi = {
-	deleteRelation: deleteRelation,
-	deleteRelations: deleteRelations,
-	deleteRelationsAndUpdateApplication: deleteRelationsAndUpdateApplication,
-	getRelation: getRelation,
-	getRelations: getRelations,
-	getRelationsDefaultTypeNodes: getRelationsDefaultTypeNodes,
-	getRelationsTypes: getRelationsTypes,
-	getRelationsTypesNodes: getRelationsTypesNodes,
-	patchRelation: patchRelation,
-	patchRelations: patchRelations,
-	patchRelationsAndUpdateApplication: patchRelationsAndUpdateApplication,
-	postRelation: postRelation,
-	postRelations: postRelations,
-	postRelationDefaultTypeNode: postRelationDefaultTypeNode,
-	postRelationsByNodeIds: postRelationsByNodeIds,
-	postRelationsBulkFetch: postRelationsBulkFetch
+	fetch: {
+		deleteRelation: deleteRelation,
+		deleteRelations: deleteRelations,
+		getRelation: getRelation,
+		getRelations: getRelations,
+		getRelationsDefaultTypeNodes: getRelationsDefaultTypeNodes,
+		getRelationsTypes: getRelationsTypes,
+		getRelationsTypesNodes: getRelationsTypesNodes,
+		patchRelation: patchRelation,
+		patchRelations: patchRelations,
+
+		postRelation: postRelation,
+		postRelations: postRelations,
+		postRelationDefaultTypeNode: postRelationDefaultTypeNode,
+		postRelationsByNodeIds: postRelationsByNodeIds,
+		postRelationsBulkFetch: postRelationsBulkFetch
+	},
+	actions: {
+		patchRelationsAndUpdateApplication: patchRelationsAndUpdateApplication,
+		deleteRelationsAndUpdateApplication: deleteRelationsAndUpdateApplication
+	}
 };

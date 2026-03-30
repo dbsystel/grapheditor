@@ -7,8 +7,8 @@ import {
 	WheelCoords
 } from 'sigma/types';
 import { NodeId } from 'src/models/node';
-import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
-import { isFunction, isFunctionWithoutParameters } from 'src/utils/helpers/general';
+import { ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { isFunction, isFunctionWithoutParameters, isObject } from 'src/utils/helpers/general';
 import {
 	isAltKeyPressed,
 	isControlKeyPressed,
@@ -18,94 +18,88 @@ import { GraphEditorSigma } from './NetworkGraph.interfaces';
 
 type StateManagerStateKeys = keyof typeof StateManagerStates;
 type StateManagerStateValues = (typeof StateManagerStates)[StateManagerStateKeys];
-type StateManagerModeValues = (typeof StateManagerMode)[keyof typeof StateManagerMode];
 
-type PayloadType<T extends StateManagerStateKeys> = T extends
-	| 'NODE_DOWN'
-	| 'NODE_ENTER'
-	| 'NODE_LEAVE'
-	| 'NODE_CLICK'
-	| 'NODE_TOOLTIP'
-	| 'NODE_CONTEXT_MENU'
+type PayloadType<T extends StateManagerStateValues> = T extends
+	| 'nodeDown'
+	| 'nodeEnter'
+	| 'nodeLeave'
+	| 'nodeClick'
+	| 'nodeTooltip'
+	| 'nodeContextMenu'
 	? SigmaNodeEventPayload
 	: T extends
-				| 'RELATION_ENTER'
-				| 'RELATION_LEAVE'
-				| 'RELATION_CLICK'
-				| 'RELATION_TOOLTIP'
-				| 'RELATION_CONTEXT_MENU'
+				| 'relationEnter'
+				| 'relationLeave'
+				| 'relationClick'
+				| 'relationTooltip'
+				| 'relationContextMenu'
 		? SigmaEdgeEventPayload
-		: T extends 'NODE_SELECTION' | 'NODE_AUTO_CONNECT' | 'MOUSE_UP'
+		: T extends 'nodeSelection' | 'nodeAutoConnect' | 'mouseUp'
 			? MouseCoords
-			: T extends 'NODE_DRAG'
+			: T extends 'nodeDrag'
 				? MouseCoords & { nodeId: NodeId }
-				: T extends 'NODE_QUICK' | 'STAGE_CONTEXT_MENU'
+				: T extends 'nodeQuick' | 'stageContextMenu'
 					? SigmaStageEventPayload
-					: T extends 'CAMERA_UPDATE'
+					: T extends 'cameraUpdate'
 						? CameraState
-						: T extends 'SCALE' | 'ZOOM_FACTOR'
+						: T extends 'scaleLabels' | 'scaleNodes' | 'zoomFactor'
 							? WheelCoords
 							: void;
 
-export const StateManagerStates = Object.freeze({
+const StateManagerStates = Object.freeze({
 	// initial/starting state
-	IDLE: 'IDLE',
+	IDLE: 'idle',
 	// stage state
-	STAGE_DOWN: 'STAGE_DOWN',
+	STAGE_DOWN: 'stageDown',
 	// node state
-	NODE_DOWN: 'NODE_DOWN',
-	NODE_TOOLTIP: 'NODE_TOOLTIP',
-	NODE_ENTER: 'NODE_ENTER',
-	NODE_LEAVE: 'NODE_LEAVE',
-	NODE_DRAG: 'NODE_DRAG',
-	NODE_SELECTION: 'NODE_SELECTION',
-	NODE_CLICK: 'NODE_CLICK',
-	NODE_QUICK: 'NODE_QUICK',
-	NODE_AUTO_CONNECT: 'NODE_AUTO_CONNECT',
-	NODE_CONTEXT_MENU: 'NODE_CONTEXT_MENU',
+	NODE_DOWN: 'nodeDown',
+	NODE_TOOLTIP: 'nodeTooltip',
+	NODE_ENTER: 'nodeEnter',
+	NODE_LEAVE: 'nodeLeave',
+	NODE_DRAG: 'nodeDrag',
+	NODE_SELECTION: 'nodeSelection',
+	NODE_CLICK: 'nodeClick',
+	NODE_QUICK: 'nodeQuick',
+	NODE_AUTO_CONNECT: 'nodeAutoConnect',
+	NODE_CONTEXT_MENU: 'nodeContextMenu',
 	// relation state
-	RELATION_ENTER: 'RELATION_ENTER',
-	RELATION_LEAVE: 'RELATION_LEAVE',
-	RELATION_CLICK: 'RELATION_CLICK',
-	RELATION_TOOLTIP: 'RELATION_TOOLTIP',
-	RELATION_CONTEXT_MENU: 'RELATION_CONTEXT_MENU',
+	RELATION_ENTER: 'relationEnter',
+	RELATION_LEAVE: 'relationLeave',
+	RELATION_CLICK: 'relationClick',
+	RELATION_TOOLTIP: 'relationTooltip',
+	RELATION_CONTEXT_MENU: 'relationContextMenu',
 	// misc state
-	MOUSE_UP: 'MOUSE_UP',
-	RESIZE: 'RESIZE',
-	CAMERA_UPDATE: 'CAMERA_UPDATE',
+	MOUSE_UP: 'mouseUp',
+	RESIZE: 'resize',
+	CAMERA_UPDATE: 'cameraUpdate',
 	// canvas (stage) state
-	STAGE_CONTEXT_MENU: 'STAGE_CONTEXT_MENU',
-	// TODO separate into scale nodes and scale labels
-	SCALE: 'SCALE',
-	ZOOM_FACTOR: 'ZOOM_FACTOR'
+	STAGE_CONTEXT_MENU: 'stageContextMenu',
+	SCALE_LABELS: 'scaleLabels',
+	SCALE_NODES: 'scaleNodes',
+	ZOOM_FACTOR: 'zoomFactor'
 });
 
-type StateManagerState<StateKey extends StateManagerStateKeys> = {
-	transitionTo: Array<StateManagerStateKeys>;
+type StateManagerState<StateKey extends StateManagerStateValues> = {
+	transitionTo: Array<StateManagerStateValues>;
 	callbacks: Array<StateManagerInternalCallback<StateKey>>;
 	// allow direct state callbacks execution without any (state) checks
 	isDirectCallbackExecutionAllowed?: boolean;
 };
 
-const StateManagerMode = Object.freeze({
-	DEFAULT: 'default',
-	EDIT: 'edit'
-});
-
-type StateManagerCallback<StateKey extends StateManagerStateKeys> = {
+type StateManagerCallback<StateKey extends StateManagerStateValues> = {
 	// executed only once, right before the callback
 	beforeCallback?: PayloadType<StateKey> extends void
 		? () => void
 		: (event: PayloadType<StateKey>) => void;
 	// the callback itself
-	callback?: PayloadType<StateKey> extends void
+	callback: PayloadType<StateKey> extends void
 		? () => void
 		: (event: PayloadType<StateKey>) => void;
 	// executed only once, right before switching to a new state
 	afterCallback?: () => void;
 };
 
-type StateManagerInternalCallback<StateKey extends StateManagerStateKeys> =
+type StateManagerInternalCallback<StateKey extends StateManagerStateValues> =
 	StateManagerCallback<StateKey> & {
 		beforeCallbackExecuted: boolean;
 		afterCallbackExecuted: boolean;
@@ -125,37 +119,25 @@ type StateManagerInternalCallback<StateKey extends StateManagerStateKeys> =
  * similar to observe context menu open/close state change, but we don't want to
  * bring in dependencies.
  */
-
-// TODO make return to the IDLE state explicit
-// TODO consider splitting into events and states
-// TODO consider making some properties private
-// TODO make explicit subscription method (instead .on('NODE_MOVE') to .onNodeMove() in order to simplify and improve TS support
-// TODO instead of combining multiple events (e.g. NODE_DOWN + NODE_AUTO_CONNECT + MOUSE_UP) have only one event
-// TODO consider dispatching only custom events (node_drag and similar), other regular sigma.js events should developer directly
-//  subscribe to via sigma.js (example: NodeHtmlLabelPlugin)
-// TODO consider unsubscribing via a UID (the "on" method should return a UID which can be used to unsubscribe)
 export class StateManager {
 	currentState: StateManagerStateValues;
 	sigma: GraphEditorSigma | null;
-	mode: StateManagerModeValues;
-	state: { [StateKey in StateManagerStateKeys]: StateManagerState<StateKey> };
-	lastRelationEvent: SigmaEdgeEventPayload | null;
-	enterNodeTimeout: number;
-	enterRelationTimeout: number;
-	// allow only one central StateManager instance in order to subscribe only
-	// once to Sigma events
+	state: { [StateKey in StateManagerStateValues]: StateManagerState<StateKey> };
+	private lastRelationEvent: SigmaEdgeEventPayload | null;
+	private enterNodeTimeout: number;
+	private enterRelationTimeout: number;
+	// allow only one central StateManager instance to prevent issues with multiple event listeners and state desynchronization
 	static _instance: StateManager;
 
 	constructor(parameters?: { sigma?: GraphEditorSigma }) {
 		this.sigma = parameters?.sigma || null;
 		this.currentState = StateManagerStates.IDLE;
-		this.mode = StateManagerMode.DEFAULT;
 		this.lastRelationEvent = null;
 		this.enterNodeTimeout = 0;
 		this.enterRelationTimeout = 0;
 		this.state = {
 			// initial/starting state
-			IDLE: {
+			idle: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.NODE_ENTER,
@@ -164,7 +146,8 @@ export class StateManager {
 					StateManagerStates.NODE_DOWN,
 					StateManagerStates.RELATION_ENTER,
 					StateManagerStates.STAGE_DOWN,
-					StateManagerStates.SCALE,
+					StateManagerStates.SCALE_LABELS,
+					StateManagerStates.SCALE_NODES,
 					StateManagerStates.ZOOM_FACTOR,
 					// allow node context menu after e.g. node drag
 					StateManagerStates.NODE_CONTEXT_MENU,
@@ -173,7 +156,7 @@ export class StateManager {
 				]
 			},
 			// stage state
-			STAGE_DOWN: {
+			stageDown: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.NODE_SELECTION,
@@ -181,12 +164,12 @@ export class StateManager {
 					StateManagerStates.IDLE
 				]
 			},
-			STAGE_CONTEXT_MENU: {
+			stageContextMenu: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
 			// node state
-			NODE_DOWN: {
+			nodeDown: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.NODE_DRAG,
@@ -195,7 +178,7 @@ export class StateManager {
 					StateManagerStates.NODE_CONTEXT_MENU
 				]
 			},
-			NODE_ENTER: {
+			nodeEnter: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.NODE_DOWN,
@@ -204,15 +187,15 @@ export class StateManager {
 					StateManagerStates.NODE_CONTEXT_MENU
 				]
 			},
-			NODE_QUICK: {
+			nodeQuick: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			NODE_AUTO_CONNECT: {
+			nodeAutoConnect: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			NODE_LEAVE: {
+			nodeLeave: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.IDLE,
@@ -220,23 +203,23 @@ export class StateManager {
 					StateManagerStates.RELATION_ENTER
 				]
 			},
-			NODE_DRAG: {
+			nodeDrag: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			NODE_CLICK: {
+			nodeClick: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.NODE_LEAVE, StateManagerStates.NODE_CONTEXT_MENU]
 			},
-			NODE_SELECTION: {
+			nodeSelection: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			NODE_CONTEXT_MENU: {
+			nodeContextMenu: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			NODE_TOOLTIP: {
+			nodeTooltip: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.NODE_DOWN,
@@ -245,7 +228,7 @@ export class StateManager {
 				]
 			},
 			// relation state
-			RELATION_ENTER: {
+			relationEnter: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.RELATION_LEAVE,
@@ -254,7 +237,7 @@ export class StateManager {
 					StateManagerStates.RELATION_CONTEXT_MENU
 				]
 			},
-			RELATION_LEAVE: {
+			relationLeave: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.IDLE,
@@ -266,42 +249,46 @@ export class StateManager {
 					StateManagerStates.RELATION_ENTER
 				]
 			},
-			RELATION_CLICK: {
+			relationClick: {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.RELATION_LEAVE,
 					StateManagerStates.RELATION_CONTEXT_MENU
 				]
 			},
-			RELATION_CONTEXT_MENU: {
+			relationContextMenu: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			RELATION_TOOLTIP: {
+			relationTooltip: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.RELATION_CLICK, StateManagerStates.RELATION_LEAVE]
 			},
 			// misc state
-			MOUSE_UP: {
+			mouseUp: {
 				transitionTo: [],
 				isDirectCallbackExecutionAllowed: true,
 				callbacks: []
 			},
-			RESIZE: {
+			resize: {
 				transitionTo: [],
 				isDirectCallbackExecutionAllowed: true,
 				callbacks: []
 			},
-			CAMERA_UPDATE: {
+			cameraUpdate: {
 				transitionTo: [],
 				isDirectCallbackExecutionAllowed: true,
 				callbacks: []
 			},
-			SCALE: {
+			scaleLabels: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
-			ZOOM_FACTOR: {
+			scaleNodes: {
+				callbacks: [],
+				transitionTo: [StateManagerStates.IDLE]
+			},
+			zoomFactor: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			}
@@ -318,7 +305,6 @@ export class StateManager {
 		return StateManager._instance;
 	}
 
-	// TODO maybe use a more abstract name?
 	setSigma(sigma: GraphEditorSigma) {
 		if (this.sigma !== sigma) {
 			this.sigma = sigma;
@@ -383,7 +369,7 @@ export class StateManager {
 			this.enterNodeTimeout = window.setTimeout(() => {
 				this.transitionTo(StateManagerStates.NODE_TOOLTIP);
 				this.executeStateCallbacks(StateManagerStates.NODE_TOOLTIP, event);
-			}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
+			}, ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS);
 		});
 
 		this.sigma.addListener('rightClickNode', (event) => {
@@ -417,7 +403,7 @@ export class StateManager {
 			this.enterRelationTimeout = window.setTimeout(() => {
 				this.transitionTo(StateManagerStates.RELATION_TOOLTIP);
 				this.executeStateCallbacks(StateManagerStates.RELATION_TOOLTIP, event);
-			}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
+			}, ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS);
 		});
 
 		this.sigma.addListener('leaveEdge', (event) => {
@@ -459,7 +445,7 @@ export class StateManager {
 		});
 
 		this.sigma.addListener('upStage', (event) => {
-			this.executeStateCallbacks('NODE_QUICK', event);
+			this.executeStateCallbacks(StateManagerStates.NODE_QUICK, event);
 		});
 
 		this.sigma.addListener('rightClickStage', (event) => {
@@ -532,24 +518,26 @@ export class StateManager {
 				if (controlKeyPressed) {
 					this.transitionTo(StateManagerStates.ZOOM_FACTOR);
 					this.executeStateCallbacks(StateManagerStates.ZOOM_FACTOR, event);
-				} else if (shiftKeyPressed || altKeyPressed) {
-					this.transitionTo(StateManagerStates.SCALE);
-					this.executeStateCallbacks(StateManagerStates.SCALE, event);
+				} else if (shiftKeyPressed) {
+					this.transitionTo(StateManagerStates.SCALE_LABELS);
+					this.executeStateCallbacks(StateManagerStates.SCALE_LABELS, event);
+				} else if (altKeyPressed) {
+					this.transitionTo(StateManagerStates.SCALE_NODES);
+					this.executeStateCallbacks(StateManagerStates.SCALE_NODES, event);
 				}
 			}
 		});
 	}
 
 	resetState() {
-		for (const stateKey in this.state) {
-			const state = this.state[stateKey as StateManagerStateKeys];
+		Object.values(this.state).forEach((state) => {
 			if ('callbacks' in state) {
 				state.callbacks.forEach((internalCallback) => {
 					internalCallback.beforeCallbackExecuted = false;
 					internalCallback.afterCallbackExecuted = false;
 				});
 			}
-		}
+		});
 
 		this.transitionTo(StateManagerStates.IDLE);
 	}
@@ -558,7 +546,7 @@ export class StateManager {
 		return this.state[this.currentState];
 	}
 
-	transitionTo(newState: StateManagerStateKeys) {
+	transitionTo(newState: StateManagerStateValues) {
 		const state = this.getSelectedState();
 
 		if (state.transitionTo.includes(newState)) {
@@ -569,11 +557,11 @@ export class StateManager {
 				}
 			});
 
-			this.currentState = StateManagerStates[newState];
+			this.currentState = newState;
 		}
 	}
 
-	executeStateCallbacks<T extends StateManagerStateKeys>(
+	executeStateCallbacks<T extends StateManagerStateValues>(
 		currentState: T,
 		event?: PayloadType<T>
 	) {
@@ -587,7 +575,7 @@ export class StateManager {
 			executeCallbacks<typeof this.currentState>(state, event);
 		}
 
-		function executeCallbacks<StateKey extends StateManagerStateKeys>(
+		function executeCallbacks<StateKey extends StateManagerStateValues>(
 			state: StateManagerState<StateKey>,
 			event?: PayloadType<StateKey>
 		) {
@@ -615,7 +603,7 @@ export class StateManager {
 		}
 	}
 
-	on<I extends StateManagerStateKeys>(
+	subscribe<I extends StateManagerStateValues>(
 		event: I,
 		callback:
 			| StateManagerCallback<I>
@@ -625,20 +613,26 @@ export class StateManager {
 
 		const internalCallback: StateManagerInternalCallback<I> = {
 			beforeCallbackExecuted: false,
-			afterCallbackExecuted: false
+			afterCallbackExecuted: false,
+			callback: () => {}
 		};
 
-		if ('callback' in callback) {
-			internalCallback.callback = callback.callback;
+		const callbackFunction = isFunction(callback) ? callback : callback.callback;
+
+		if (isObject(callback) && 'callback' in callback) {
+			internalCallback.callback = callbackFunction;
 			internalCallback.beforeCallback = callback.beforeCallback;
 			internalCallback.afterCallback = callback.afterCallback;
 		} else if (isFunction(callback)) {
-			internalCallback.callback = callback;
+			internalCallback.callback = callbackFunction;
 		}
 
 		state.callbacks.push(internalCallback);
+
+		return () => this.unsubscribe(event, callbackFunction);
 	}
-	off<I>(event: keyof typeof StateManagerStates, callback: (event: I) => void) {
+
+	unsubscribe<I>(event: StateManagerStateValues, callback: (event: I) => void) {
 		const state = this.state[event];
 
 		const callbackIndex = state.callbacks.findIndex(
@@ -652,3 +646,5 @@ export class StateManager {
 }
 
 export type NodeDragEvent = MouseCoords & { nodeId: NodeId };
+
+(window as any).StateManager = StateManager;

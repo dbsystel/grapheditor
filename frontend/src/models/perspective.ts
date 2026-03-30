@@ -4,6 +4,7 @@ import { Relation } from './relation';
 export type Perspective = {
 	id: PerspectiveId;
 	name: string;
+	description?: string;
 	nodes: Record<string, Node>;
 	relations: Record<string, Relation>;
 };

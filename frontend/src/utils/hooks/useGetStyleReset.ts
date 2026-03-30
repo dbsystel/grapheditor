@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { getStyleReset, GetStyleResetResponse } from 'src/utils/fetch/getStyleReset';
+import { api } from 'src/utils/api/api';
+import { GetStyleResetResponse } from 'src/utils/fetch/getStyleReset';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetStyleReset = {
@@ -23,6 +24,6 @@ export const useGetStyleReset = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getStyleReset
+		fetchFunction: api.styles.fetch.getStyleReset
 	});
 };

@@ -52,7 +52,8 @@ i18n.use(Backend)
 		// learn more: https://github.com/i18next/i18next-browser-languageDetector?tab=readme-ov-file#detector-options
 		detection: {
 			caches: []
-		}
+		},
+		showSupportNotice: false
 	});
 
 // load translation files to override local translation files

@@ -1,0 +1,10 @@
+.print-object {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	row-gap: var(--db-spacing-fixed-2xs);
+
+	&__object-key {
+		text-transform: capitalize;
+		padding-right: var(--db-spacing-fixed-sm);
+	}
+}

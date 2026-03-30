@@ -5,12 +5,13 @@ import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { Loading } from 'src/components/loading/Loading';
 import { ParaQueryEditor } from 'src/components/para-query-editor/ParaQueryEditor';
 import { NodeId } from 'src/models/node';
 import { ParaQuery } from 'src/models/paraquery';
-import { useGraphStore } from 'src/stores/graph';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
-import { paraQueriesApi } from 'src/utils/api/paraQueries';
+import { api } from 'src/utils/api/api';
 import {
 	GLOBAL_SEARCH_NODE_ID_KEY,
 	GLOBAL_SEARCH_PARAMETERS_KEY,
@@ -19,6 +20,7 @@ import {
 } from 'src/utils/constants';
 import { isObject, isString } from 'src/utils/helpers/general';
 import { useGetParaQueries } from 'src/utils/hooks/useGetParaQueries';
+import { useGetParaQuery } from 'src/utils/hooks/useGetParaQuery';
 import { ParaQueriesProps } from './ParaQueries.interfaces';
 
 export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQueriesProps) => {
@@ -30,7 +32,6 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 		{}
 	);
 	const [searchParams] = useSearchParams();
-	const paraQueriesRef = useRef<Record<NodeId, ParaQuery>>({});
 	const parametersRef = useRef<Record<string, string>>({});
 	const shouldPreselectByIdRef = useRef('');
 	const rootElementClassName = clsx('para-queries', className);
@@ -40,15 +41,29 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 		onSuccess: (response) => {
 			const newOptions: Array<CustomSelectOptionType> = [];
 
-			for (const [nodeId, paraQuery] of Object.entries(response.data.paraqueries)) {
-				newOptions.push({ label: paraQuery.description, value: nodeId });
-			}
+			response.data.paraqueries.forEach((entry) => {
+				newOptions.push({ label: entry[1], value: entry[0] });
+			});
 
 			setOptions(newOptions);
-			paraQueriesRef.current = response.data.paraqueries;
+		}
+	});
+
+	const { reFetch: reFetchParaQuery, isLoading: isParaQueryLoading } = useGetParaQuery({
+		paraQueryId: '',
+		executeImmediately: false,
+		onSuccess: (response) => {
+			const paraQuery = response.data.paraquery;
+
+			parametersRef.current = {};
+
+			for (const [key, parameter] of Object.entries(paraQuery.parameters)) {
+				parametersRef.current[key] = parameter.default_value || '';
+			}
+
+			setSelectedParaQuery(paraQuery);
 
 			if (shouldPreselectByIdRef.current) {
-				const preselectedQuery = response.data.paraqueries[shouldPreselectByIdRef.current];
 				const parameters = useSearchStore
 					.getState()
 					.getUrlSearchParameter(GLOBAL_SEARCH_PARAMETERS_KEY);
@@ -57,9 +72,7 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 				setValues([shouldPreselectByIdRef.current]);
 
 				// preselect the para-query from the URL
-				if (preselectedQuery) {
-					setSelectedParaQuery(preselectedQuery);
-				}
+				setSelectedParaQuery(paraQuery);
 
 				// use any parameters from the URL to prefill the parameter values
 				if (parameters) {
@@ -80,9 +93,10 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 				}
 
 				shouldPreselectByIdRef.current = '';
+
+				searchFunctionRef.current.triggerSearch();
 			}
-		},
-		onError: () => {}
+		}
 	});
 
 	useEffect(() => {
@@ -92,7 +106,7 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 		if (type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY && nodeId) {
 			// initialize the component with values from URL
 			shouldPreselectByIdRef.current = nodeId;
-			reFetch();
+			reFetchParaQuery({ paraQueryId: nodeId });
 		}
 	}, [searchParams]);
 
@@ -104,29 +118,26 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 
 	const onOptionSelected = (values: Array<NodeId>) => {
 		const selectedValue = values.at(0);
-		const localSelectedParaQuery = selectedValue ? paraQueriesRef.current[selectedValue] : null;
 
-		parametersRef.current = {};
-
-		if (localSelectedParaQuery) {
-			for (const [key, parameter] of Object.entries(localSelectedParaQuery.parameters)) {
-				parametersRef.current[key] = parameter.default_value || '';
-			}
+		if (selectedValue) {
+			setValues([selectedValue]);
+			reFetchParaQuery({ paraQueryId: selectedValue });
 		}
-
-		setValues(values);
-		setSelectedParaQuery(localSelectedParaQuery);
 	};
 
 	const onParameterChange = (key: string, value: string) => {
 		parametersRef.current[key] = value;
 	};
 
-	searchFunctionRef.current.triggerSearch = () => {
-		if (selectedParaQuery) {
-			useGraphStore.getState().clearPerspective();
+	searchFunctionRef.current.searchFunction = () => {
+		const nodeId = values.at(0);
+		if (selectedParaQuery && nodeId) {
+			usePerspectiveStore.getState().reset();
 
-			paraQueriesApi.executeParaQuery(selectedParaQuery.cypher, parametersRef.current);
+			api.paraQueries.actions.executeParaQuery(
+				selectedParaQuery.cypher,
+				parametersRef.current
+			);
 		}
 	};
 
@@ -155,6 +166,7 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 				onOptionSelected={onOptionSelected}
 				searchPlaceholder={searchPlaceholder}
 			/>
+			{isParaQueryLoading && <Loading isLoading={isParaQueryLoading} />}
 			{selectedParaQuery && (
 				<ParaQueryEditor
 					paraQuery={selectedParaQuery}

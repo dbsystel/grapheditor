@@ -13,11 +13,24 @@
 	&__node-label-container {
 		line-height: 1.2;
 		position: absolute;
-		overflow-x: hidden;
-		// CR_ML_2
-		overflow-y: hidden;
 		word-break: break-word;
 		transition: none;
+
+		&[data-number-of-self-loops]:not([data-number-of-self-loops="0"]):before {
+			content: attr(data-number-of-self-loops);
+			position: absolute;
+			bottom: 0;
+			right: 0;
+			background-color: inherit;
+			z-index: 1;
+			border-width: 1px;
+			border-style: solid;
+			border-color: inherit;
+			border-bottom: none;
+			border-right: none;
+			padding: 1px 1px 0 1px;
+			line-height: 1;
+		}
 
 		&--highlighted {
 			z-index: 1;
@@ -29,26 +42,19 @@
 			z-index: 2;
 			box-shadow: 0 0 0 2px #ffffff,
 			0 0 8px 2px #000000;
-		}
 
-		/* width */
+			&:before {
+				display: none;
+			}
+		}
+	}
+
+	&__node-label {
+		overflow: auto;
+		height: 100%;
+
 		&::-webkit-scrollbar {
-			width: 5px;
-		}
-
-		/* Track */
-		&::-webkit-scrollbar-track {
-			background: #f1f1f1;
-		}
-
-		/* Handle */
-		&::-webkit-scrollbar-thumb {
-			background: #888;
-		}
-
-		/* Handle on hover */
-		&::-webkit-scrollbar-thumb:hover {
-			background: #555;
+			width: 0;
 		}
 	}
 }

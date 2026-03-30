@@ -1,10 +1,9 @@
 import './RightWidget.scss';
-import { DBButton, DBDrawer, DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useState } from 'react';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemsDrawer } from 'src/components/items-drawer/ItemsDrawer';
 import { ParallaxNextSteps } from 'src/components/parallax-next-steps/ParallaxNextSteps';
+import { Sidebar } from 'src/components/sidebar/Sidebar';
 import { RightWidgetProps } from './RightWidget.interfaces';
 
 export const RightWidget = ({
@@ -13,55 +12,18 @@ export const RightWidget = ({
 	className,
 	testId
 }: RightWidgetProps) => {
-	const [isCollapsed, setIsCollapsed] = useState<boolean>(true);
-	const rootElementClassName = clsx('right-widget', className, {
-		'right-widget--collapsed': isCollapsed
-	});
-
-	const toggleDrawer = () => {
-		setIsCollapsed(!isCollapsed);
-	};
+	const rootElementClassName = clsx('right-widget', className);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
 			{shouldRenderNextSteps && (
-				<DBDrawer
-					id="right-widget__drawer"
-					data-testid={testId}
-					closeButtonText=""
-					backdrop="none"
-					open={true}
-					direction="right"
-					drawerHeader={
-						<DrawerHead toggleDrawer={toggleDrawer} isCollapsed={isCollapsed} />
-					}
-					spacing="none"
-				>
+				<Sidebar shouldHideCloseButton={true} direction="left">
 					<ErrorBoundary>
 						<ParallaxNextSteps />
 					</ErrorBoundary>
-				</DBDrawer>
+				</Sidebar>
 			)}
-			<ItemsDrawer id="items-drawer" />
+			<ItemsDrawer />
 		</div>
-	);
-};
-
-const DrawerHead = ({
-	isCollapsed,
-	toggleDrawer
-}: {
-	isCollapsed: boolean;
-	toggleDrawer: () => void;
-}) => {
-	return (
-		<DBSection spacing="none" className="right-widget__header">
-			<DBButton
-				icon={isCollapsed ? 'chevron_left' : 'chevron_right'}
-				onClick={toggleDrawer}
-				variant="ghost"
-				noText
-			/>
-		</DBSection>
 	);
 };

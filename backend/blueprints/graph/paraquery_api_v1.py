@@ -1,4 +1,4 @@
-from flask import current_app
+from flask import abort, current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from blueprints.graph import query_model
@@ -6,20 +6,21 @@ from blueprints.graph import paraquery_model
 from blueprints.maintenance.login_api import require_tab_id
 from blueprints.graph.query_api_v1 import execute_query
 from database.utils import abort_with_json
+from database.mapper import get_base_id
 
 blp = Blueprint(
     "Parameterized queries", __name__, description="Work with queries with parameters."
 )
 
 @blp.route("")
-class ParaQuery(MethodView):
-    @blp.response(200, paraquery_model.ParaqueryResponseSchema)
+class ParaQueries(MethodView):
+    @blp.response(200, paraquery_model.ParaqueriesGetResponseSchema)
     @require_tab_id()
     def get(self):
         "Return a map of paraquery ID's to their contents."
         paraqueries = current_app.graph_db.get_paraqueries()
         return {
-            "paraqueries": paraqueries
+            "paraqueries": [[f"id::{k}", v] for k, v in paraqueries.items()]
         }
 
     @blp.arguments(
@@ -31,7 +32,10 @@ class ParaQuery(MethodView):
         example=query_model.cypher_result_example,
     )
     @require_tab_id()
-    def post(self, uuid=None, name=None, db_id=None, parameters=None):
+    def post(self, uuid: str|None=None,
+             name: str|None=None,
+             db_id: str|None=None,
+             parameters: dict|None=None):
         """Execute an specific paraquery optionally with parameters.
 
         Given an UUID, name oder ID of a paraquery, execute it on
@@ -68,3 +72,17 @@ class ParaQuery(MethodView):
         query_text = paraquery_node.properties["cypher__tech_"]
 
         return execute_query(query_text, parameters)
+
+
+@blp.route("/<pquery_id>")
+class ParaQuery(MethodView):
+    @blp.response(200, paraquery_model.ParaqueryGetResponseSchema)
+    @require_tab_id()
+    def get(self, pquery_id: str):
+        "Return a paraquery by its ID."
+        pquery = current_app.graph_db.get_paraquery(get_base_id(pquery_id))
+        if not pquery:
+            abort(404)
+        return {
+            "paraquery": pquery
+        }

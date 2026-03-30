@@ -1,8 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import {
-	getNodesDefaultLabelNodes,
-	GetNodesDefaultLabelNodesResponse
-} from 'src/utils/fetch/getNodesDefaultLabelNodes';
+import { api } from 'src/utils/api/api';
+import { GetNodesDefaultLabelNodesResponse } from 'src/utils/fetch/getNodesDefaultLabelNodes';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetNodesLabelsDefaultNodesParameters = {
@@ -26,6 +24,6 @@ export const useGetNodesDefaultLabelsNodes = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getNodesDefaultLabelNodes
+		fetchFunction: api.nodes.fetch.getNodesDefaultLabelNodes
 	});
 };

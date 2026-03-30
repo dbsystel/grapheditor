@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw';
+import { RefObject } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { GlobalSearchRef } from 'src/components/global-search/GlobalSearch.interfaces';
 import { useSearchStore } from 'src/stores/search';
 import { TEST_HOST } from 'src/tests/constants';
 import { testExtend } from 'src/tests/test-extend';
@@ -15,9 +17,14 @@ import { render } from 'vitest-browser-react';
 import { GlobalSearch } from './GlobalSearch';
 
 describe('Components - GlobalSearch', () => {
-	const globalSearchRef = {
+	const globalSearchRef: RefObject<GlobalSearchRef> = {
 		current: {
-			triggerSearch: () => {}
+			triggerSearch: () => {
+				globalSearchRef.current.searchFunction();
+				globalSearchRef.current.redirectToApplication();
+			},
+			searchFunction: () => {},
+			redirectToApplication: () => {}
 		}
 	};
 

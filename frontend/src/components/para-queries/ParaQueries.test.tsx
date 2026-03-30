@@ -1,3 +1,5 @@
+import { RefObject } from 'react';
+import { GlobalSearchRef } from 'src/components/global-search/GlobalSearch.interfaces';
 import { ParaQueries } from 'src/components/para-queries/ParaQueries';
 import { renderWithRouter } from 'src/tests/helpers';
 import { vi } from 'vitest';
@@ -5,7 +7,13 @@ import { userEvent } from 'vitest/browser';
 
 describe('Components - ParaQueries', () => {
 	test('Options are shown + option click', async () => {
-		const ref = { current: { triggerSearch: () => {} } };
+		const ref: RefObject<GlobalSearchRef> = {
+			current: {
+				triggerSearch: () => {},
+				searchFunction: () => {},
+				redirectToApplication: () => {}
+			}
+		};
 		const screen = await renderWithRouter(<ParaQueries searchFunctionRef={ref} />);
 
 		const summary = screen.getByRole('group').element().getElementsByTagName('summary')[0];
@@ -31,7 +39,9 @@ describe('Components - ParaQueries', () => {
 
 		await userEvent.click(options[0]);
 
-		// check if the ParaQueryEditor component is rendered
-		expect(screen.container.firstElementChild?.childElementCount).toBe(2);
+		await vi.waitFor(() => {
+			// check if the ParaQueryEditor component is rendered
+			expect(screen.container.firstElementChild?.childElementCount).toBe(2);
+		});
 	});
 });

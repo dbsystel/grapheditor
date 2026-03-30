@@ -1,8 +1,8 @@
 import { DBButton } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { preparePerspectiveDataAndRefreshNodesPosition } from 'src/utils/helpers/perspectives';
 import { usePutPerspective } from 'src/utils/hooks/usePutPerspective';
 import { HeaderPerspectiveSaveButtonProps } from './HeaderPerspectiveSaveButton.interfaces';
@@ -17,10 +17,10 @@ export const HeaderPerspectiveSaveButton = ({
 }: HeaderPerspectiveSaveButtonProps) => {
 	const { t } = useTranslation();
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const { perspectiveName } = useGraphStore((store) => store);
+	const perspective = usePerspectiveStore((store) => store.perspective);
 	const { reFetch, isLoading } = usePutPerspective({
 		perspectiveId: perspectiveId,
-		perspectiveName: perspectiveName || '',
+		perspectiveName: perspective?.name || '',
 		nodePositions: {},
 		relationIds: [],
 		onSuccess: async () => {
@@ -42,7 +42,7 @@ export const HeaderPerspectiveSaveButton = ({
 
 		reFetch({
 			perspectiveId: perspectiveId,
-			perspectiveName: perspectiveName || '',
+			perspectiveName: perspective?.name || '',
 			nodePositions: nodePositions,
 			relationIds: relationIds
 		});

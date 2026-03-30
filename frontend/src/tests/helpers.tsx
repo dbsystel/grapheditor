@@ -1,8 +1,9 @@
 import { act, ReactElement } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { ItemsDrawer } from 'src/components/items-drawer/ItemsDrawer';
-import { FormItemProperty } from 'src/models/general';
 import { ItemProperty } from 'src/models/item';
+import { Perspective } from 'src/models/perspective';
+import { getRandomIntiger } from 'src/utils/helpers/general';
 import { render } from 'vitest-browser-react';
 
 export const renderWithRouter = (component: ReactElement) => {
@@ -38,10 +39,14 @@ export const generateTestProperty = (id: string): ItemProperty => {
 	};
 };
 
-export const generateFormItemProperty = (key: string): FormItemProperty => {
+export const generateTestPerspective = (): Perspective => {
+	const randomIntiger = getRandomIntiger(1000000);
+
 	return {
-		key: key,
-		value: key + '-value',
-		type: 'string'
+		id: 'node-' + randomIntiger,
+		description: 'description',
+		name: 'node-' + randomIntiger,
+		nodes: {},
+		relations: {}
 	};
 };

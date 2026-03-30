@@ -8,7 +8,7 @@ import { ParallaxRelations } from 'src/components/parallax-relations/ParallaxRel
 import { Node, NodeId } from 'src/models/node';
 import { RelationType } from 'src/models/relation';
 import { ParallaxHistory, useParallaxStore } from 'src/stores/parallax';
-import { parallaxApi } from 'src/utils/api/parallax';
+import { api } from 'src/utils/api/api';
 import { usePostNodesBulkFetch } from 'src/utils/hooks/usePostNodesBulkFetch';
 import { ParallaxNextStepsProps } from './ParallaxNextSteps.interfaces';
 
@@ -39,13 +39,16 @@ export const ParallaxNextSteps = ({ id, className, testId }: ParallaxNextStepsPr
 
 	const { reFetch, isLoading: isRelationTypesLoading } = usePostNodesBulkFetch({
 		executeImmediately: false,
-		onSuccess: (nodes) => {
+		onSuccess: (response) => {
 			setRelationsTypeNodes(
-				nodes.reduce<Map<NodeId, Node>>((previousValue, currentValue) => {
-					previousValue.set(currentValue.id, currentValue);
+				Object.values(response.data.nodes).reduce<Map<NodeId, Node>>(
+					(previousValue, currentValue) => {
+						previousValue.set(currentValue.id, currentValue);
 
-					return previousValue;
-				}, new Map())
+						return previousValue;
+					},
+					new Map()
+				)
 			);
 		},
 		onError: () => {},
@@ -123,7 +126,7 @@ export const ParallaxNextSteps = ({ id, className, testId }: ParallaxNextStepsPr
 			historyRef.current = parallaxHistory;
 
 			useParallaxStore.getState().setApiTriggerType('next-steps');
-			parallaxApi.triggerNextSteps(historyRef.current);
+			api.parallax.actions.triggerNextSteps(historyRef.current);
 
 			setSelectedNextRelations({
 				incomingRelationTypes: [],

@@ -2,29 +2,34 @@ import { ParallaxInitialQuery, ParallaxSteps } from 'src/models/parallax';
 import { useItemsStore } from 'src/stores/items';
 import { useParallaxStore } from 'src/stores/parallax';
 import { useSearchStore } from 'src/stores/search';
+import { api } from 'src/utils/api/api';
 import { GLOBAL_SEARCH_TYPE_VALUE_PARALLAX } from 'src/utils/constants';
 import { postParallax } from 'src/utils/fetch/postParallax';
 import { isHomepageView } from 'src/utils/helpers/general';
 import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 
 export const parallaxApi = {
-	postParallax: postParallax,
-	triggerStart: () => {
-		wrapParallaxTrigger(triggerStart);
+	fetch: {
+		postParallax: postParallax
 	},
-	triggerNextSteps: (nextSteps: ParallaxSteps) => {
-		wrapParallaxTrigger(triggerNextSteps.bind(null, nextSteps));
-	},
-	triggerFilters: (initialQuery: ParallaxInitialQuery, steps: ParallaxSteps) => {
-		wrapParallaxTrigger(triggerFilters.bind(null, initialQuery, steps));
-	},
-	triggerBreadcrumbs: (index: number) => {
-		wrapParallaxTrigger(triggerBreadcrumbs.bind(null, index));
+	actions: {
+		triggerStart: () => {
+			wrapParallaxTrigger(triggerStart);
+		},
+		triggerNextSteps: (nextSteps: ParallaxSteps) => {
+			wrapParallaxTrigger(triggerNextSteps.bind(null, nextSteps));
+		},
+		triggerFilters: (initialQuery: ParallaxInitialQuery, steps: ParallaxSteps) => {
+			wrapParallaxTrigger(triggerFilters.bind(null, initialQuery, steps));
+		},
+		triggerBreadcrumbs: (index: number) => {
+			wrapParallaxTrigger(triggerBreadcrumbs.bind(null, index));
+		}
 	}
 };
 
 async function triggerStart() {
-	await parallaxApi
+	await api.parallax.fetch
 		.postParallax({
 			nodeIds: useItemsStore.getState().nodes.keys().toArray(),
 			filters: { labels: [], properties: {} },
@@ -43,7 +48,7 @@ async function triggerStart() {
 async function triggerNextSteps(steps: ParallaxSteps) {
 	useParallaxStore.getState().setShouldPreventApiCall(true);
 
-	await parallaxApi
+	await api.parallax.fetch
 		.postParallax({
 			nodeIds: useParallaxStore.getState().initialQuery.nodeIds,
 			filters: useParallaxStore.getState().initialQuery.filters,
@@ -66,7 +71,7 @@ async function triggerNextSteps(steps: ParallaxSteps) {
 async function triggerFilters(initialQuery: ParallaxInitialQuery, steps: ParallaxSteps) {
 	useParallaxStore.getState().setShouldPreventApiCall(true);
 
-	await parallaxApi
+	await api.parallax.fetch
 		.postParallax({
 			nodeIds: initialQuery.nodeIds,
 			filters: initialQuery.filters,
@@ -89,7 +94,7 @@ async function triggerFilters(initialQuery: ParallaxInitialQuery, steps: Paralla
 async function triggerBreadcrumbs(index: number) {
 	useParallaxStore.getState().setShouldPreventApiCall(true);
 
-	await parallaxApi
+	await api.parallax.fetch
 		.postParallax({
 			nodeIds: useParallaxStore.getState().initialQuery.nodeIds,
 			filters: useParallaxStore.getState().initialQuery.filters,
@@ -120,10 +125,10 @@ async function wrapParallaxTrigger(callback: () => Promise<void>) {
 
 	useParallaxStore.getState().setIsLoading(true);
 
-	await callback();
-
-	useParallaxStore.getState().setIsLoading(false);
-	useParallaxStore.getState().setApiTriggerType('refresh');
+	callback().finally(() => {
+		useParallaxStore.getState().setIsLoading(false);
+		useParallaxStore.getState().setApiTriggerType('refresh');
+	});
 }
 
 const enableParallaxApiCallsOnSearchResultProcessEnd = () => {

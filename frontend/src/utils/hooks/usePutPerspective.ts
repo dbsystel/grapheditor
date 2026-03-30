@@ -1,9 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import {
-	putPerspective,
-	PutPerspectiveParameters,
-	PutPerspectiveResponse
-} from 'src/utils/fetch/putPerspective';
+import { api } from 'src/utils/api/api';
+import { PutPerspectiveParameters, PutPerspectiveResponse } from 'src/utils/fetch/putPerspective';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UsePutPerspectiveParameters = {
@@ -47,7 +44,7 @@ export const usePutPerspective = ({
 							relationIds: parameters.relationIds
 						};
 
-			return putPerspective(params);
+			return api.perspectives.fetch.putPerspective(params);
 		}
 	});
 };

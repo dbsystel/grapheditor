@@ -1,23 +1,25 @@
 import './ItemOverviewPopover.scss';
 import { DBPopover } from '@db-ux/react-core-components';
-import { autoPlacement, autoUpdate, computePosition, offset, shift } from '@floating-ui/react';
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/react';
 import clsx from 'clsx';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { SingleNode } from 'src/components/single-node/SingleNode';
 import { SingleRelation } from 'src/components/single-relation/SingleRelation';
+import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { ItemOverviewPopoverProps } from './ItemOverviewPopover.interfaces';
 
 /**
- * This component renders the content of each item.
+ * This component renders the content of an item in a popover.
  * It gives the user an overview of details to the corresponding item.
  */
 export const ItemOverviewPopover = ({
 	item,
 	popoverRef,
 	popoverOffset,
+	popoverPlacement,
 	id,
 	className,
 	testId
@@ -80,12 +82,14 @@ export const ItemOverviewPopover = ({
 				() => {
 					computePosition(popoverRef, popoverElement, {
 						strategy: 'fixed',
-						placement: 'top',
+						placement: popoverPlacement || 'top',
 						middleware: [
 							offset(popoverOffset || 0),
-							shift({ crossAxis: true }),
-							autoPlacement({
-								allowedPlacements: [
+							// use the "flip" function instead of the "autoPlacement" function,
+							// the "autoPlacement" function completely ignores the "placement" option
+							flip({
+								fallbackStrategy: 'initialPlacement',
+								fallbackPlacements: [
 									'top',
 									'top-end',
 									'top-start',
@@ -99,7 +103,8 @@ export const ItemOverviewPopover = ({
 									'left-end',
 									'left-start'
 								]
-							})
+							}),
+							shift({ crossAxis: true })
 						]
 					}).then((computedPosition) => {
 						// adjust for bottom placements manually since fixed positioning with bottom won't render
@@ -129,9 +134,17 @@ export const ItemOverviewPopover = ({
 		}
 	}, []);
 
+	const onRefChange = useCallback((element: HTMLDivElement | null) => {
+		localPopoverRef.current = element;
+
+		if (element) {
+			useItemOverviewPopoverStore.getState().registerPopoverElementAndEvents(element);
+		}
+	}, []);
+
 	return createPortal(
 		<dialog id={id} open={true} className={rootElementClassName} data-testid={testId}>
-			<DBPopover className="item-overview-popover__popover" open={true} ref={localPopoverRef}>
+			<DBPopover className="item-overview-popover__popover" open={true} ref={onRefChange}>
 				{isNode(item) && (
 					<SingleNode
 						node={item}

@@ -1,14 +1,13 @@
-import { AxiosError } from 'axios';
-import { Node } from 'src/models/node';
-import { nodesApi } from 'src/utils/api/nodes';
-import { PostNodesBulkFetchParameters } from 'src/utils/fetch/postNodesBulkFetch';
-import { PostParallaxParameters } from 'src/utils/fetch/postParallax';
+import { AxiosError, AxiosResponse } from 'axios';
+import { api } from 'src/utils/api/api';
+import {
+	PostNodesBulkFetchParameters,
+	PostNodesBulkFetchResponse
+} from 'src/utils/fetch/postNodesBulkFetch';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
-type PostNodesBulkFetchResponse = Array<Node>;
-
 export type UsePostParallaxParameters = {
-	onSuccess: (data: PostNodesBulkFetchResponse) => void;
+	onSuccess: (data: AxiosResponse<PostNodesBulkFetchResponse>) => void;
 	onError?: (error: AxiosError) => void;
 	onFinally?: () => void;
 	executeImmediately?: boolean;
@@ -27,14 +26,14 @@ export const usePostNodesBulkFetch = (
 	}: UsePostParallaxParameters,
 	dependencies?: Array<unknown>
 ) => {
-	return useApiHook<PostNodesBulkFetchResponse, PostNodesBulkFetchParameters>({
+	return useApiHook<AxiosResponse<PostNodesBulkFetchResponse>, PostNodesBulkFetchParameters>({
 		executeImmediately: executeImmediately,
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
 		dependencies: dependencies,
 		fetchFunction: (parameters?: PostNodesBulkFetchParameters) => {
-			return nodesApi.postNodesBulkFetch({ nodeIds: parameters?.nodeIds || nodeIds });
+			return api.nodes.fetch.postNodesBulkFetch({ nodeIds: parameters?.nodeIds || nodeIds });
 		}
 	});
 };

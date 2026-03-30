@@ -12,8 +12,7 @@ import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
 import { AddRelationFormProps } from './AddRelationForm.interfaces';
 
@@ -28,12 +27,9 @@ export const AddRelationForm = ({
 	const [toNodes, setToNodes] = useState<Array<Node>>([]);
 	const { t } = useTranslation();
 	const { addNotification } = useNotificationsStore((state) => state);
-	const {
-		addRelation: addGraphRelation,
-		indexParallelRelations,
-		adaptRelationTypeAndCurvature,
-		addNode: addGraphNode
-	} = useGraphStore((store) => store);
+	const { addRelation: addGraphRelation, addNode: addGraphNode } = useGraphStore(
+		(store) => store
+	);
 	const setRelation = useItemsStore((store) => store.setRelation);
 	const [isSourceNodeDisabled, setIsSourceNodeDisabled] = useState<boolean>(true);
 	const form = useForm<{
@@ -70,7 +66,7 @@ export const AddRelationForm = ({
 	}, [refNode]);
 
 	const fetchNodes = (type: 'from' | 'to', searchTerm: string) => {
-		nodesApi.getNodes({ searchTerm: searchTerm }).then((data) => {
+		api.nodes.fetch.getNodes({ searchTerm: searchTerm }).then((data) => {
 			if (type === 'from') {
 				setFromNodes(data.data);
 			} else if (type === 'to') {
@@ -101,7 +97,7 @@ export const AddRelationForm = ({
 		const type = getValues('type');
 
 		if (validationSuccessful && sourceNodeId && targetNodeId && type) {
-			relationsApi
+			api.relations.fetch
 				.postRelation({
 					properties: {},
 					sourceId: sourceNodeId,
@@ -110,9 +106,10 @@ export const AddRelationForm = ({
 				})
 				.then(async (data) => {
 					const relation = data.data;
-					const nodes = await nodesApi.postNodesBulkFetch({
+					const response = await api.nodes.fetch.postNodesBulkFetch({
 						nodeIds: [relation.source_id, relation.target_id]
 					});
+					const nodes = Object.values(response.data.nodes);
 					const sourceNode = getNodeByIdFromArrayOfNodes(nodes, relation.source_id);
 					const targetNode = getNodeByIdFromArrayOfNodes(nodes, relation.target_id);
 
@@ -133,8 +130,10 @@ export const AddRelationForm = ({
 					addGraphNode(targetNode);
 					setRelation(relation);
 					addGraphRelation(relation);
-					indexParallelRelations();
-					adaptRelationTypeAndCurvature(relation.id);
+					// leave the method call like this, instead of importing at the beginning of the component
+					// (otherwise it won't work properly)
+					useGraphStore.getState().indexParallelRelations();
+					useGraphStore.getState().adaptRelationsTypeAndCurvature();
 
 					if (isSourceNodeDisabled) {
 						resetField('targetNode');

@@ -25,7 +25,7 @@ CALL apoc.systemdb.execute(
     "CALL apoc.custom.installFunction(
       'joinPropertiesText(elem::ANY) :: STRING',
       'RETURN REDUCE(result = \\'\\',
-              prop IN [p IN keys($elem) WHERE p <> \"_ft__tech_\" | p]
+              prop IN [p IN keys($elem) WHERE not p in [\"_ft__tech_\", \"nodes__tech_\", \"positions__tech_\",\"relations__tech_\"] | p]
               | result + custom.lowercase(prop) + \" : \" + custom.lowercase($elem[prop]) + \" ; \") AS answer',
       $dbName,
       false,

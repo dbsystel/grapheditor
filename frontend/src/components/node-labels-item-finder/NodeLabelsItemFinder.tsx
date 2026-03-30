@@ -4,10 +4,10 @@ import clsx from 'clsx';
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
-import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { Node } from 'src/models/node';
-import { nodesApi } from 'src/utils/api/nodes';
-import { GraphEditorTypeSimplified, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
+import { api } from 'src/utils/api/api';
+import { GraphEditorTypeSimplified } from 'src/utils/constants';
 import { compareTwoStringsForSorting } from 'src/utils/helpers/general';
 import {
 	generateNode,
@@ -15,7 +15,7 @@ import {
 	nodeContainsSearchTerm
 } from 'src/utils/helpers/nodes';
 import { useGetNodesLabelsNodes } from 'src/utils/hooks/useGetNodesLabelsNodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import {
 	NodeLabelsItemFinderProps,
 	NodeLabelsItemFinderTagProps
@@ -33,11 +33,11 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const allLabels = useRef<Array<Node>>([]);
 	const rootElementClassName = clsx('node-labels-item-finder', className);
 	const label = props.label || t('create_node_label');
-	const [tooltipLabel, setTooltipLabel] = useState<Node | null>(null);
 	const timeoutRef = useRef(0);
 	const [newlyAddedTags, setNewlyAddedTags] = useState<Array<string>>([]);
 	const [selectedTagIds, setSelectedTagIds] = useState<Array<string>>([]);
 	const [originalValue, setOriginalValue] = useState<Array<Node> | undefined>(undefined);
+	const [highlightedTagIds, setHighlightedTagIds] = useState<Array<string>>([]);
 	const sortedLabels = useMemo(() => {
 		return value?.slice().toSorted((a, b) => {
 			const aTitle = idFormatter.parseIdToName(a.title);
@@ -58,16 +58,20 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 
 	const { isLoading: isLabelsLoading, reFetch: reFetchLabels } = useGetNodesLabelsNodes({
 		executeImmediately: false,
-		onSuccess: (data) => {
-			allLabels.current = data;
-			setLabelOptions(data);
+		onSuccess: (response) => {
+			const responseNodes = Object.values(response.data.nodes);
+
+			allLabels.current = responseNodes;
+			setLabelOptions(responseNodes);
 		}
 	});
 
+	// TODO "labels" seem to be one step behind when "handleRef" is used in "onChange"
 	useImperativeHandle(handleRef, () => ({
 		handleSave,
 		handleUndo,
-		labels: (value || []).map((label) => getNodeSemanticIdOrId(label))
+		setHighlightedTagIds: setHighlightedTagIds,
+		labels: getNodesSemanticIdOrId(value || [])
 	}));
 
 	useEffect(() => {
@@ -100,6 +104,10 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		}
 	}, [props.value, isEditModeActive]);
 
+	const getNodesSemanticIdOrId = (nodes: Array<Node>) => {
+		return nodes.map((node) => getNodeSemanticIdOrId(node));
+	};
+
 	/**
 	 * Function executed on the ItemFinder labels search.
 	 */
@@ -117,6 +125,10 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	 * Function executed on the ItemFinder options click.
 	 */
 	const onLabelChange = (item: Node, isItemSelected: boolean, selectedItems: Array<Node>) => {
+		if (handleRef && handleRef.current) {
+			handleRef.current.labels = getNodesSemanticIdOrId(selectedItems);
+		}
+
 		setValue(selectedItems);
 
 		if (isItemSelected && !newlyAddedTags.includes(item.id)) {
@@ -133,7 +145,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		const optionMatch = labelOptions.find((option) => {
 			return option.title === searchTerm;
 		});
-
 		const newLabel = optionMatch
 			? optionMatch
 			: generateNode(
@@ -160,7 +171,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 				labels: (value || []).map((label) => label.id)
 			};
 
-			await nodesApi.patchNodesAndUpdateApplication([patchObject]);
+			await api.nodes.actions.patchNodesAndUpdateApplication([patchObject]);
 
 			setNewlyAddedTags([]);
 			setOriginalValue(value);
@@ -170,27 +181,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const handleUndo = () => {
 		setValue(originalValue);
 		setNewlyAddedTags([]);
-	};
-
-	const onMouseEnter = (label: Node) => {
-		if (showTooltipOnHover) {
-			if (timeoutRef.current) {
-				window.clearTimeout(timeoutRef.current);
-			}
-
-			timeoutRef.current = window.setTimeout(() => {
-				setTooltipLabel(label);
-			}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
-		}
-	};
-
-	const onMouseLeave = () => {
-		if (showTooltipOnHover) {
-			if (timeoutRef.current) {
-				window.clearTimeout(timeoutRef.current);
-			}
-			setTooltipLabel(null);
-		}
 	};
 
 	const handleTagSelect = (tagId: string) => {
@@ -233,9 +223,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 							sortedLabels.map((label) => {
 								const isNewlyAdded = newlyAddedTags.includes(label.id);
 								const isSelected = selectedTagIds.includes(label.id);
-								const isHighlighted = !!props.highlightedTagIds?.includes(label.id);
-								const hoveredTooltipLabel =
-									tooltipLabel && tooltipLabel.id === label.id ? label : null;
+								const isHighlighted = highlightedTagIds.includes(label.id);
 								const shouldRenderWarningIcon = props.markTagIdsAsWarning?.includes(
 									label.id
 								);
@@ -249,12 +237,11 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 										editLabels={editLabels}
 										isHighlighted={isHighlighted}
 										shouldRenderWarningIcon={shouldRenderWarningIcon}
-										onMouseEnter={onMouseEnter}
-										onMouseLeave={onMouseLeave}
 										onLabelChange={onLabelChange}
 										value={value}
 										onTagSelect={handleTagSelect}
-										tooltipLabel={hoveredTooltipLabel}
+										tooltipLabel={label}
+										showTooltipOnHover={showTooltipOnHover}
 									/>
 								);
 							})}
@@ -313,15 +300,13 @@ const Tag = ({
 	editLabels,
 	isHighlighted,
 	label,
-	onMouseEnter,
-	onMouseLeave,
 	onLabelChange,
 	value,
 	onTagSelect,
 	tooltipLabel,
-	shouldRenderWarningIcon
+	shouldRenderWarningIcon,
+	showTooltipOnHover
 }: NodeLabelsItemFinderTagProps) => {
-	const [ref, setRef] = useState<HTMLDivElement | null>(null);
 	const rootElementClassName = clsx(
 		isHighlighted
 			? 'node-labels-item-finder__highlighted-border'
@@ -333,7 +318,11 @@ const Tag = ({
 	);
 
 	const onRefChange = useCallback((element: HTMLDivElement | null) => {
-		setRef(element);
+		if (element && tooltipLabel && showTooltipOnHover) {
+			useItemOverviewPopoverStore
+				.getState()
+				.registerTriggerElement({ triggerElement: element, item: tooltipLabel });
+		}
 	}, []);
 
 	const onRemove = () => {
@@ -355,8 +344,6 @@ const Tag = ({
 			className={rootElementClassName}
 			showCheckState={false}
 			data-density="functional"
-			onMouseEnter={() => onMouseEnter(label)}
-			onMouseLeave={onMouseLeave}
 			ref={onRefChange}
 			behavior={editLabels ? 'removable' : undefined}
 			onRemove={onRemove}
@@ -366,8 +353,6 @@ const Tag = ({
 				{shouldRenderWarningIcon && <DBIcon icon="exclamation_mark_circle" />}
 
 				{idFormatter.parseIdToName(label.title)}
-
-				{tooltipLabel && <ItemOverviewPopover item={tooltipLabel} popoverRef={ref} />}
 			</DBCheckbox>
 		</DBTag>
 	);

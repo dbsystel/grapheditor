@@ -1,7 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { NodeId } from 'src/models/node';
 import { ParallaxData, ParallaxFilters, ParallaxSteps } from 'src/models/parallax';
-import { backendApi } from 'src/utils/api';
+import { backendApi } from 'src/utils/backend-api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PostParallaxParameters = {

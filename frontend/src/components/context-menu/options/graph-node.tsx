@@ -4,6 +4,7 @@ import { RemoveLabelsAction } from 'src/components/context-menu/actions/remove-l
 import i18n from 'src/i18n';
 import { useClipboardStore } from 'src/stores/clipboard';
 import { useContextMenuStore } from 'src/stores/context-menu';
+import { useExpandNodeStore } from 'src/stores/expand-node';
 import { AddRelationAction } from '../actions/add-relation';
 import { applyLayoutToFollowingNodesAction } from '../actions/apply-layout-to-following-nodes';
 import { collapseNodeAction } from '../actions/collapse-node';
@@ -66,7 +67,7 @@ export const graphNodeOptions = (): Partial<Record<ContextMenuAction, ContextMen
 				expandNodeAction(nodeId);
 			},
 			shouldRender: () => {
-				return !useContextMenuStore.getState().isNodeExpanded(nodeId);
+				return !useExpandNodeStore.getState().isNodeExpanded(nodeId);
 			}
 		},
 		collapse: {
@@ -75,7 +76,7 @@ export const graphNodeOptions = (): Partial<Record<ContextMenuAction, ContextMen
 				collapseNodeAction(nodeId);
 			},
 			shouldRender: () => {
-				return useContextMenuStore.getState().isNodeExpanded(nodeId);
+				return useExpandNodeStore.getState().isNodeExpanded(nodeId);
 			}
 		},
 		load_perspective: {

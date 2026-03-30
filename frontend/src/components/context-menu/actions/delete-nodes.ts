@@ -1,9 +1,9 @@
 import { NodeId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 
 export const deleteNodesAction = (nodeIds: Array<NodeId>) => {
-	nodesApi.deleteNodesAndUpdateApplication(nodeIds).then(() => {
+	api.nodes.actions.deleteNodesAndUpdateApplication(nodeIds).then(() => {
 		useContextMenuStore.getState().close();
 	});
 };

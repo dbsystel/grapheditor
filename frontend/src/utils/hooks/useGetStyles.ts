@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { getStyles, GetStylesResponse } from 'src/utils/fetch/getStyles';
+import { api } from 'src/utils/api/api';
+import { GetStylesResponse } from 'src/utils/fetch/getStyles';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetStylesParameters = {
@@ -26,6 +27,6 @@ export const useGetStyles = ({
 		onError: onError,
 		onFinally: onFinally,
 		waitBeforeReFetch: waitBeforeReFetch,
-		fetchFunction: getStyles
+		fetchFunction: api.styles.fetch.getStyles
 	});
 };

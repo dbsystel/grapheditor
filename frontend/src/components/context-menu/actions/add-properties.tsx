@@ -1,29 +1,23 @@
 import { DBButton, DBCard } from '@db-ux/react-core-components';
 import { useState } from 'react';
+import { AddNewProperty } from 'src/components/add-new-property/AddNewProperty';
 import { ContextMenuTopBlock } from 'src/components/context-menu/sub-menu/top-block/ContextMenuTopBlock';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
-import { ItemPropertiesAddNewProperty } from 'src/components/item-properties/tabs/add-new-property/ItemPropertiesAddNewProperty';
 import { Table } from 'src/components/table/Table';
 import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableHead } from 'src/components/table-head/TableHead';
 import { TableRow } from 'src/components/table-row/TableRow';
 import i18n from 'src/i18n';
-import {
-	ItemProperties,
-	ItemProperty,
-	ItemPropertyKey,
-	ItemPropertyWithKey
-} from 'src/models/item';
+import { ItemProperties, ItemProperty, ItemPropertyKey } from 'src/models/item';
 import { Node, PatchNode } from 'src/models/node';
 import { PatchRelation } from 'src/models/relation';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { clone } from 'src/utils/helpers/general';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { ContextMenuSubMenu } from '../sub-menu/ContextMenuSubMenu';
 
 export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
@@ -31,13 +25,19 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 		Record<ItemPropertyKey, { property: ItemProperty; node?: Node }>
 	>({});
 
-	const onPropertyCreate = async (newProperty: ItemPropertyWithKey, propertyNode?: Node) => {
+	const onPropertyCreate = async (
+		key: ItemPropertyKey,
+		newProperty: ItemProperty,
+		propertyNode?: Node
+	) => {
 		const newPropertiesClone = clone(newProperties);
 		let newPropertyNode = propertyNode;
 
 		if (!propertyNode) {
-			const response = await nodesApi.postNodesBulkFetch({ nodeIds: [newProperty.key] });
-			const responseNode = response.at(0);
+			const response = await api.nodes.fetch.postNodesBulkFetch({
+				nodeIds: [key]
+			});
+			const responseNode = Object.values(response.data.nodes).at(0);
 
 			if (responseNode) {
 				newPropertyNode = responseNode;
@@ -46,7 +46,7 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 					title: i18n.t(
 						'notifications_warning_context_menu_add_properties_node_fetch_fail',
 						{
-							id: newProperty.key
+							id: key
 						}
 					),
 					type: 'warning'
@@ -54,12 +54,8 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 			}
 		}
 
-		newPropertiesClone[newProperty.key] = {
-			property: {
-				value: newProperty.value,
-				type: newProperty.type,
-				edit: newProperty.edit
-			},
+		newPropertiesClone[key] = {
+			property: newProperty,
 			node: newPropertyNode
 		};
 
@@ -78,11 +74,7 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 			const adaptedNewProperties: ItemProperties = {};
 
 			for (const [key, value] of Object.entries(newProperties)) {
-				adaptedNewProperties[key] = {
-					type: value.property.type,
-					value: value.property.value,
-					edit: value.property.edit
-				};
+				adaptedNewProperties[key] = value.property;
 			}
 
 			storeNodes.forEach((storeNode) => {
@@ -108,10 +100,10 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 			useContextMenuStore.getState().setIsActionLoading(true);
 
 			if (patchNodes.length) {
-				await nodesApi.patchNodesAndUpdateApplication(patchNodes);
+				await api.nodes.actions.patchNodesAndUpdateApplication(patchNodes);
 			}
 			if (patchRelations.length) {
-				await relationsApi.patchRelationsAndUpdateApplication(patchRelations);
+				await api.relations.actions.patchRelationsAndUpdateApplication(patchRelations);
 			}
 
 			useContextMenuStore.getState().close();
@@ -129,7 +121,7 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 	return (
 		<ContextMenuSubMenu className="context-menu__paste-properties-action">
 			<ContextMenuTopBlock closeSubMenuFunction={goBack} />
-			<ItemPropertiesAddNewProperty onPropertyCreate={onPropertyCreate} />
+			<AddNewProperty onPropertyCreate={onPropertyCreate} />
 			{hasNewProperties && (
 				<DBCard className="context-menu__expanded-content">
 					<div>
@@ -154,7 +146,9 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 												{!propertyEntry.node &&
 													idFormatter.parseIdToName(propertyKey)}
 											</TableCell>
-											<TableCell>{propertyEntry.property.value}</TableCell>
+											<TableCell>
+												{JSON.stringify(propertyEntry.property.value)}
+											</TableCell>
 											<TableCell>{propertyEntry.property.type}</TableCell>
 										</TableRow>
 									);

@@ -1,19 +1,5 @@
-import { ItemPropertyKey, ItemPropertyType } from 'src/models/item';
 import { NodeId } from 'src/models/node';
 import { SearchStoreType } from 'src/stores/search';
-
-export type FormItemProperty = {
-	key: ItemPropertyKey;
-	value: string;
-	type: ItemPropertyType;
-};
-
-export type FormItemPostProperty = {
-	value: string;
-	type: ItemPropertyType;
-};
-
-export type FormItemPostProperties = Record<string, FormItemPostProperty>;
 
 export type StyleProperties = Record<string, string>;
 
@@ -33,3 +19,5 @@ export type HomepageQuery = {
 	description: string;
 	nodeId?: NodeId;
 };
+
+export type UUID = `${string}-${string}-${string}-${string}-${string}`;

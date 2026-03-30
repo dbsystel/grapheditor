@@ -8,7 +8,7 @@ from database.id_handling import (
     GraphEditorLabel,
 )
 from database.mapper import python_value_to_cypher
-from database.utils import dict_to_array
+from database.utils import dict_to_array, split_statements
 
 
 def test_get_base_id():
@@ -71,6 +71,41 @@ def test_metatype_from_labels():
         is not None
     )
     assert mapper.get_metatype_from_labels([]) is None
+
+
+def test_split_statements():
+    res = split_statements("return 23; return \"abc;def\"")
+    assert len(res) == 2
+    assert res[0] == "return 23"
+    assert res[1] == "return \"abc;def\""
+
+    res = split_statements("return 23; return \"abc;def'\"")
+    assert res[1] == "return \"abc;def'\""
+
+    res = split_statements("return 23")
+    assert res[0] == "return 23"
+
+    res = split_statements("")
+    assert len(res) == 0
+
+    res = split_statements("return 23;")
+    assert len(res) == 1
+    assert res[0] == "return 23"
+
+    res = split_statements(r'return "\\\";\""; return "abc"')
+    assert res[0] == r'return "\\\";\""'
+    assert res[1] == 'return "abc"'
+
+    res = split_statements(r'return "\\"; return "abc"')
+    assert res[0] == r'return "\\"'
+    assert res[1] == 'return "abc"'
+
+    res = split_statements(r'return "\"; return"')
+    assert len(res) == 1
+    assert res[0] == r'return "\"; return"'
+
+    res = split_statements("return `;` 23")
+    assert res[0] == "return `;` 23"
 
 
 if __name__ == "__main__":

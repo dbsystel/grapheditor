@@ -7,16 +7,14 @@
 
 	&__input {
 		flex-grow: 1;
+		max-height: 90dvh;
+		overflow: auto;
 
 		&:hover {
 			#{$this}__icon {
 				opacity: 1;
 				color: var(--db-brand-origin-enabled);
 			}
-		}
-
-		label {
-			display: none;
 		}
 
 		input {

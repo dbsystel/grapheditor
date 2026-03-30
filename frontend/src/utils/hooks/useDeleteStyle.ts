@@ -1,9 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import {
-	deleteStyle,
-	DeleteStyleParameters,
-	DeleteStyleResponse
-} from 'src/utils/fetch/deleteStyle';
+import { api } from 'src/utils/api/api';
+import { DeleteStyleParameters, DeleteStyleResponse } from 'src/utils/fetch/deleteStyle';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UseDeleteStyleParameters = {
@@ -29,6 +26,8 @@ export const useDeleteStyle = ({
 		onError: onError,
 		onFinally: onFinally,
 		fetchFunction: (parameters?: DeleteStyleParameters) =>
-			deleteStyle({ grassFileName: parameters?.grassFileName || grassFileName })
+			api.styles.fetch.deleteStyle({
+				grassFileName: parameters?.grassFileName || grassFileName
+			})
 	});
 };

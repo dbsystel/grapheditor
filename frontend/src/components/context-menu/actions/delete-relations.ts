@@ -1,9 +1,9 @@
 import { RelationId } from 'src/models/relation';
 import { useContextMenuStore } from 'src/stores/context-menu';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 
 export const deleteRelationsAction = (relationIds: Array<RelationId>) => {
-	relationsApi.deleteRelationsAndUpdateApplication(relationIds).then(() => {
+	api.relations.actions.deleteRelationsAndUpdateApplication(relationIds).then(() => {
 		useContextMenuStore.getState().close();
 	});
 };

@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { getDatabases, GetDatabasesResponse } from 'src/utils/fetch/getDatabases';
+import { api } from 'src/utils/api/api';
+import { GetDatabasesResponse } from 'src/utils/fetch/getDatabases';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetDatabasesParameters = {
@@ -23,6 +24,6 @@ export const useGetDatabases = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getDatabases
+		fetchFunction: api.databases.fetch.getDatabases
 	});
 };

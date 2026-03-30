@@ -1,15 +1,15 @@
 import { ReactNode } from 'react';
 import { ItemInfo } from 'src/components/item-info/ItemInfo';
+import { ItemPropertyValue } from 'src/components/item-property-value/ItemPropertyValue';
+import { RenderContent } from 'src/components/render-content/RenderContent';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useItemsStore } from 'src/stores/items';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
 import { NOT_AVAILABLE_SIGN } from 'src/utils/constants';
-import { isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
-import { RenderContent } from 'src/utils/helpers/search';
 
 export const getSearchResultTableContent = (result: CypherQuerySearchResult) => {
 	const keys: Array<Exclude<keyof Node, 'properties'> | Exclude<keyof Relation, 'properties'>> = [
@@ -21,7 +21,7 @@ export const getSearchResultTableContent = (result: CypherQuerySearchResult) => 
 		'type',
 		'target_id',
 		'source_id'
-	] as const;
+	];
 
 	const keysToRender: Array<
 		Array<Exclude<keyof Node, 'properties'> | Exclude<keyof Relation, 'properties'> | string>
@@ -141,14 +141,8 @@ export const getSearchResultTableContent = (result: CypherQuerySearchResult) => 
 							if (storeItem) {
 								const storeItemKeyContent =
 									storeItem[key as keyof typeof storeItem];
-								const isStoreItemKeyContentString = isString(storeItemKeyContent);
 
-								content.push(
-									<RenderContent
-										content={storeItemKeyContent}
-										applyMarkdown={isStoreItemKeyContentString}
-									/>
-								);
+								content.push(<RenderContent content={storeItemKeyContent} />);
 							} else {
 								content.push(NOT_AVAILABLE_SIGN);
 							}
@@ -161,26 +155,15 @@ export const getSearchResultTableContent = (result: CypherQuerySearchResult) => 
 				// then render property keys content
 				propertyKeysToRender[resultRowIndex].forEach((propertyKey) => {
 					if (storeItem && Object.hasOwn(storeItem.properties, propertyKey)) {
-						content.push(JSON.stringify(storeItem.properties[propertyKey].value));
+						content.push(
+							<ItemPropertyValue property={storeItem.properties[propertyKey]} />
+						);
 					} else {
 						content.push(NOT_AVAILABLE_SIGN);
 					}
 				});
-			}
-			// node or relation missing
-			else if (item === '' || item === null) {
-				const cellContent = item === '' ? '""' : 'null';
-
-				keysToRender[resultRowIndex].forEach(() => {
-					content.push(cellContent);
-				});
-				propertyKeysToRender[resultRowIndex].forEach(() => {
-					content.push(cellContent);
-				});
 			} else {
-				const isContentString = isString(item);
-
-				content.push(<RenderContent content={item} applyMarkdown={isContentString} />);
+				content.push(<RenderContent content={item} />);
 			}
 		});
 

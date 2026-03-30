@@ -51,17 +51,17 @@ export const NetworkGraphSelectionTool = () => {
 
 		refreshSelectionElementSize();
 
-		StateManager.getInstance().on('MOUSE_UP', onMouseUp);
-		StateManager.getInstance().on('NODE_SELECTION', {
+		StateManager.getInstance().subscribe('mouseUp', onMouseUp);
+		StateManager.getInstance().subscribe('nodeSelection', {
 			beforeCallback: nodeSelectionBeforeCallback,
 			callback: nodeSelectionCallback
 		});
-		StateManager.getInstance().on('MOUSE_UP', refreshSelectionElementSize);
+		StateManager.getInstance().subscribe('mouseUp', refreshSelectionElementSize);
 
 		return () => {
-			StateManager.getInstance().off('MOUSE_UP', onMouseUp);
-			StateManager.getInstance().off('NODE_SELECTION', nodeSelectionCallback);
-			StateManager.getInstance().off('MOUSE_UP', refreshSelectionElementSize);
+			StateManager.getInstance().unsubscribe('mouseUp', onMouseUp);
+			StateManager.getInstance().unsubscribe('nodeSelection', nodeSelectionCallback);
+			StateManager.getInstance().unsubscribe('mouseUp', refreshSelectionElementSize);
 		};
 	}, [selectionElementRef.current]);
 

@@ -10,7 +10,7 @@ import { GraphEditorTypeSimplified } from 'src/utils/constants';
 import { deleteRelations } from 'src/utils/fetch/deleteRelations';
 import { patchRelations } from 'src/utils/fetch/patchRelations';
 import { isObject } from 'src/utils/helpers/general';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 export const isRelation = (data: unknown): data is Relation => {
 	if (isObject(data) && '_grapheditor_type' in data && data._grapheditor_type === 'relation') {
@@ -77,7 +77,8 @@ export async function deleteRelationsAndUpdateApplication(relationIds: Array<Rel
 		if (isDeletionSuccessful) {
 			addNotification({
 				title: i18n.t(successTitle),
-				type: 'successful'
+				type: 'successful',
+				isClosable: true
 			});
 		} else {
 			addNotification({
@@ -119,20 +120,20 @@ export async function patchRelationsAndUpdateApplication(relations: Array<PatchR
 
 	itemsStore.setRelations(Object.values(responseRelationsMap));
 
-	for (const oldRelationKey in responseRelationsMap) {
-		const serverRelation = responseRelationsMap[oldRelationKey];
-		const localRelation = localRelationsMap[oldRelationKey];
+	for (const oldRelationId in responseRelationsMap) {
+		const serverRelation = responseRelationsMap[oldRelationId];
+		const localRelation = localRelationsMap[oldRelationId];
 
 		// check if, due to relation update, a new relation was created (e.g. relation type change)
-		if (serverRelation.id !== oldRelationKey) {
+		if (serverRelation.id !== oldRelationId) {
 			const relationHighlighted = graphStore.isRelationHighlighted(localRelation.id);
-			const drawerItem = drawerStore.getActiveEntry();
+			const drawerIndex = drawerStore.getEntryIndexByItemId(oldRelationId);
+			const drawerEntry = drawerStore.getEntryByIndex(drawerIndex);
 
 			// if necessary, update drawer data which will re-render this component
-			if (drawerItem && drawerItem.item.id === oldRelationKey) {
-				// TODO improve to replace a specific entry only, currently this will replace all entries
-				drawerStore.setEntry({
-					...drawerItem,
+			if (drawerEntry) {
+				drawerStore.updateEntryByIndex(drawerIndex, {
+					...drawerEntry,
 					item: serverRelation
 				});
 			}

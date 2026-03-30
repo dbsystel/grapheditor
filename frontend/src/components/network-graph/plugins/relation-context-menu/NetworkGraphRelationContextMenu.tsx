@@ -41,11 +41,11 @@ export const NetworkGraphRelationContextMenu = () => {
 			}
 		};
 
-		StateManager.getInstance().on('RELATION_CONTEXT_MENU', onRelationContextMenu);
+		StateManager.getInstance().subscribe('relationContextMenu', onRelationContextMenu);
 
 		return () => {
 			useContextMenuStore.getState().reset();
-			StateManager.getInstance().off('RELATION_CONTEXT_MENU', onRelationContextMenu);
+			StateManager.getInstance().unsubscribe('relationContextMenu', onRelationContextMenu);
 		};
 	}, []);
 

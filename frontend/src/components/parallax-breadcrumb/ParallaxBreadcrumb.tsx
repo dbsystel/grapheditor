@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { useCallback, useState } from 'react';
 import { Tooltip } from 'src/components/tooltip/Tooltip';
 import { useParallaxStore } from 'src/stores/parallax';
+import { api } from 'src/utils/api/api';
 import { parallaxApi } from 'src/utils/api/parallax';
 import { ParallaxBreadcrumbProps } from './ParallaxBreadcrumb.interfaces';
 
@@ -23,7 +24,7 @@ export const ParallaxBreadcrumb = ({
 
 	const onBreadcrumbClick = () => {
 		useParallaxStore.getState().setApiTriggerType('breadcrumbs');
-		parallaxApi.triggerBreadcrumbs(index);
+		api.parallax.actions.triggerBreadcrumbs(index);
 	};
 
 	const separator = index > -1 ? '\xa0-\xa0' : '';

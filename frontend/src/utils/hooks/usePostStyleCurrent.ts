@@ -1,6 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import { api } from 'src/utils/api/api';
 import {
-	postStyleCurrent,
 	PostStyleCurrentParameters,
 	PostStyleCurrentResponse
 } from 'src/utils/fetch/postStyleCurrent';
@@ -33,7 +33,9 @@ export const usePostStyleCurrent = (
 		onFinally: onFinally,
 		dependencies: dependencies,
 		fetchFunction: (parameters?: PostStyleCurrentParameters) => {
-			return postStyleCurrent({ filename: parameters?.filename || filename });
+			return api.styles.fetch.postStyleCurrent({
+				filename: parameters?.filename || filename
+			});
 		}
 	});
 };

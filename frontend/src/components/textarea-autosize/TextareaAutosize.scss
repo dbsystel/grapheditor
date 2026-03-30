@@ -20,6 +20,7 @@
 	&__content {
 		display: flex;
 		min-height: 100%;
+		font-family: monospace;
 	}
 
 	&__row-numbers {
@@ -32,6 +33,13 @@
 		border-radius: var(--db-border-radius-xs);
 		border-top-right-radius: 0;
 		border-bottom-right-radius: 0;
+		font: inherit;
+	}
+
+	&:has(textarea[disabled]) {
+		.db-textarea {
+			opacity: 1;
+		}
 	}
 
 	.db-textarea {
@@ -40,7 +48,7 @@
 		font: inherit;
 
 		textarea {
-			overflow: clip;
+			overflow: hidden;
 			font: inherit;
 			border-top-left-radius: 0 !important;
 			border-bottom-left-radius: 0;
@@ -87,6 +95,11 @@
 	.db-textarea textarea,
 	&__test-element {
 		overflow-wrap: break-word;
-		font-family: monospace;
+		font: inherit;
+		white-space: pre;
+	}
+
+	label {
+		display: none;
 	}
 }

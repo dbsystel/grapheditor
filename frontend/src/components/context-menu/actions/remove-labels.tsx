@@ -7,7 +7,7 @@ import i18n from 'src/i18n';
 import { NodeLabelId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 
 export const RemoveLabelsAction = ({ goBack }: { goBack: () => void }) => {
 	const [options, setOptions] = useState<Array<CustomSelectOptionType>>([]);
@@ -52,7 +52,7 @@ export const RemoveLabelsAction = ({ goBack }: { goBack: () => void }) => {
 				};
 			});
 
-		await nodesApi.patchNodesAndUpdateApplication(patchNodes);
+		await api.nodes.actions.patchNodesAndUpdateApplication(patchNodes);
 
 		useContextMenuStore.getState().close();
 	};

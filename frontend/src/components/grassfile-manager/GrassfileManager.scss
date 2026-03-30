@@ -6,4 +6,10 @@
 	.db-select {
 		inline-size: 90%;
 	}
+
+	.db-popover-content {
+		.db-card {
+			z-index: 9999;
+		}
+	}
 }

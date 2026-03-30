@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## 2026.3.1
+
+- Node-only perspectives
+- Multistatement cypher queries
+- Self loops are shown in graph dispay
+- Werkzeug can be forced for development
+- Improved item info
+- Parameterless paraqueries, improved listing
+- SSO Support
+- Editing of all neo4j types, except vectors
+- Markdown handling in tables
+- Improved perspective management
+
 ## 2025.12.1
 
 - Startpage with customizable queries

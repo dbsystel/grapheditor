@@ -20,10 +20,10 @@ export type MenuButtonOption = Pick<
 	icon?: IconTypes;
 	isDisabled?: boolean;
 	onClick?: () => void;
+	closeMenuOnClick?: boolean;
 	options?: Array<MenuButtonOption>;
 };
 
 export type MenuButtonOptionsContentProps = {
 	options: Array<MenuButtonOption>;
-	onOptionClick?: (option: MenuButtonOption) => void;
 };

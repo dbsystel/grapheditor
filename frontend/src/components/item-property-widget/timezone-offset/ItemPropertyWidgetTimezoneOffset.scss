@@ -1,0 +1,42 @@
+.item-property-widget-timezone-offset {
+	&__inputs {
+		display: flex;
+		gap: var(--db-spacing-fixed-sm);
+		align-items: start;
+
+		.db-input {
+			margin-top: 0;
+		}
+	}
+
+	&__info-list {
+		list-style: none;
+		padding: 0;
+	}
+
+	&__label {
+		display: flex;
+		gap: var(--db-spacing-fixed-2xs);
+		align-items: center;
+		font: var(--db-type-body-sm);
+
+		.db-icon {
+			display: flex;
+			background-color: transparent;
+		}
+	}
+
+	.db-select {
+		inline-size: 70px;
+		min-inline-size: auto;
+
+		select {
+			min-inline-size: auto;
+			font: var(--db-type-body-xl);
+		}
+	}
+
+	.db-input {
+		inline-size: 100%;
+	}
+}

@@ -1,6 +1,7 @@
 .item-overview-popover {
 	position: fixed;
 	background: transparent;
+	z-index: 10000;
 
 	&__popover {
 		block-size: auto;
@@ -11,10 +12,10 @@
 
 		> article {
 			max-inline-size: none;
-			inset-inline: auto!important;
-			inset-block: auto!important;
-			position: static!important;
-			transform: none!important;
+			inset-inline: auto !important;
+			inset-block: auto !important;
+			position: static !important;
+			transform: none !important;
 			padding: var(--db-spacing-fixed-sm);
 			visibility: inherit;
 		}

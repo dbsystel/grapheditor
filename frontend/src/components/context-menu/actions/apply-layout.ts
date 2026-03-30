@@ -1,5 +1,5 @@
 import { calculateBoundingBoxCenterByCoordinates } from 'src/components/network-graph/helpers';
-import { Point } from 'src/models/graph';
+import { Cartesian2D } from 'src/models/graph';
 import { NodeId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
@@ -11,7 +11,7 @@ export const applyLayoutAction = (direction: 'horizontal' | 'vertical') => {
 	const sigma = useGraphStore.getState().sigma;
 	const graph = sigma.getGraph();
 	const distanceBetweenNodes = 50;
-	const nodeData: Array<{ id: NodeId; size: number } & Point> = [];
+	const nodeData: Array<{ id: NodeId; size: number } & Cartesian2D> = [];
 	let minX = Infinity;
 	let maxX = -Infinity;
 	let minY = Infinity;

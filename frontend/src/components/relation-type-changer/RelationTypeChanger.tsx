@@ -1,12 +1,11 @@
 import './RelationTypeChanger.scss';
 import { DBTag } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
+import { useCallback, useImperativeHandle, useState } from 'react';
 import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder/RelationTypeItemFinder';
 import { Node } from 'src/models/node';
-import { relationsApi } from 'src/utils/api/relations';
-import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
+import { api } from 'src/utils/api/api';
 import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 import { useGetNode } from 'src/utils/hooks/useGetNode';
 import { RelationTypeChangerProps } from './RelationTypeChanger.interfaces';
@@ -22,9 +21,6 @@ export const RelationTypeChanger = ({
 }: RelationTypeChangerProps) => {
 	const [selectedType, setSelectedType] = useState<Node | null>(null);
 	const [originalType, setOriginalType] = useState<Node | null>(null);
-	const [renderTooltip, setRenderTooltip] = useState<boolean>(false);
-	const [tooltipRef, setTooltipRef] = useState<HTMLDivElement | null>(null);
-	const timeoutRef = useRef(0);
 	const rootElementClassName = clsx('relation-type-changer', className);
 
 	useGetNode({
@@ -36,7 +32,11 @@ export const RelationTypeChanger = ({
 	});
 
 	const onRefChange = useCallback((element: HTMLDivElement | null) => {
-		setTooltipRef(element);
+		if (element && showTooltipOnHover) {
+			useItemOverviewPopoverStore
+				.getState()
+				.registerTriggerElement({ triggerElement: element, item: relation });
+		}
 	}, []);
 
 	const onTypeChange = (option: Node) => {
@@ -60,7 +60,7 @@ export const RelationTypeChanger = ({
 				type: selectedType.id
 			};
 
-			await relationsApi.patchRelationsAndUpdateApplication([patchObject]);
+			await api.relations.actions.patchRelationsAndUpdateApplication([patchObject]);
 			setOriginalType(selectedType);
 		}
 	};
@@ -71,44 +71,16 @@ export const RelationTypeChanger = ({
 		type: selectedType ? getNodeSemanticIdOrId(selectedType) : ''
 	}));
 
-	const onMouseEnter = () => {
-		if (showTooltipOnHover) {
-			if (timeoutRef.current) {
-				window.clearTimeout(timeoutRef.current);
-			}
-
-			timeoutRef.current = window.setTimeout(() => {
-				setRenderTooltip(true);
-			}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
-		}
-	};
-
-	const onMouseLeave = () => {
-		if (showTooltipOnHover) {
-			if (timeoutRef.current) {
-				window.clearTimeout(timeoutRef.current);
-			}
-
-			setRenderTooltip(false);
-		}
-	};
-
 	if (!selectedType) {
 		return;
 	}
 
 	return (
-		<div id={id} className={rootElementClassName} ref={onRefChange} data-testid={testId}>
+		<div id={id} className={rootElementClassName} data-testid={testId}>
 			{!isEditMode ? (
-				<DBTag onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-					{selectedType.title}
-
-					{renderTooltip && (
-						<ItemOverviewPopover item={selectedType} popoverRef={tooltipRef} />
-					)}
-				</DBTag>
+				<DBTag ref={onRefChange}>{selectedType.title}</DBTag>
 			) : (
-				<div className="relation-type-changer__relation-change">
+				<div className="relation-type-changer__relation-change" ref={onRefChange}>
 					<div className="relation-type-changer__relation-finder">
 						<RelationTypeItemFinder
 							label=""

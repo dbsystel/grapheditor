@@ -12,4 +12,5 @@ export type ToggleGroupProps<T extends string = string> = GlobalComponentProps &
 	onChange: (value: T) => void;
 	selectedLabel?: string;
 	size?: 'small' | 'medium';
+	tooltipFixClassName?: string;
 };

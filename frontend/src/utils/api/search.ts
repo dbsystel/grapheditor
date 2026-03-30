@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios';
 import { useDrawerStore } from 'src/stores/drawer';
 import { SearchResultType, SearchStoreType, useSearchStore } from 'src/stores/search';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
+import { api } from 'src/utils/api/api';
 import {
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
@@ -13,9 +14,13 @@ import { parseError } from 'src/utils/helpers/general';
 import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 
 export const searchApi = {
-	getFullTextSearch: getFullTextSearch,
-	postCypherQuerySearch: postCypherQuerySearch,
-	executeSearch: executeSearch
+	fetch: {
+		getFullTextSearch: getFullTextSearch,
+		postCypherQuerySearch: postCypherQuerySearch
+	},
+	actions: {
+		executeSearch: executeSearch
+	}
 };
 
 async function executeSearch(parameters?: {
@@ -46,7 +51,7 @@ async function executeSearch(parameters?: {
 			type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
 			type === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY
 		) {
-			const response = await searchApi.postCypherQuerySearch({
+			const response = await api.search.fetch.postCypherQuerySearch({
 				queryText: query || '',
 				parameters: cypherQueryParameters
 			});
@@ -56,7 +61,7 @@ async function executeSearch(parameters?: {
 		}
 		// if regular, full-text search
 		else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
-			const responses = await searchApi.getFullTextSearch({
+			const responses = await api.search.fetch.getFullTextSearch({
 				searchTerm: query || ''
 			});
 			// make full-text search results format consistent with the cypher query

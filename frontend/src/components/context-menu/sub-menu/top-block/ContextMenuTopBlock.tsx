@@ -19,6 +19,7 @@ export const ContextMenuTopBlock = ({
 				onClick={closeSubMenuFunction}
 				icon="arrow_left"
 				variant="ghost"
+				noText
 			/>
 			{children}
 		</div>

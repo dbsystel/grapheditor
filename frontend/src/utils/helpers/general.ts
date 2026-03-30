@@ -3,12 +3,22 @@ import { useApplicationStore } from 'src/stores/application';
 import { useClipboardStore } from 'src/stores/clipboard';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useDrawerStore } from 'src/stores/drawer';
+import { useExpandNodeStore } from 'src/stores/expand-node';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useParallaxStore } from 'src/stores/parallax';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
 import { AppLanguage, AppTheme, useSettingsStore } from 'src/stores/settings';
 import { APP_LANGUAGES } from 'src/utils/constants';
+import { eventBus } from 'src/utils/event-bus';
+import {
+	dateRegex,
+	html5DateRegex,
+	html5DatetimeRegex,
+	html5DurationRegex,
+	html5TimeRegex
+} from 'src/utils/helpers/regex';
 
 export const adjustElementHeight = (element: HTMLElement) => {
 	element.style.height = 'auto';
@@ -19,26 +29,70 @@ export const isString = (data: unknown): data is string => {
 	return typeof data === 'string';
 };
 
+export const isBoolean = (data: unknown): data is boolean => {
+	return typeof data === 'boolean';
+};
+
 export const isNumber = (data: unknown): data is number => {
-	return typeof data === 'number';
+	return typeof data === 'number' && !isNaN(data);
 };
 
 export const isInteger = (data: unknown): data is number => {
+	return Number.isInteger(data);
+};
+
+export const isFloat = (data: unknown): data is number => {
 	if (!isNumber(data)) {
 		return false;
 	}
 
-	return data % 1 === 0;
+	return data % 1 !== 0;
 };
 
-export const isObject = (
-	value: unknown
-): value is Record<'string' | 'number' | symbol, unknown> => {
+export const isTime = (input: unknown) => {
+	return isString(input) && html5TimeRegex.test(input);
+};
+
+export const isDate = (input: unknown) => {
+	if (!(isString(input) || isNumber(input))) {
+		return false;
+	}
+
+	try {
+		new Date(input).toISOString();
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+export const isDatetime = (input: unknown) => {
+	if (!isString(input) && !isNumber(input)) {
+		return false;
+	}
+
+	try {
+		new Date(input).toISOString();
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+export const isDuration = (input: unknown) => {
+	return isString(input) && html5DurationRegex.test(input);
+};
+
+export const isObject = (value: unknown): value is Record<'string', unknown> => {
 	if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
 		return true;
 	} else {
 		return false;
 	}
+};
+
+export const isArray = (value: unknown): value is Array<unknown> => {
+	return Array.isArray(value);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
@@ -59,12 +113,89 @@ export const isPrimitive = (
 	return value !== Object(value);
 };
 
+export const isKeyOfObject = <T>(object: T, key: unknown): key is keyof T => {
+	return isObject(object) && typeof key === 'string' && key in object;
+};
+
+export function hasKey<O extends object, K extends keyof O>(obj: O, key: K | string): key is K {
+	return key in obj;
+}
+
+export const objectHasOwnProperty = (object: Record<string, unknown>, key: string) => {
+	return Object.prototype.hasOwnProperty.call(object, key);
+};
+
 export const isDevelopment = () => {
 	return import.meta.env.DEV;
 };
 
 export const isProduction = () => {
 	return import.meta.env.PROD;
+};
+
+export const convertStringToBoolean = (input: string): boolean => {
+	const normalizedInput = input.trim().toLowerCase();
+
+	return normalizedInput === 'true';
+};
+
+export const convertBooleanToString = (input: boolean): string => {
+	return input ? 'true' : 'false';
+};
+
+export const getDigitsFromString = (input: string) => {
+	const digits = input.replace(/\D/g, '');
+
+	if (digits.length > 0) {
+		return digits;
+	}
+
+	return undefined;
+};
+
+export const getDateFromString = (input: string) => {
+	const matches = input.match(dateRegex);
+	const groups = matches?.groups;
+
+	if (groups && 'year' in groups && 'month' in groups && 'day' in groups) {
+		return groups.year + '-' + groups.month + '-' + groups.day;
+	}
+
+	return undefined;
+};
+
+export const getTimeFromString = (input: string) => {
+	const matches = input.match(html5TimeRegex);
+
+	if (!matches) {
+		return undefined;
+	}
+
+	const fractionOfSecond = stripTrailingZerosFromString(matches.at(2) || '');
+
+	return {
+		time: matches.at(1),
+		fractionOfSecond: fractionOfSecond,
+		timezoneOffsetSign: matches.at(3),
+		timezoneOffset: matches.at(4)
+	};
+};
+
+export const getDatetimeFromString = (datetimeString: string) => {
+	const matches = datetimeString.match(html5DatetimeRegex);
+
+	if (!matches) {
+		return undefined;
+	}
+
+	const fractionOfSecond = stripTrailingZerosFromString(matches.at(2) || '');
+
+	return {
+		datetime: matches.at(1),
+		fractionOfSecond: fractionOfSecond,
+		timezoneOffsetSign: matches.at(3),
+		timezoneOffset: matches.at(4)
+	};
 };
 
 export const compareTwoStringsForSorting = (string1: string, string2: string) => {
@@ -79,8 +210,8 @@ export const compareTwoStringsForSorting = (string1: string, string2: string) =>
 	return 0;
 };
 
-export const objectHasOwnProperty = (object: Record<string, unknown>, key: string) => {
-	return Object.prototype.hasOwnProperty.call(object, key);
+export const getAt = <T extends unknown[], I extends keyof T>(array: T, index: I): T[I] => {
+	return array[index];
 };
 
 export const twoObjectValuesAreEqual = (object1: unknown, object2: unknown) => {
@@ -161,7 +292,7 @@ export const setApplicationTheme = (theme: AppTheme) => {
 };
 
 // return current date and time as the following format: 4-7-2025-17-58-27
-export const getFormattedCurrentDateTime = () => {
+export const getFormattedCurrentDatetime = () => {
 	const date = new Date();
 	const dateTime = date.toLocaleString();
 	const formattedDateTime = dateTime
@@ -171,6 +302,82 @@ export const getFormattedCurrentDateTime = () => {
 		.replaceAll(':', '-');
 
 	return formattedDateTime;
+};
+
+/**
+ * Removes trailing zeros from a numeric string.
+ * Handles both integer and decimal numbers, including negative values.
+ *
+ * Examples:
+ * - "123.45000" -> "123.45"
+ * - "1000.000" -> "1000"
+ * - "5000" -> "5"
+ * - "-123.4000" -> "-123.4"
+ * - "-1000.000" -> "-1000"
+ * */
+export const stripTrailingZerosFromString = (string: string) => {
+	let trimmedString = String(string).trim();
+	const sign = trimmedString.startsWith('-') ? '-' : '';
+
+	if (!trimmedString) {
+		return string;
+	}
+
+	if (sign) {
+		trimmedString = trimmedString.slice(1);
+	}
+
+	if (trimmedString.includes('.')) {
+		// Remove trailing zeros after decimal; remove dangling decimal if needed
+		trimmedString = trimmedString
+			.replace(/(\.\d*?[1-9])0+$/, '$1')
+			.replace(/\.0+$/, '')
+			.replace(/\.$/, '');
+	} else {
+		// Integer case
+		trimmedString = trimmedString.replace(/0+$/, '') || '0';
+	}
+
+	return sign + trimmedString;
+};
+
+export const getFormattedLocaleDatetimeString = (datetime: string) => {
+	const datetimeObject = getDatetimeFromString(datetime);
+	const date = new Date(datetime);
+	let dateToReturn = '';
+	let datetimeSuffix = '';
+
+	// if datetime, try and return locale datetime and other information if possible
+	if (datetimeObject) {
+		dateToReturn = date.toLocaleString();
+
+		if (datetimeObject.fractionOfSecond) {
+			datetimeSuffix += `.${datetimeObject.fractionOfSecond}`;
+		}
+
+		if (
+			datetimeObject.timezoneOffsetSign &&
+			datetimeObject.timezoneOffset &&
+			// ignore timezone offset if it's 00:00
+			parseInt(datetimeObject.timezoneOffset)
+		) {
+			datetimeSuffix += `${datetimeObject.timezoneOffsetSign}${datetimeObject.timezoneOffset}`;
+		}
+	}
+	// else if only date, return locale date only
+	else if (html5DateRegex.test(datetime)) {
+		dateToReturn = date.toLocaleDateString();
+	}
+
+	return dateToReturn + datetimeSuffix;
+};
+
+export const getFormattedFloat = (float: string) => {
+	return float.replaceAll(',', '.');
+};
+
+export const getFormattedGUIFloat = (float: string) => {
+	return float.replaceAll('.', ',');
 };
 
 // name: full name, including extension
@@ -204,6 +411,7 @@ export const downloadFile = (options: DownloadFileOptions) => {
 };
 
 export const resetApplicationStates = () => {
+	// reset all application states
 	useSearchStore.getState().setResult({ data: null, type: '' });
 	useClipboardStore.getState().reset();
 	useContextMenuStore.getState().reset();
@@ -212,6 +420,10 @@ export const resetApplicationStates = () => {
 	useItemsStore.getState().reset();
 	useParallaxStore.getState().reset();
 	useApplicationStore.getState().reset();
+	usePerspectiveStore.getState().reset();
+	useExpandNodeStore.getState().reset();
+	// other reset logic if needed
+	eventBus.reset();
 };
 
 export const goToHomepageView = () => {
@@ -224,4 +436,47 @@ export const isHomepageView = () => {
 
 export const goToApplicationView = () => {
 	useApplicationStore.getState().setIsHomepageView(false);
+};
+
+export const isElementBeforeElement = (element1: HTMLElement, element2: HTMLElement) => {
+	let cur;
+	if (element2.parentNode === element1.parentNode) {
+		for (cur = element1.previousSibling; cur; cur = cur.previousSibling) {
+			if (cur === element2) return true;
+		}
+	}
+	return false;
+};
+
+export const getElementIndex = (element: HTMLElement) => {
+	let index = 0;
+	let node = element.parentElement?.firstElementChild;
+	while (node && node !== element) {
+		node = node.nextElementSibling;
+		index++;
+	}
+	return index;
+};
+
+export const swapArrayIndexes = (array: Array<unknown>, index1: number, index2: number) => {
+	const temp = array[index1];
+
+	array[index1] = array[index2];
+
+	array[index2] = temp;
+};
+
+export const getDeepestHoveredElement = () => {
+	const hoveredElements = document.querySelectorAll(':hover');
+
+	// use Array.from to convert NodeList to array (it provides better TS support)
+	return Array.from(hoveredElements).at(hoveredElements.length - 1);
+};
+
+/**
+ * Return random number between (and including) 0 and max (not including).
+ * @param max
+ */
+export const getRandomIntiger = (max: number) => {
+	return Math.floor(Math.random() * max);
 };

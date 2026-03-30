@@ -20,6 +20,7 @@ import {
 	GRAPH_DEFAULT_LABEL_DARK_COLOR,
 	GRAPH_DEFAULT_LABEL_LIGHT_COLOR
 } from 'src/utils/constants';
+import { eventBus } from 'src/utils/event-bus';
 import { isNonPseudoNode } from 'src/utils/helpers/nodes';
 
 // TODO check all modules, plugins and other functionalities tied to graph for unnecessary re-renderings
@@ -32,14 +33,7 @@ export const LoadGraph = () => {
 		setIsGraphRendered,
 		sigma
 	} = useGraphStore((store) => store);
-	const {
-		getStoreNode,
-		getStoreRelation,
-		addEventListener,
-		removeEventListener,
-		nodes,
-		relations
-	} = useItemsStore((store) => store);
+	const { getStoreNode, getStoreRelation, nodes, relations } = useItemsStore((store) => store);
 	const algorithm = useSearchStore((store) => store.algorithm);
 	const theme = useSettingsStore((store) => store.theme);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
@@ -67,16 +61,16 @@ export const LoadGraph = () => {
 
 	// observe node and relation changes
 	useEffect(() => {
-		addEventListener('onNodesUpdate', onNodesUpdate);
-		addEventListener('onNodesRemove', onNodesRemove);
-		addEventListener('onRelationsUpdate', onRelationsUpdate);
-		addEventListener('onRelationsRemove', onRelationsRemove);
+		eventBus.subscribe('nodesUpdate', onNodesUpdate);
+		eventBus.subscribe('nodesRemove', onNodesRemove);
+		eventBus.subscribe('relationsUpdate', onRelationsUpdate);
+		eventBus.subscribe('relationsRemove', onRelationsRemove);
 
 		return () => {
-			removeEventListener('onNodesUpdate', onNodesUpdate);
-			removeEventListener('onNodesRemove', onNodesRemove);
-			removeEventListener('onRelationsUpdate', onRelationsUpdate);
-			removeEventListener('onRelationsRemove', onRelationsRemove);
+			eventBus.unsubscribe('nodesUpdate', onNodesUpdate);
+			eventBus.unsubscribe('nodesRemove', onNodesRemove);
+			eventBus.unsubscribe('relationsUpdate', onRelationsUpdate);
+			eventBus.unsubscribe('relationsRemove', onRelationsRemove);
 		};
 	}, [sigma]);
 

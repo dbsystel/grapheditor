@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { getNode, GetNodeParameters, GetNodeResponse } from 'src/utils/fetch/getNode';
+import { api } from 'src/utils/api/api';
+import { GetNodeParameters, GetNodeResponse } from 'src/utils/fetch/getNode';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UseGetNodeParameters = {
@@ -25,6 +26,6 @@ export const useGetNode = ({
 		onError: onError,
 		onFinally: onFinally,
 		fetchFunction: (parameters?: GetNodeParameters) =>
-			getNode({ nodeId: parameters?.nodeId || nodeId })
+			api.nodes.fetch.getNode({ nodeId: parameters?.nodeId || nodeId })
 	});
 };

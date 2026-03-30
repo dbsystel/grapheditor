@@ -3,6 +3,7 @@
  * No reusable declarations such as "const version = '/v1'; ... return version + ..."
  * were used in order to improve readability.
  */
+import { NodeId } from 'src/models/node';
 
 export const endpoints = {
 	getDatabasesPath: () => {
@@ -128,7 +129,10 @@ export const endpoints = {
 		return '/v1/meta/meta_for_meta';
 	},
 	getParaQueriesPath: () => {
-		return '/v1/paraquery';
+		return '/v1/paraqueries';
+	},
+	getParaQueryPath: ({ paraQueryId }: { paraQueryId: NodeId }) => {
+		return `/v1/paraqueries/${encodeURIComponent(paraQueryId)}`;
 	},
 	getHomepageDataPath: () => {
 		return 'files/homepage.json';

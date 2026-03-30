@@ -1,7 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { ItemProperties } from 'src/models/item';
 import { Relation, RelationId, RelationType } from 'src/models/relation';
-import { backendApi } from 'src/utils/api';
+import { backendApi } from 'src/utils/backend-api';
 import { endpoints } from 'src/utils/endpoints';
 import { PostRelationParameters } from 'src/utils/fetch/postRelation';
 

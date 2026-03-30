@@ -1,7 +1,7 @@
 import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import i18n from 'src/i18n';
 import { testNodes } from 'src/tests/data/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 
@@ -9,7 +9,8 @@ describe('Components - ItemOverviewPopover', () => {
 	const node = testNodes[0];
 
 	test('modal content', async () => {
-		const screen = await render(<ItemOverviewPopover item={node} popoverRef={null} />);
+		const body = document.body;
+		const screen = await render(<ItemOverviewPopover item={node} popoverRef={body} />);
 		const modal = screen.getByRole('dialog').element();
 
 		expect(screen.getByText(node.title)).toBeInTheDocument();

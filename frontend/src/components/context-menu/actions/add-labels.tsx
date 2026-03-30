@@ -7,7 +7,7 @@ import i18n from 'src/i18n';
 import { Node, NodeLabelId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 
 export const AddLabelsAction = ({ goBack }: { goBack: () => void }) => {
 	const labelIdsRef = useRef<Array<NodeLabelId>>([]);
@@ -31,7 +31,7 @@ export const AddLabelsAction = ({ goBack }: { goBack: () => void }) => {
 				};
 			});
 
-		await nodesApi.patchNodesAndUpdateApplication(patchNodes);
+		await api.nodes.actions.patchNodesAndUpdateApplication(patchNodes);
 
 		useContextMenuStore.getState().close();
 	};

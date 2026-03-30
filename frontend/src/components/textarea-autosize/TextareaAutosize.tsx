@@ -3,7 +3,6 @@ import { DBTextarea } from '@db-ux/react-core-components';
 import { InteractionEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { ChangeEvent, forwardRef, useCallback, useEffect, useRef, useState } from 'react';
-import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { TextareaAutosizeProps } from './TextareaAutosize.interfaces';
 
 /**
@@ -17,11 +16,12 @@ import { TextareaAutosizeProps } from './TextareaAutosize.interfaces';
  * This works as a temporary workaround for the https://github.com/db-ux-design-system/core-web/issues/2508 issue.
  */
 export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaAutosizeProps>(
-	({ onBlur, onFocus, id, className, testId, onChange, value, ...rest }, ref) => {
+	({ onBlur, onFocus, id, className, testId, onChange, value, textareaId, ...rest }, ref) => {
 		const localRef = useRef<HTMLTextAreaElement | null>(null);
 		const [isFocused, setIsFocused] = useState(false);
+		// TODO find a more performant way to refresh height on input changes
 		const [lineNumbers, setLineNumbers] = useState<Array<number>>([1]);
-		const rootElementClassName = clsx('textarea-autosize db-bg-color-lvl-3', className, {
+		const rootElementClassName = clsx('textarea-autosize', className, {
 			'textarea-autosize--focused': isFocused
 		});
 		const rootElementRef = useRef<HTMLDivElement>(null);
@@ -40,12 +40,11 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 					// if width has changed
 					else if (rootElementSize.current.width !== observerSize.inlineSize) {
 						rootElementSize.current.width = observerSize.inlineSize;
-						delayedCallback(localRefreshHeight);
+						localRefreshHeight();
 					}
 				}
 			})
 		);
-		const delayedCallback = useDebounce(200);
 
 		useEffect(() => {
 			localRefreshHeight();
@@ -116,7 +115,10 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 				onChange(event);
 			}
 
-			localRefreshHeight();
+			// useEffect covers the value prop changes
+			if (value === undefined) {
+				localRefreshHeight();
+			}
 		};
 
 		const localOnBlur = (event: InteractionEvent<HTMLTextAreaElement>) => {
@@ -141,6 +143,7 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 				className={rootElementClassName}
 				data-testid={testId}
 				ref={onRootElementRefChange}
+				data-disabled={rest.disabled ? true : undefined}
 			>
 				<div className="textarea-autosize__content">
 					<div className="textarea-autosize__row-numbers db-bg-color-basic-level-4">
@@ -153,8 +156,8 @@ export const TextareaAutosize = forwardRef<HTMLTextAreaElement | null, TextareaA
 					</div>
 					<div className="textarea-autosize__wrapper">
 						<DBTextarea
+							id={textareaId}
 							ref={onRefChange}
-							//rows={lineNumbers.length}
 							{...rest}
 							onChange={localOnChange}
 							onBlur={localOnBlur}

@@ -15,13 +15,18 @@ import { NetworkGraphQuickNode } from 'src/components/network-graph/plugins/quic
 import { NetworkGraphQuickZoomFactor } from 'src/components/network-graph/plugins/quick-zoom-factor/NetworkGraphQuickZoomFactor';
 import { NetworkGraphRelationClick } from 'src/components/network-graph/plugins/relation-click/NetworkGraphRelationClick';
 import { NetworkGraphRelationContextMenu } from 'src/components/network-graph/plugins/relation-context-menu/NetworkGraphRelationContextMenu';
-import { NetworkGraphScale } from 'src/components/network-graph/plugins/scale/NetworkGraphScale';
+import { NetworkGraphScaleLabels } from 'src/components/network-graph/plugins/scale-labels/NetworkGraphScaleLabels';
+import { NetworkGraphScaleNodes } from 'src/components/network-graph/plugins/scale-nodes/NetworkGraphScaleNodes';
 import { NetworkGraphSelectionTool } from 'src/components/network-graph/plugins/selection-tool/NetworkGraphSelectionTool';
 import i18n from 'src/i18n';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { checkBrowserRenderingCapabilities } from 'src/utils/helpers/browser';
+import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { NetworkGraphProps } from './NetworkGraph.interfaces';
+
+// don't puth this into the graphStore, it will reset when graphStore is reset
+let areRenderingCapabilitiesChecked = false;
 
 /**
  * Functional component responsible for rendering a network graph using Sigma.js.
@@ -49,22 +54,35 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	const isRenderingCapabilitiesWarningShown = useGraphStore(
 		(store) => store.isRenderingCapabilitiesWarningShown
 	);
-	const rootElementSize = useRef({ width: -1 });
+	const delayedCallback = useDebounce(100);
+	const rootElementSize = useRef({ width: -1, height: -1 });
 	const observerRef = useRef(
 		new ResizeObserver(function (mutations) {
 			const observerSize = mutations.at(0)?.contentBoxSize.at(0);
 
 			if (observerSize) {
+				const rootElementWidth = rootElementSize.current.width;
+				const rootElementHeight = rootElementSize.current.height;
+				const observerInlineSize = observerSize.inlineSize;
+				const observerBlockSize = observerSize.blockSize;
+
 				// initial render
-				if (rootElementSize.current.width === -1) {
-					rootElementSize.current.width = observerSize.inlineSize;
+				if (rootElementWidth === -1 || rootElementHeight === -1) {
+					rootElementSize.current.width = observerInlineSize;
+					rootElementSize.current.height = observerBlockSize;
 				}
-				// refresh graph only if its width has changed (ignore height changes)
-				else if (rootElementSize.current.width !== observerSize.inlineSize) {
-					rootElementSize.current.width = observerSize.inlineSize;
+				// refresh graph only if its width or height has changed
+				else if (
+					rootElementWidth !== observerInlineSize ||
+					rootElementHeight !== observerBlockSize
+				) {
+					rootElementSize.current.width = observerInlineSize;
+					rootElementSize.current.height = observerBlockSize;
 
 					if (useGraphStore.getState().isGraphRendered) {
-						useGraphStore.getState().sigma.refresh();
+						delayedCallback(() => {
+							useGraphStore.getState().sigma.refresh();
+						});
 					}
 				}
 			}
@@ -85,23 +103,26 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	}, []);
 
 	useEffect(() => {
-		// TODO this probably needs to be checked only once
-		const renderingCapabilities = checkBrowserRenderingCapabilities();
+		if (!areRenderingCapabilitiesChecked) {
+			areRenderingCapabilitiesChecked = true;
 
-		if (renderingCapabilities.softwareRendering && !isRenderingCapabilitiesWarningShown) {
-			useGraphStore.getState().setIsRenderingCapabilitiesWarningShown(true);
+			const renderingCapabilities = checkBrowserRenderingCapabilities();
 
-			useNotificationsStore.getState().addNotification({
-				title: i18n.t(
-					'notifications_warning_rendering_capabilities_software_rendering_fallback_used_title'
-				),
-				description: i18n.t(
-					'notifications_warning_rendering_capabilities_software_rendering_fallback_used_description'
-				),
-				type: 'warning',
-				autoCloseAfterMilliseconds: 0,
-				isClosable: true
-			});
+			if (renderingCapabilities.softwareRendering && !isRenderingCapabilitiesWarningShown) {
+				useGraphStore.getState().setIsRenderingCapabilitiesWarningShown(true);
+
+				useNotificationsStore.getState().addNotification({
+					title: i18n.t(
+						'notifications_warning_rendering_capabilities_software_rendering_fallback_used_title'
+					),
+					description: i18n.t(
+						'notifications_warning_rendering_capabilities_software_rendering_fallback_used_description'
+					),
+					type: 'warning',
+					autoCloseAfterMilliseconds: 0,
+					isClosable: true
+				});
+			}
 		}
 	}, []);
 
@@ -119,7 +140,8 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 				<NetworkGraphRelationClick />
 				<NetworkGraphNodeRelationMouseover />
 				<NetworkGraphQuickNode />
-				<NetworkGraphScale />
+				<NetworkGraphScaleNodes />
+				<NetworkGraphScaleLabels />
 				<NetworkGraphNodeContextMenu />
 				<NetworkGraphQuickZoomFactor />
 				<NetworkGraphNodeHtmlLabel />

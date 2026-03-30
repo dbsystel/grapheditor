@@ -2,12 +2,8 @@ import { CreateEdgeCurveProgramOptions } from '@sigma/edge-curve';
 import { Attributes } from 'graphology-types';
 import { Settings } from 'sigma/settings';
 import { EdgeDisplayData, NodeDisplayData, PartialButFor } from 'sigma/types';
+import { Cartesian2D } from 'src/models/graph';
 import { useGraphStore } from 'src/stores/graph';
-
-interface Point {
-	x: number;
-	y: number;
-}
 
 type EdgeLabelDrawingFunction<
 	N extends Attributes = Attributes,
@@ -28,13 +24,13 @@ type EdgeLabelDrawingFunction<
 	settings: Settings<N, E, G>
 ) => void;
 
-function getCurvePoint(t: number, p0: Point, p1: Point, p2: Point): Point {
+function getCurvePoint(t: number, p0: Cartesian2D, p1: Cartesian2D, p2: Cartesian2D): Cartesian2D {
 	const x = (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * p1.x + t ** 2 * p2.x;
 	const y = (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * p1.y + t ** 2 * p2.y;
 	return { x, y };
 }
 
-function getCurveLength(p0: Point, p1: Point, p2: Point): number {
+function getCurveLength(p0: Cartesian2D, p1: Cartesian2D, p2: Cartesian2D): number {
 	const steps = 20;
 	let length = 0;
 	let lastPoint = p0;

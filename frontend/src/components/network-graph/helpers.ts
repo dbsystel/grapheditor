@@ -1,3 +1,4 @@
+import { DEFAULT_EDGE_CURVATURE } from '@sigma/edge-curve';
 import seedrandom from 'seedrandom';
 import { MouseCoords, SigmaEventPayload, SigmaNodeEventPayload } from 'sigma/types';
 import { assignForceLayout } from 'src/components/network-graph/layouts/force';
@@ -5,13 +6,13 @@ import { assignForceAtlas2Layout } from 'src/components/network-graph/layouts/fo
 import { assignNoverlapLayout } from 'src/components/network-graph/layouts/noverlap';
 import { assignRandomLayout } from 'src/components/network-graph/layouts/random';
 import { GraphEditorSigma } from 'src/components/network-graph/NetworkGraph.interfaces';
-import { Point } from 'src/models/graph';
+import { Cartesian2D } from 'src/models/graph';
 import { Node, NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useSearchStore } from 'src/stores/search';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 import {
 	GRAPH_DEFAULT_EDGE_COLOR,
 	GRAPH_DEFAULT_EDGE_LABEL_BACKGROUND_COLOR,
@@ -31,6 +32,8 @@ import {
 	GRAPH_LAYOUT_NOVERLAP,
 	GRAPH_LAYOUT_RANDOM
 } from 'src/utils/constants';
+import { EventBusEvents } from 'src/utils/event-bus';
+import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 
 // disabling and enabling camera didn't work ¯\_(ツ)_/¯
 export const preventSigmaCameraMovement = (event: MouseCoords) => {
@@ -212,7 +215,11 @@ export const replaceFontSizeInFont = (font: string, newFontSize: number) => {
 	return font.replace(match, newFontSize.toString());
 };
 
-export const isPointInsideRectangle = (point: Point, topLeft: Point, bottomRight: Point) => {
+export const isPointInsideRectangle = (
+	point: Cartesian2D,
+	topLeft: Cartesian2D,
+	bottomRight: Cartesian2D
+) => {
 	return (
 		point.x >= topLeft.x &&
 		point.x <= bottomRight.x &&
@@ -221,7 +228,11 @@ export const isPointInsideRectangle = (point: Point, topLeft: Point, bottomRight
 	);
 };
 
-export const isPointOutsideRectangle = (point: Point, topLeft: Point, bottomRight: Point) => {
+export const isPointOutsideRectangle = (
+	point: Cartesian2D,
+	topLeft: Cartesian2D,
+	bottomRight: Cartesian2D
+) => {
 	return (
 		point.x < topLeft.x ||
 		point.x > bottomRight.x ||
@@ -243,7 +254,7 @@ const getIntersectSide = (angleInDegrees: number) => {
 };
 
 // calculate degrees between two points
-export const calculateAngle = (pointA: Point, pointB: Point) => {
+export const calculateAngle = (pointA: Cartesian2D, pointB: Cartesian2D) => {
 	// Calculate differences
 	const deltaX = pointB.x - pointA.x;
 	const deltaY = pointB.y - pointA.y;
@@ -276,7 +287,7 @@ export const calculateHypotenuse = (oppositeSideLength: number, angleDegrees: nu
 	return Math.abs(oppositeSideLength / trigonometryFunctionValue);
 };
 
-export const movePoint = (point: Point, hypotenuse: number, angleDegrees: number) => {
+export const movePoint = (point: Cartesian2D, hypotenuse: number, angleDegrees: number) => {
 	const angleRadians = angleDegrees * (Math.PI / 180);
 	const xNew = point.x + Math.cos(angleRadians) * hypotenuse;
 	const yNew = point.y + Math.sin(angleRadians) * hypotenuse;
@@ -285,8 +296,10 @@ export const movePoint = (point: Point, hypotenuse: number, angleDegrees: number
 };
 
 export const getNodesViewportCoordinates = (nodeIds: Array<NodeId>) => {
-	const nodeRectangles: Record<NodeId, { topLeft: Point; bottomRight: Point; center: Point }> =
-		{};
+	const nodeRectangles: Record<
+		NodeId,
+		{ topLeft: Cartesian2D; bottomRight: Cartesian2D; center: Cartesian2D }
+	> = {};
 	const sigma = useGraphStore.getState().sigma;
 
 	nodeIds.forEach((nodeId) => {
@@ -333,10 +346,10 @@ export const getMouseViewportCoordinates = (event: SigmaEventPayload | SigmaNode
 	}
 };
 
-export const onNodesUpdate = (nodes: Array<Node>) => {
+export const onNodesUpdate = (data: EventBusEvents['nodesUpdate']) => {
 	const sigma = useGraphStore.getState().sigma;
 
-	nodes.forEach((node) => {
+	data.nodes.forEach((node) => {
 		if (sigma.getGraph().hasNode(node.id)) {
 			const nodeGraphData: Partial<ReturnType<typeof getNodeGraphData>> =
 				getNodeGraphData(node);
@@ -353,16 +366,16 @@ export const onNodesUpdate = (nodes: Array<Node>) => {
 	});
 };
 
-export const onNodesRemove = (nodes: Array<Node>) => {
-	nodes.forEach((node) => {
+export const onNodesRemove = (data: EventBusEvents['nodesRemove']) => {
+	data.nodes.forEach((node) => {
 		useGraphStore.getState().removeNode(node.id);
 	});
 };
 
-export const onRelationsUpdate = (relations: Array<Relation>) => {
+export const onRelationsUpdate = (data: EventBusEvents['relationsUpdate']) => {
 	const sigma = useGraphStore.getState().sigma;
 
-	relations.forEach((relation) => {
+	data.relations.forEach((relation) => {
 		if (sigma.getGraph().hasEdge(relation.id)) {
 			const relationGraphData = getRelationGraphData(relation);
 
@@ -374,8 +387,8 @@ export const onRelationsUpdate = (relations: Array<Relation>) => {
 	});
 };
 
-export const onRelationsRemove = (relations: Array<Relation>) => {
-	relations.forEach((relation) => {
+export const onRelationsRemove = (data: EventBusEvents['relationsRemove']) => {
+	data.relations.forEach((relation) => {
 		useGraphStore.getState().removeRelation(relation.id);
 	});
 };
@@ -387,9 +400,11 @@ export const addNewGraphNode = (event: SigmaEventPayload, onSuccess?: () => void
 
 	const eventCoordinates = sigma.viewportToGraph(event.event);
 
-	nodesApi
+	api.nodes.fetch
 		.postNode({
-			labels: defaultNodeLabels ? defaultNodeLabels.map((label) => label.id) : [],
+			labels: defaultNodeLabels
+				? defaultNodeLabels.map((label) => getNodeSemanticIdOrId(label))
+				: [],
 			properties: {}
 		})
 		.then((response) => {
@@ -449,7 +464,7 @@ export const indexAndRefreshGraph = () => {
 	useGraphStore.getState().sigma.refresh({ skipIndexation: true });
 };
 
-export const calculateBoundingBoxCenterByCoordinates = (points: Array<Point>) => {
+export const calculateBoundingBoxCenterByCoordinates = (points: Array<Cartesian2D>) => {
 	let minX = Infinity;
 	let maxX = -Infinity;
 	let minY = Infinity;
@@ -479,9 +494,9 @@ export const calculateBoundingBoxCenterByCoordinates = (points: Array<Point>) =>
 };
 
 export const getCoordinatesPointRelativeToTargetPoint = (
-	current: Point,
-	source: Point,
-	target: Point
+	current: Cartesian2D,
+	source: Cartesian2D,
+	target: Cartesian2D
 ) => {
 	return {
 		x: target.x + (current.x - source.x),
@@ -507,3 +522,35 @@ export function clearCanvasContexts(canvases: Array<HTMLCanvasElement>) {
 		}
 	});
 }
+
+export const getCurvature = (index: number, maxIndex: number): number => {
+	if (maxIndex <= 0) throw new Error('Invalid maxIndex');
+	if (index < 0) return -getCurvature(-index, maxIndex);
+	const amplitude = 3.5;
+	const maxCurvature = amplitude * (1 - Math.exp(-maxIndex / amplitude)) * DEFAULT_EDGE_CURVATURE;
+	return (maxCurvature * index) / maxIndex;
+};
+
+/**
+ * For self-loops, curvature=0 would produce a collapsed/invisible loop
+ * (unlike curved edges where curvature=0 simply means a straight line).
+ * Every self-loop needs a minimum curvature to be visible, and each
+ * additional self-loop on the same node must be progressively larger.
+ */
+export const getSelfLoopCurvature = (index: number, minIndex: number = 0) => {
+	const baseCurvature = DEFAULT_EDGE_CURVATURE;
+	const step = DEFAULT_EDGE_CURVATURE * 0.75;
+	// Convert the symmetric parallel index range (e.g. [-3,-2,-1,0,1,2,3])
+	// into a sequential 1-based series (1,2,3,4,5,6,7) so that every
+	// self-loop gets a unique curvature and none overlap.
+	const sequentialIndex = index - minIndex + 1;
+	return baseCurvature + sequentialIndex * step;
+};
+
+export const enableSigmaMouseCaptor = () => {
+	useGraphStore.getState().sigma.getMouseCaptor().enabled = true;
+};
+
+export const disableSigmaMouseCaptor = () => {
+	useGraphStore.getState().sigma.getMouseCaptor().enabled = false;
+};

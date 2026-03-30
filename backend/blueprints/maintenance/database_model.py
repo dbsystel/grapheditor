@@ -4,6 +4,7 @@ from marshmallow import Schema, fields
 class DatabaseSchema(Schema):
     name = fields.Str()
     status = fields.Str()
+    type = fields.Str()
 
 
 class DatabasesGetSchema(Schema):

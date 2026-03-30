@@ -1,18 +1,19 @@
 import { HeaderPerspectiveSaveButton } from 'src/components/header/perspective-save-button/HeaderPerspectiveSaveButton';
-import { useGraphStore } from 'src/stores/graph';
+import { usePerspectiveStore } from 'src/stores/perspective';
+import { generateTestPerspective } from 'src/tests/helpers';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 describe('Components - HeaderPerspectiveSave', () => {
-	const perspectiveId = 'node-0';
+	const perspective = generateTestPerspective();
 
 	it('Render component', async () => {
-		useGraphStore.getState().setPerspectiveId(perspectiveId);
+		usePerspectiveStore.getState().setPerspective(perspective);
 
 		const screen = await render(
 			<HeaderPerspectiveSaveButton
-				perspectiveId={perspectiveId}
+				perspectiveId={perspective.id}
 				closeMenuFunction={() => {}}
 				testId="header-perspective-save"
 			/>
@@ -24,12 +25,12 @@ describe('Components - HeaderPerspectiveSave', () => {
 	});
 
 	it('Save Perspective', async () => {
-		useGraphStore.getState().setPerspectiveId(perspectiveId);
+		usePerspectiveStore.getState().setPerspective(perspective);
 		const closeFunction = vi.fn();
 
 		const screen = await render(
 			<HeaderPerspectiveSaveButton
-				perspectiveId={perspectiveId}
+				perspectiveId={perspective.id}
 				closeMenuFunction={closeFunction}
 				testId="header-perspective-save"
 			/>

@@ -11,7 +11,8 @@ export const ToggleGroup = <T extends string>({
 	value,
 	onChange,
 	selectedLabel,
-	size = 'small'
+	size = 'small',
+	tooltipFixClassName
 }: ToggleGroupProps<T>) => {
 	const rootElementClassName = clsx('toggle-group', className);
 
@@ -29,7 +30,11 @@ export const ToggleGroup = <T extends string>({
 						className={value === option.value ? 'toggle-group--selected' : ''}
 					>
 						<DBIcon icon={option.icon} />
-						<DBTooltip placement="bottom-start" showArrow={false}>
+						<DBTooltip
+							placement="bottom-start"
+							showArrow={false}
+							className={tooltipFixClassName}
+						>
 							{option.label}
 						</DBTooltip>
 					</DBButton>

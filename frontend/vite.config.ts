@@ -42,7 +42,12 @@ export default defineConfig({
 		restoreMocks: true,
 		browser: {
 			enabled: true,
-			provider: playwright(),
+			provider: playwright({
+				launchOptions: {
+					// We added this because of sigma.js after updating playwright and playwright-chromium from version 1.57.0 to version 1.58.2
+					args: ['--use-gl=angle']
+				}
+			}),
 			instances: [
 				{
 					browser: 'chromium'

@@ -8,14 +8,24 @@ import {
 	initializeApplicationStoresObservers
 } from 'src/observers';
 import { useLoginStore } from 'src/stores/login';
-import { setApiHeaderTabId } from 'src/utils/api';
-import { usersApi } from 'src/utils/api/users';
-import { resetApplicationStates } from 'src/utils/helpers/general';
+import { useNotificationsStore } from 'src/stores/notifications';
+import { api } from 'src/utils/api/api';
+import { setBackendApiHeaderTabId } from 'src/utils/backend-api';
+import { SSO_HOST_STORAGE_KEY } from 'src/utils/constants';
+import { parseError, resetApplicationStates } from 'src/utils/helpers/general';
 import { AuthProps } from './Auth.interfaces';
 
 export const Auth = ({ children, id, className, testId }: AuthProps) => {
-	const { isConnected, isConnecting, setIsConnecting, tabId, connect, disconnect } =
-		useLoginStore((store) => store);
+	const {
+		isConnected,
+		isConnecting,
+		setIsConnecting,
+		tabId,
+		connect,
+		disconnect,
+		checkIfLoggedInDone,
+		setCheckIfLoggedInDone
+	} = useLoginStore((store) => store);
 	const rootElementClassName = clsx('auth', className);
 
 	// TODO this is a quick-fix, not a proper solution. This logic shouldn't be part of the Auth component
@@ -37,17 +47,57 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 	// TODO --quick-fix end
 
 	useEffect(() => {
-		setApiHeaderTabId(tabId);
+		setBackendApiHeaderTabId(tabId);
 		setIsConnecting(true);
 
-		usersApi
-			.getLogin()
-			.then((data) => {
-				connect(data.data.host, data.data.username);
-			})
-			.catch(() => {
-				disconnect();
+		const checkLogin = async () => {
+			const ssoHost = await new Promise((resolve: (value: string | null) => void) => {
+				resolve(window.localStorage.getItem(SSO_HOST_STORAGE_KEY));
 			});
+
+			let loginPromise;
+
+			// try and continue SSO login if SSO login in progress
+			if (ssoHost) {
+				await new Promise((resolve) => {
+					window.localStorage.removeItem(SSO_HOST_STORAGE_KEY);
+					resolve('ok');
+				});
+
+				loginPromise = api.users.fetch
+					.postLoginSSO({
+						host: ssoHost,
+						useToken: true
+					})
+					.then((response) => {
+						if ('host' in response.data && 'username' in response.data) {
+							connect(response.data.host, response.data.username);
+						}
+					})
+					.catch((error) => {
+						useNotificationsStore.getState().addNotification({
+							title: parseError(error),
+							type: 'critical'
+						});
+					});
+			}
+			// else try and get existing login session
+			else {
+				loginPromise = api.users.fetch.getLogin().then((data) => {
+					connect(data.data.host, data.data.username);
+				});
+			}
+
+			loginPromise
+				.catch(() => {
+					disconnect();
+				})
+				.finally(() => {
+					setCheckIfLoggedInDone(true);
+				});
+		};
+
+		checkLogin();
 	}, []);
 
 	if (isConnecting) {
@@ -60,9 +110,13 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 		);
 	}
 
-	if (isConnected) {
-		return children;
+	if (checkIfLoggedInDone) {
+		if (isConnected) {
+			return children;
+		} else {
+			return <LoginForm id={id} className={rootElementClassName} testId={testId} />;
+		}
 	}
 
-	return <LoginForm id={id} className={rootElementClassName} testId={testId} />;
+	return null;
 };

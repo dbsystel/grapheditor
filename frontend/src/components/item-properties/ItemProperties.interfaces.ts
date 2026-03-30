@@ -1,6 +1,6 @@
 import { RefObject } from 'react';
-import { ItemPropertiesTableProps } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
-import { Item, ItemProperties } from 'src/models/item';
+import { ItemPropertiesTableProps } from 'src/components/item-properties-table/ItemPropertiesTable.interfaces';
+import { Item } from 'src/models/item';
 import { MetaForMeta, NodeId } from 'src/models/node';
 import { GlobalComponentProps } from 'src/types/components';
 
@@ -17,7 +17,7 @@ type ItemPropertiesBase = {
 };
 
 export type ItemPropertiesHandle = {
-	handleSave: () => Promise<void>;
+	handleSave: () => Promise<boolean>;
 	handleUndo: () => void;
-	properties: ItemProperties;
+	validateProperties: () => boolean;
 } | null;

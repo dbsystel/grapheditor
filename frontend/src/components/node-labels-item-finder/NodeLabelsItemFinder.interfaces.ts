@@ -1,5 +1,5 @@
 import { LabelVariantType } from '@db-ux/react-core-components/dist/shared/model';
-import { ReactNode, RefObject } from 'react';
+import { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
 import { ItemFinderProps } from 'src/components/item-finder/ItemFinder.interfaces';
 import { Node, NodeId } from 'src/models/node';
 import { GlobalComponentProps } from 'src/types/components';
@@ -18,7 +18,6 @@ export type NodeLabelsItemFinderProps = GlobalComponentProps & {
 	placeholder?: string;
 	defaultSelectedOptions?: ItemFinderProps<Node>['defaultSelectedOptions'];
 	onTagsSelected?: (updatedTagLabelObjects: Array<Node>) => void;
-	highlightedTagIds?: Array<NodeId>;
 	markTagIdsAsWarning?: Array<NodeId>;
 	isEditMode?: boolean;
 	handleRef?: RefObject<NodeLabelsItemFinderHandle>;
@@ -38,11 +37,10 @@ export type NodeLabelsItemFinderTagProps = {
 	isNewlyAdded: boolean;
 	isSelected: boolean;
 	isHighlighted: boolean;
+	showTooltipOnHover?: boolean;
 	shouldRenderWarningIcon?: boolean;
 	editLabels: boolean;
 	label: Node;
-	onMouseEnter: (label: Node) => void;
-	onMouseLeave: () => void;
 	onLabelChange: (item: Node, isItemSelected: boolean, selectedItems: Array<Node>) => void;
 	value: Array<Node>;
 	onTagSelect: (tagId: NodeId) => void;
@@ -52,5 +50,6 @@ export type NodeLabelsItemFinderTagProps = {
 export type NodeLabelsItemFinderHandle = {
 	handleSave: () => Promise<void>;
 	handleUndo: () => void;
+	setHighlightedTagIds: Dispatch<SetStateAction<Array<NodeId>>>;
 	labels: Array<NodeId>;
 } | null;

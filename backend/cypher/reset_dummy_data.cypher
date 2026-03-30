@@ -3,16 +3,16 @@ match (n) detach delete n;
 create
   (alice:Person__dummy_ {name__dummy_:"Alice"}),
   (bob:Person__dummy_ {name__dummy_:"Bob"}),
-  
+
   (alice)-[:likes__dummy_ {since__dummy_:1998}]->(bob),
-  
+
 
   (person:MetaLabel__tech_ {name__tech_:"Person__dummy_",description__tech_:"A living human"}),
   (personname:MetaProperty__tech_ {name__tech_:"name__dummy_",description__tech_:"the name of something or someone", type__tech_:"string"}),
   (personname)-[:prop__tech_]->(person),
   (likes:MetaRelation__tech_ {name__tech_:"likes__dummy_",description__tech_:"Someone takes a liking in something or someone"}),
   (since:MetaProperty__tech_ {name__tech_:"since__dummy_",description__tech_:"since when some relation holds",type__tech_:"integer"}),
-  
+
   (person_likes_person:Restriction__tech_ {description__tech_:"Person likes Person"}),
   (person)-[:source__tech_]->(person_likes_person),
   (person)-[:target__tech_]->(person_likes_person),
@@ -27,7 +27,7 @@ create
   (metaproperty:MetaLabel__tech_ {name__tech_:"MetaProperty__tech_", description__tech_:"MetaProperty describes a property"}),
   (metarelation:MetaLabel__tech_ {name__tech_:"MetaRelation__tech_", description__tech_:"MetaRelation describes a relation type"}),
   (restriction:MetaLabel__tech_ {name__tech_:"Restriction__tech_", description__tech_:"Restriction specifies the use of a MetaRelation between two MetaLabels"}),
-  
+
   (metaname)-[:prop__tech_]->(metalabel),
   (metaname)-[:prop__tech_]->(metaproperty),
   (metaname)-[:prop__tech_]->(metarelation),
@@ -107,8 +107,65 @@ create
   }),
   (paramLabel)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_"}]->(paraquery2),
   (paramPropName)-[:parameter__tech_ {parameter_name__tech_: "propertyName", default_value__tech_: "name__dummy_"}]->(paraquery2),
-  (paramPropValue)-[:parameter__tech_ {parameter_name__tech_: "propertyValue"}]->(paraquery2)
-;
+  (paramPropValue)-[:parameter__tech_ {parameter_name__tech_: "propertyValue"}]->(paraquery2),
+
+  (paraquery3:Paraquery__tech_ {
+      name__tech_: "Query persons", description__tech_: "Return all persons in the database. This paraquery has no parameters.",
+      user_text__tech_: "I want all nodes with $label = Person__dummy_.",
+      cypher__tech_: "match (a:Person__dummy_) return a"
+  });
+
+with date("2025-11-05") as a_date,
+     datetime("2019-06-01T18:40:32") as a_datetime,
+     time("12:34:56") as a_time,
+     time("12:34") as a_time_no_seconds,
+     time("12:34:56.2") as a_time_partial_ms,
+     time("12:34:56.000000789") as a_time_with_ns,
+     datetime("2019-06-01T18:40:32.1") as a_datetime_with_ms,
+     datetime("2019-06-01T18:40:32.000000001") as a_datetime_with_ns,
+     datetime("2019-06-01T18:40:32.1-01:00") as a_datetime_with_tz,
+     localtime("12:34:56.789") as a_localtime,
+     localdatetime("2025-02-18T12:34:56") as a_localdatetime,
+     duration('P14DT16H12M') as a_duration, point({x: 3, y: 0}) as cartesian2d,
+     point({x: 0, y: 4, z: 1}) as cartesian3d, point({latitude: 12, longitude: 56}) as geo2d,
+     point({latitude: 12, longitude: 56, height: 1000}) as geo3d
+create
+  (complex:ComplexObject {
+      boolean: True,
+      integer: 1,
+      float: 1.1,
+      string: "abc",
+      date: a_date,
+      time: a_time,
+      time_partial_ms: a_time_partial_ms,
+      time_no_seconds: a_time_no_seconds,
+      time_ns: a_time_with_ns,
+      datetime: a_datetime,
+      datetime_ms: a_datetime_with_ms,
+      datetime_ns: a_datetime_with_ns,
+      datetime_tz: a_datetime_with_tz,
+      localtime: a_localtime,
+      localdatetime: a_localdatetime,
+      duration: a_duration,
+      cartesian2d: cartesian2d,
+      cartesian3d: cartesian3d,
+      geo2d: geo2d,
+      geo3d: geo3d,
+      list_boolean: [True, False],
+      list_integer: [1, -2],
+      list_float: [1.1, 2.0, 1e3],
+      list_string: ["abc", "def"],
+      list_date: [a_date, a_date],
+      list_datetime: [a_datetime, a_datetime],
+      list_locatime: [a_localtime, a_localtime],
+      list_localdatetime: [a_localdatetime, a_localdatetime],
+      list_duration: [a_duration, a_duration],
+      list_cartesian2d: [cartesian2d, cartesian2d],
+      list_cartesian3d: [cartesian3d, cartesian3d],
+      list_geo2d: [geo2d, geo2d],
+      list_geo3d: [geo3d, geo3d],
+      empty_list: []
+  });
 
 match (a)-[r]->(b)
       return *;

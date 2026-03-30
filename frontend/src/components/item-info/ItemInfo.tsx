@@ -1,14 +1,13 @@
 import './ItemInfo.scss';
 import { DBButton } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { MouseEvent, useCallback, useRef, useState } from 'react';
-import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
+import { MouseEvent, useCallback, useState } from 'react';
 import { useItemsDrawerContext } from 'src/components/items-drawer/context/ItemsDrawerContext';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useDrawerStore } from 'src/stores/drawer';
-import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { isNode } from 'src/utils/helpers/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { ItemInfoProps } from './ItemInfo.interfaces';
 
 /**
@@ -27,9 +26,6 @@ export const ItemInfo = ({
 	showTooltipOnHover = true
 }: ItemInfoProps) => {
 	const [ref, setRef] = useState<HTMLButtonElement | null>(null);
-	const [renderTooltip, setRenderTooltip] = useState(false);
-	const { setEntry, addEntry } = useDrawerStore((store) => store);
-	const timeoutRef = useRef(0);
 	const { isInsideItemsDrawer } = useItemsDrawerContext();
 	const rootElementClassName = clsx('item-info', className);
 
@@ -39,40 +35,39 @@ export const ItemInfo = ({
 	 */
 	const onRefChange = useCallback((element: HTMLButtonElement | null) => {
 		setRef(element);
+
+		if (element) {
+			useItemOverviewPopoverStore
+				.getState()
+				.registerTriggerElement({ triggerElement: element, item: item });
+		}
 	}, []);
 
 	const onClick = () => {
+		const overviewEntries = useItemOverviewPopoverStore
+			.getState()
+			.overviews.map((overview) => ({ item: overview.item }));
+
+		useItemOverviewPopoverStore.getState().reset();
+
 		if (isInsideItemsDrawer) {
-			addEntry({ item: item });
+			useDrawerStore.getState().addEntry({ item: item });
 		} else {
-			setEntry({ item: item });
-		}
-	};
+			const existingDrawerEntries = useDrawerStore.getState().entries;
+			const entries = [...existingDrawerEntries, ...overviewEntries];
 
-	const onMouseEnter = () => {
-		if (showTooltipOnHover) {
-			timeoutRef.current = window.setTimeout(() => {
-				setRenderTooltip(true);
-			}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
-		}
-	};
+			if (overviewEntries.at(overviewEntries.length - 1)?.item.id !== item.id) {
+				entries.push({ item: item });
+			}
 
-	const resetTooltip = () => {
-		window.clearTimeout(timeoutRef.current);
-
-		setRenderTooltip(false);
-	};
-
-	const onMouseLeave = () => {
-		if (showTooltipOnHover) {
-			resetTooltip();
+			useDrawerStore.getState().setEntries(entries);
 		}
 	};
 
 	const onContextMenu = (event: MouseEvent) => {
 		if (ref && isNode(item)) {
 			if (showTooltipOnHover) {
-				resetTooltip();
+				useItemOverviewPopoverStore.getState().reset();
 			}
 
 			event.preventDefault();
@@ -96,13 +91,9 @@ export const ItemInfo = ({
 				size="small"
 				onClick={onClick}
 				ref={onRefChange}
-				onMouseEnter={onMouseEnter}
-				onMouseLeave={onMouseLeave}
 				onContextMenu={onContextMenu}
 			>
 				{idFormatter.parseIdToName(item.title)}
-
-				{renderTooltip && <ItemOverviewPopover item={item} popoverRef={ref} />}
 			</DBButton>
 		</div>
 	);

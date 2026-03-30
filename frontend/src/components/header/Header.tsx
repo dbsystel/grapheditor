@@ -14,30 +14,31 @@ import { PerspectiveFinder } from 'src/components/perspective-finder/Perspective
 import { SearchOptions } from 'src/components/search-options/SearchOptions';
 import { useSearchStore } from 'src/stores/search';
 import {
-	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
-	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
 import { goToApplicationView, goToHomepageView, isHomepageView } from 'src/utils/helpers/general';
+import { isCypherQueryOrFullText } from 'src/utils/helpers/search';
 import { HeaderProps } from './Header.interfaces';
 
 export const Header = ({ id, className, testId }: HeaderProps) => {
 	const rootElementClassName = clsx('header', className);
 	const searchType = useSearchStore((store) => store.type);
-	const globalSearchRef = useRef<GlobalSearchRef>({ triggerSearch: () => {} });
-
-	const triggerSearch = () => {
-		if (isHomepageView()) {
-			goToApplicationView();
+	const globalSearchRef = useRef<GlobalSearchRef>({
+		triggerSearch: () => {
+			globalSearchRef.current.searchFunction();
+			globalSearchRef.current.redirectToApplication();
+		},
+		searchFunction: () => {},
+		redirectToApplication: () => {
+			if (isHomepageView()) {
+				goToApplicationView();
+			}
 		}
-		globalSearchRef.current.triggerSearch();
-	};
+	});
 
 	// Depending on which SearchType the user selected we show a different component
-	const isFullTextOrCypherQuery =
-		searchType === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT ||
-		searchType === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY;
+	const isFullTextOrCypherQuery = isCypherQueryOrFullText(searchType);
 	const isPerspective = searchType === GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE;
 	const isParaQueries = searchType === GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY;
 
@@ -53,7 +54,7 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 							variant="brand"
 							icon="play"
 							className="header__search-button"
-							onClick={triggerSearch}
+							onClick={globalSearchRef.current.triggerSearch}
 						>
 							Start
 						</DBButton>

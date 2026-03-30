@@ -1,5 +1,6 @@
 from marshmallow import Schema, fields
 
+
 class ParameterSchema(Schema):
     help_text = fields.Str()
     type = fields.Str()
@@ -9,6 +10,20 @@ class ParameterSchema(Schema):
     default_value = fields.Raw(metadata={
         "description": "Optional default value for this paramater."
     }, required=False)
+
+
+class ParaqueriesGetResponseSchema(Schema):
+    paraqueries = fields.List(
+        fields.Tuple((
+                fields.Str(
+                    metadata={"description": "Paraquery db id."}
+                ),
+                fields.Str(
+                    metadata={"description": "Paraquery description."}
+                )
+        ))
+    )
+
 
 class ParaquerySchema(Schema):
     uuid = fields.Str()
@@ -36,11 +51,10 @@ class ParaquerySchema(Schema):
         }
     )
 
-class ParaqueryResponseSchema(Schema):
-    paraqueries = fields.Dict(
-        keys=fields.Str(),
-        values=fields.Nested(ParaquerySchema())
-    )
+
+class ParaqueryGetResponseSchema(Schema):
+    paraquery = fields.Nested(ParaquerySchema())
+
 
 class ParaqueryPostSchema(Schema):
     uuid = fields.Str(required=False)

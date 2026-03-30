@@ -14,6 +14,7 @@ This is the GUI for the GraphEditor project. It supports users to work with diff
     - [Development](#development)
     - [HTTP Requests](#http-requests)
     - [Global State Management](#global-state-management)
+    - [Working with events](#working-with-events)
     - [Theming](#theming)
     - [Icon Fonts](#icon-fonts)
     - [Applications' focus and blur management](#applications-focus-and-blur-management)
@@ -172,11 +173,13 @@ This prevents malicious code scripts from being silently installed without restr
       required to pass username and password in Neo4J browser GUI in order to connect to the neo4j database, but if you are, please
       check the backend documentation and/or its environment files
 
-4.**run frontend**: - `npm run dev` in this directory to start the project locally. For other commands please refer to the _package.json_ file.
+4. **run frontend**: - `npm run dev` in this directory to start the project locally. For other commands please refer to the _package.json_ file.
 
-5.**mock data**: - If you need mock data to explore the project, please visit http://localhost:4999/swagger. Under the headline "Dev tools" you can
-find `/dev/reset` and `/dev/osm_data` endpoints. For a simple set of data, you can use the `/dev/reset` endpoint, for a more
-complex set of data please use the `/dev/osm_data` endpoint.
+5. **Component Creation**: - To quickly scaffold new React components with all necessary files, use the component generation script: `npm run create-component ComponentName`. This will create a new component in folder src/components/ with a component file (.tsx), a style file (.scss), an interfaces (.interfaces.ts) and a test file (.test.tsx). It supports various naming formats (camelCase, kebab-case, spaces) – all are converted to PascalCase.
+
+6. **mock data**: - If you need mock data to explore the project, please visit http://localhost:4999/swagger. Under the headline "Dev tools" you can
+   find `/dev/reset` and `/dev/osm_data` endpoints. For a simple set of data, you can use the `/dev/reset` endpoint, for a more
+   complex set of data please use the `/dev/osm_data` endpoint.
 
 If you successfully followed this short tutorial, you should see our homepage in your browser.
 
@@ -184,7 +187,8 @@ If you successfully followed this short tutorial, you should see our homepage in
 
 To interface with our backend system, we have established two primary methodologies. The first method utilizes API abstraction objects, <br>
 which reside in the `frontend/src/utils/api` directory. These objects encapsulate backend communication logic and are designed to <br>
-streamline integration within the frontend architecture.
+streamline integration within the frontend architecture. In code, please always use the root `api` object from `frontend/src/utils/api/api.ts` <br>
+to access API functions. This approach promotes a clean separation of concerns and enhances maintainability by centralizing API interactions.
 
 The alternative strategy involves deploying custom React hooks, accessible within `frontend/src/utils/hooks`. These hooks are tailored <br>
 specifically for React components, offering a seamless way to manage asynchronous data flows in a declarative manner.
@@ -222,7 +226,11 @@ For managing global state withing the application, we use [Zustand](https://gith
 We tried keeping API layer out of it, but because sometimes it would fit really well into it, and to reduce code complexity, you <br>
 might find API calls inside Zustand states.
 
-When working with global state, please don't mix one state properties or methods with another another state.
+When working with global state, please don't mix one state properties or methods with another state.
+
+### Working with events
+
+When working with events, please check the `src/EVENT_SYSTEMS.md` file for more information about our event systems and their use cases.
 
 ### Theming
 
@@ -369,3 +377,6 @@ Team GraphEditor. Responsible frontend developers:
 10. Refactor URL parameters workflow (define how we deal with URL parameters and their changes, create a helper function to create clean URLs and similar)
 11. Add loading states to components when fetching data from backend
 12. Add e2e tests with Playwright
+13. Replace itemsStore events/callbacks system with a more generic solution
+14. Centralize helpers like with API objects
+15. Isolate regexes into a separate file (check the `src/utils/regex.ts` file)

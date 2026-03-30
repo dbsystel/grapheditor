@@ -1,24 +1,38 @@
 import clsx from 'clsx';
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AddNewProperty } from 'src/components/add-new-property/AddNewProperty';
 import {
 	processItemPropertiesEntries,
-	showNotificationForPropertyTypeAndValueMismatch,
-	validateItemProperties
+	PropertiesStorageClass,
+	showNotificationForInvalidProperties
 } from 'src/components/item-properties/helpers';
-import { ItemPropertiesTable } from 'src/components/item-properties/table/ItemPropertiesTable';
-import { ItemPropertiesTableEntries } from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
-import { ItemPropertiesAddNewProperty } from 'src/components/item-properties/tabs/add-new-property/ItemPropertiesAddNewProperty';
+import { ItemPropertiesTable } from 'src/components/item-properties-table/ItemPropertiesTable';
+import {
+	ItemPropertiesTableEntries,
+	ItemPropertiesTableEntryWithTopFlag
+} from 'src/components/item-properties-table/ItemPropertiesTable.interfaces';
 import { TabItem } from 'src/components/tab-item/TabItem';
 import { TabList } from 'src/components/tab-list/TabList';
 import { TabPanel } from 'src/components/tab-panel/TabPanel';
 import { Tabs } from 'src/components/tabs/Tabs';
-import { ItemPropertyKey, ItemPropertyWithKey } from 'src/models/item';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
-import { clone, objectHasOwnProperty } from 'src/utils/helpers/general';
+import { ItemProperty, ItemPropertyKey } from 'src/models/item';
+import { api } from 'src/utils/api/api';
+import {
+	clone,
+	compareTwoStringsForSorting,
+	twoObjectValuesAreEqual
+} from 'src/utils/helpers/general';
+import {
+	areItemPropertiesValid,
+	convertItemPropertyToNewType,
+	getDefaultItemPropertyForItemPropertyType,
+	isItemPropertyOfTypeList,
+	isItemPropertyTypeValid
+} from 'src/utils/helpers/items';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
+import { idFormatter } from 'src/utils/id-formatter';
 import { ItemPropertiesProps } from './ItemProperties.interfaces';
 
 export const ItemProperties = ({
@@ -38,156 +52,220 @@ export const ItemProperties = ({
 	// sometimes cause React not to rerender the component although one of the states
 	// was updated (this behaviour would happen rarely, every ~15/20 times)
 	const [entriesState, setEntriesState] = useState<{
-		complete: ItemPropertiesTableEntries;
-		top: ItemPropertiesTableEntries;
+		entries: Array<ItemPropertiesTableEntryWithTopFlag>;
 		renderIncompleteTab: boolean;
 	}>({
-		complete: [],
-		top: [],
+		entries: [],
 		renderIncompleteTab: false
 	});
-	const [renderKey, setRenderKey] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
+	// lazy initialization to prevent creating the PropertiesStorageClass instance on every render
+	const [propertiesStorage] = useState(() => new PropertiesStorageClass(clone(item.properties)));
 	const tabsActiveIndexRef = useRef(-1); // -1 = none
 	const topEntriesPropertyKeysCacheRef = useRef<Array<ItemPropertyKey>>([]);
+	const propertyKeyPrefix = useRef(window.crypto.randomUUID());
 	const propsStorageRef = useRef({
 		metaData: metaData,
 		filterMetaByNodeIds: filterMetaByNodeIds,
 		itemProperties: clone(item.properties)
 	});
-	const propertiesRef = useRef(clone(item.properties));
 	const rootElementClassName = clsx('item-properties', className);
 
 	useImperativeHandle(handleRef, () => ({
 		handleSave,
 		handleUndo,
-		properties: propertiesRef.current
+		validateProperties
 	}));
 
 	useEffect(() => {
+		propertiesStorage.setProperties(clone(item.properties));
+
+		return () => {
+			propertiesStorage.reset();
+		};
+	}, [item]);
+
+	useEffect(() => {
+		refreshPropsStorageAndProcessTableEntries();
+	}, [item, metaData, filterMetaByNodeIds]);
+
+	function refreshPropsStorageAndProcessTableEntries() {
 		/**
 		 * Prevent stale closures.
-		 * Asynchronous function creates a closure that captures the variables at the time of its creation. If React re-renders after
-		 * the async function has been created but before it finishes execution, the values used inside the async function don't update,
-		 * they remain "stale".
+		 * Asynchronous function creates a closure that captures the variables at the time of its creation. If React re-renders
+		 * after the async function has been created but before it finishes execution, the values used inside the async
+		 * function don't update, they remain "stale".
 		 */
 		propsStorageRef.current = {
 			metaData: metaData,
 			filterMetaByNodeIds: filterMetaByNodeIds,
-			itemProperties: propertiesRef.current
-		};
-
-		const processTableEntries = async () => {
-			const { metaData, filterMetaByNodeIds, itemProperties } = propsStorageRef.current;
-			const propertyNodes = await nodesApi.postNodesBulkFetch({
-				nodeIds: Object.keys(itemProperties)
-			});
-
-			const { newCompleteEntries, newIncompleteEntries, newTopEntries } =
-				processItemPropertiesEntries({
-					propertyNodes: propertyNodes,
-					metaData: metaData,
-					filterMetaByNodeIds: filterMetaByNodeIds,
-					itemProperties: itemProperties,
-					topEntriesPropertyKeys: topEntriesPropertyKeysCacheRef.current
-				});
-
-			const renderIncompleteTab =
-				tabsActiveIndexRef.current === 1 && newIncompleteEntries.length;
-
-			const topTableEntries = renderIncompleteTab ? newIncompleteEntries : newTopEntries;
-
-			setEntriesState({
-				top: topTableEntries,
-				complete: newCompleteEntries,
-				renderIncompleteTab: newIncompleteEntries.length > 0
-			});
+			itemProperties: clone(propertiesStorage.properties)
 		};
 
 		processTableEntries();
-	}, [item, renderKey, metaData, filterMetaByNodeIds]);
+	}
+
+	async function processTableEntries() {
+		const { metaData, filterMetaByNodeIds, itemProperties } = propsStorageRef.current;
+		const response = await api.nodes.fetch.postNodesBulkFetch({
+			nodeIds: Object.keys(itemProperties)
+		});
+		const propertyNodes = Object.values(response.data.nodes);
+
+		const { newCompleteEntries, newIncompleteEntries, newTopEntries } =
+			processItemPropertiesEntries({
+				propertyNodes: propertyNodes,
+				metaData: metaData,
+				filterMetaByNodeIds: filterMetaByNodeIds,
+				itemProperties: itemProperties,
+				topEntriesPropertyKeys: topEntriesPropertyKeysCacheRef.current
+			});
+
+		const renderIncompleteTab = tabsActiveIndexRef.current === 1 && newIncompleteEntries.length;
+		const topTableEntries = renderIncompleteTab ? newIncompleteEntries : newTopEntries;
+		const topEntries: Array<ItemPropertiesTableEntryWithTopFlag> = sortTableEntriesByNodesTitle(
+			topTableEntries
+		).map((entry) => [...entry, true]);
+		const completeEntries: Array<ItemPropertiesTableEntryWithTopFlag> =
+			sortTableEntriesByNodesTitle(newCompleteEntries).map((entry) => [...entry, false]);
+
+		setEntriesState({
+			entries: [...topEntries, ...completeEntries],
+			renderIncompleteTab: newIncompleteEntries.length > 0
+		});
+	}
 
 	// sort as sort into complete/incomplete columns, not sort alphabetically or similar
 	const sortTopEntriesMap = (keepActiveTabIndex?: boolean) => {
 		if (!keepActiveTabIndex) {
-			tabsActiveIndexRef.current = -1;
+			setActiveTabIndex(-1);
 		}
 
-		topEntriesPropertyKeysCacheRef.current = [];
-		refreshComponent();
+		clearTopEntriesCache();
+		refreshPropsStorageAndProcessTableEntries();
 	};
 
 	const onTabChange = (tabElement: HTMLInputElement, tabIndex: number) => {
-		tabsActiveIndexRef.current = tabIndex;
+		setActiveTabIndex(tabIndex);
 		sortTopEntriesMap(true);
 	};
 
 	const handleSave = async () => {
 		if (!isLoading) {
-			const itemPropertiesAreValid = validateItemProperties(propertiesRef.current);
+			const itemPropertiesValidation = areItemPropertiesValid(propertiesStorage.properties);
 
-			if (!itemPropertiesAreValid) {
-				showNotificationForPropertyTypeAndValueMismatch();
-				return;
+			if (!itemPropertiesValidation.isValid) {
+				showNotificationForInvalidProperties(
+					itemPropertiesValidation.invalidKeys.map((key) =>
+						idFormatter.parseIdToName(key)
+					)
+				);
+
+				return false;
 			}
 
+			setActiveTabIndex(0);
+			clearTopEntriesCache();
 			setIsLoading(true);
 
 			const patchObject = {
 				id: item.id,
-				properties: propertiesRef.current
+				properties: propertiesStorage.properties
 			};
 
 			if (isNode(item)) {
-				await nodesApi.patchNodesAndUpdateApplication([patchObject]);
+				await api.nodes.actions.patchNodesAndUpdateApplication([patchObject]);
 			} else if (isRelation(item)) {
-				await relationsApi.patchRelationsAndUpdateApplication([patchObject]);
+				await api.relations.actions.patchRelationsAndUpdateApplication([patchObject]);
 			}
 
-			topEntriesPropertyKeysCacheRef.current = [];
 			setIsLoading(false);
+
+			return true;
 		}
+
+		return false;
 	};
 
 	const handleUndo = () => {
-		propertiesRef.current = clone(item.properties);
+		propertiesStorage.setProperties(clone(item.properties));
+		refreshPropertyKeyPrefix();
+		setActiveTabIndex(0);
+		clearTopEntriesCache();
+		refreshPropsStorageAndProcessTableEntries();
+	};
+
+	const validateProperties = () => {
+		return twoObjectValuesAreEqual(item.properties, propertiesStorage.properties);
+	};
+
+	const refreshPropertyKeyPrefix = () => {
+		propertyKeyPrefix.current = window.crypto.randomUUID();
+	};
+
+	const clearTopEntriesCache = () => {
 		topEntriesPropertyKeysCacheRef.current = [];
-		tabsActiveIndexRef.current = 0;
-		// TODO check if this needs to be optimized to not refresh the whole component
-		refreshComponent();
 	};
 
-	const onPropertyCreate = (property: ItemPropertyWithKey) => {
-		propertiesRef.current[property.key] = {
-			value: property.value,
-			type: property.type,
-			edit: true
-		};
-
-		topEntriesPropertyKeysCacheRef.current.push(property.key);
-		refreshComponent();
+	const setActiveTabIndex = (tabIndex: number) => {
+		tabsActiveIndexRef.current = tabIndex;
 	};
 
-	const onPropertyChange = (key: ItemPropertyKey, value: string) => {
-		// if we work with missing ("recommended") properties
-		if (!objectHasOwnProperty(propertiesRef.current, key)) {
-			propertiesRef.current[key] = {
-				type: 'string',
-				value: '',
-				edit: true
-			};
+	const onPropertyCreate = (key: ItemPropertyKey, property: ItemProperty) => {
+		propertiesStorage.setProperty(key, property);
+
+		if (!topEntriesPropertyKeysCacheRef.current.includes(key)) {
+			topEntriesPropertyKeysCacheRef.current.push(key);
+		} else {
+			refreshPropertyKeyPrefix();
 		}
 
-		propertiesRef.current[key].value = value;
+		refreshPropsStorageAndProcessTableEntries();
 	};
 
-	const onPropertyDelete = (key: ItemPropertyKey) => {
-		delete propertiesRef.current[key];
-		refreshComponent();
+	const onPropertyChange = (key: ItemPropertyKey, updatedProperty: ItemProperty) => {
+		propertiesStorage.setProperty(key, updatedProperty);
 	};
 
-	const refreshComponent = () => {
-		setRenderKey(window.crypto.randomUUID());
+	const handlePropertyDelete = (key: ItemPropertyKey) => {
+		propertiesStorage.deleteProperty(key);
+		refreshPropsStorageAndProcessTableEntries();
+	};
+
+	// newType is string because it can be list_<type> (easier to handle that way)
+	const handlePropertyTypeChange = (key: ItemPropertyKey, newType: string) => {
+		const mainType = newType.startsWith('list_') ? 'list' : newType;
+		const subType = newType.startsWith('list_') ? newType.slice(5) : null;
+		const existingProperty = propertiesStorage.getProperty(key);
+
+		if (
+			!isItemPropertyTypeValid(mainType) ||
+			!existingProperty ||
+			(subType && !isItemPropertyTypeValid(subType))
+		) {
+			return;
+		}
+
+		const convertedProperty = convertItemPropertyToNewType(existingProperty, mainType);
+
+		if (!convertedProperty) {
+			return;
+		}
+
+		if (
+			convertedProperty &&
+			isItemPropertyOfTypeList(convertedProperty) &&
+			isItemPropertyTypeValid(subType)
+		) {
+			const subProperty = getDefaultItemPropertyForItemPropertyType(subType);
+
+			if (!isItemPropertyOfTypeList(subProperty)) {
+				convertedProperty.value.push(subProperty);
+			}
+		}
+
+		propertiesStorage.setProperty(key, convertedProperty);
+		refreshPropsStorageAndProcessTableEntries();
 	};
 
 	return (
@@ -211,20 +289,30 @@ export const ItemProperties = ({
 						)}
 					</TabList>
 					<TabPanel onTabClose={sortTopEntriesMap}>
-						<ItemPropertiesAddNewProperty onPropertyCreate={onPropertyCreate} />
+						<AddNewProperty onPropertyCreate={onPropertyCreate} />
 					</TabPanel>
 				</Tabs>
 			)}
 			<ItemPropertiesTable
-				topEntries={entriesState.top}
-				entries={entriesState.complete}
+				entries={entriesState.entries}
 				areTopEntriesMissingProperties={tabsActiveIndexRef.current === 1}
 				onPropertyRowMouseEnter={onPropertyRowMouseEnter}
 				onPropertyRowMouseLeave={onPropertyRowMouseLeave}
 				onPropertyChange={onPropertyChange}
-				onPropertyDelete={onPropertyDelete}
+				handlePropertyDelete={handlePropertyDelete}
+				handlePropertyTypeChange={handlePropertyTypeChange}
 				isEditMode={isEditMode}
+				propertyKeyPrefix={propertyKeyPrefix.current}
 			/>
 		</div>
 	);
+};
+
+const sortTableEntriesByNodesTitle = (entries: ItemPropertiesTableEntries) => {
+	return entries.toSorted((a, b) => {
+		const aTitle = idFormatter.parseIdToName(a[2].title);
+		const bTitle = idFormatter.parseIdToName(b[2].title);
+
+		return compareTwoStringsForSorting(aTitle, bTitle);
+	});
 };

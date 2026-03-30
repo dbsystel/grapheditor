@@ -6,7 +6,7 @@ import { useNotificationsStore } from 'src/stores/notifications';
 import { useParallaxStore } from 'src/stores/parallax';
 import { SearchStoreResult, useSearchStore } from 'src/stores/search';
 import { useSettingsStore } from 'src/stores/settings';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import {
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
@@ -47,7 +47,7 @@ const searchStoreResultObserver = async (result: SearchStoreResult) => {
 
 		if (nodesMap.size) {
 			if (useSettingsStore.getState().isAutoconnectEnabled) {
-				const response = await relationsApi.postRelationsByNodeIds({
+				const response = await api.relations.fetch.postRelationsByNodeIds({
 					additionalNodeIds: Array.from(nodesMap.keys())
 				});
 

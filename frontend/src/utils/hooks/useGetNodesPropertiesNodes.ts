@@ -1,8 +1,6 @@
 import { AxiosError } from 'axios';
-import {
-	getNodesPropertiesNodes,
-	GetNodesPropertiesNodesResponse
-} from 'src/utils/fetch/getNodesPropertiesNodes';
+import { api } from 'src/utils/api/api';
+import { GetNodesPropertiesNodesResponse } from 'src/utils/fetch/getNodesPropertiesNodes';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetNodesPropertiesNodesParameters = {
@@ -26,6 +24,6 @@ export const useGetNodesPropertiesNodes = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getNodesPropertiesNodes
+		fetchFunction: api.nodes.fetch.getNodesPropertiesNodes
 	});
 };

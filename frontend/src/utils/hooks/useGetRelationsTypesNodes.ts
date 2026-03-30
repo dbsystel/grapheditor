@@ -1,8 +1,6 @@
 import { AxiosError } from 'axios';
-import {
-	getRelationsTypesNodes,
-	GetRelationsTypesNodesResponse
-} from 'src/utils/fetch/getRelationsTypesNodes';
+import { api } from 'src/utils/api/api';
+import { GetRelationsTypesNodesResponse } from 'src/utils/fetch/getRelationsTypesNodes';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetRelationsTypesNodesParameters = {
@@ -24,6 +22,6 @@ export const useGetRelationsTypesNodes = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getRelationsTypesNodes
+		fetchFunction: api.relations.fetch.getRelationsTypesNodes
 	});
 };

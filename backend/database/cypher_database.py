@@ -6,6 +6,8 @@
 
 from uuid import uuid4
 from typing import Any
+
+import msgspec
 from flask import abort, g, current_app
 import neo4j.exceptions
 
@@ -368,16 +370,12 @@ class CypherDatabase(GraphDatabase):
                 old_labels, new_labels
             )
 
+        properties = None
         if "properties" in node_data:
             properties = mapper.compute_updated_properties(
                 existing_node.properties,
                 node_data["properties"]
             )
-        else:
-            properties = {
-                k: v for k, v in existing_node.properties.items()
-                if get_base_id(k) != "_uuid__tech_"
-            }
 
         if properties:
             result = self._run(
@@ -859,26 +857,6 @@ class CypherDatabase(GraphDatabase):
             return BaseRelation.from_neo_relation(row["r"])
         return None
 
-    def _update_relation_references(self, old_rid, new_rid):
-        query = """
-        MATCH (n)-[r]->() WHERE elementid(r)=$new_full_rid
-        MATCH (p)-[pos:pos__tech_]->(n)
-        WITH pos.out_relations__tech_ AS old_rels,
-             pos,
-             [out_rel IN pos.out_relations__tech_ |
-              CASE out_rel
-              WHEN $old_rid THEN $new_rid
-              ELSE out_rel
-              END] AS updated_rels
-        SET pos.out_relations__tech_ = updated_rels
-        RETURN pos
-        """
-        self._run(
-            query,
-            new_full_rid=new_rid,
-            old_rid=id_handling.get_internal_id(old_rid),
-            new_rid=id_handling.get_internal_id(new_rid),
-        )
 
     def update_relation_by_id(
         self, rid, relation_data, existing_relation=None
@@ -944,7 +922,6 @@ class CypherDatabase(GraphDatabase):
             return None
 
         new_rel = result.single()["r"]
-        self._update_relation_references(raw_db_id, new_rel.element_id)
 
         if raw_db_id:
             return BaseRelation.from_neo_relation(new_rel)
@@ -1050,58 +1027,94 @@ class CypherDatabase(GraphDatabase):
     # ======================= Perspective related =============================
 
     def _set_perspective_node_positions(self, pid, data):
-        """Update node positions in perspective.
+        """Updates the nodes and their positions in the perspective.
         Args:
-            pid: perspective ID (string).
-            data: dictionary node_id->{x: <X>, y: <Y>, z: <Z>}
+            pid: elementId of the perspective ID (string).
+            data: dictionary <elementId_of_node>->{x: <X>, y: <Y>, z: <Z>}
+
+        Notes:
+            - Updates the 'positions__tech_' property of the perspective node with the new
+                positions.
+            - Positions are encoded as JSON strings for storage in the database.
+            - Updates the 'nodes__tech_' property with the UUIDs of the included nodes. This way it
+                is easier to access all nodes in one transaction without decoding the JSON in
+                cypher.
         """
-        arr = [
+
+        query = """
+        UNWIND $nodes AS node_id
+        MATCH (n) 
+        WHERE elementid(n) = node_id
+        RETURN n._uuid__tech_ AS uuid, elementid(n) AS id"""
+        id_uudids = self._run(query, nodes=list(data.keys())).data()
+        id_to_uuid = {row["id"]: row["uuid"] for row in id_uudids}
+        positions = [
+            msgspec.json.encode(
             {
                 "id": nid,
+                "_uuid": id_to_uuid[nid] if nid in id_to_uuid else None,
                 "x": pos["x"],
                 "y": pos["y"],
                 "z": pos["z"] if "z" in pos else 0,
-            }
+            }).decode("utf-8")
+            # The JSON is decoded to a string to ensure that the Cypher database treats it as a
+            # plain value, rather than interpreting it as a dictionary.
             for nid, pos in data.items()
         ]
         query = """
-        UNWIND $arr AS pos
         MATCH (p) WHERE elementid(p) = $pid
-        MATCH (n) WHERE elementid(n) = pos.id
-        CREATE (p)-[:pos__tech_ {x__tech_: pos.x,
-                                 y__tech_: pos.y,
-                                 z__tech_: pos.z,
-                                 out_relations__tech_: []
-                                }]->(n);
+        WITH p 
+        UNWIND $nodes AS node_id
+        MATCH (n)
+        WHERE elementid(n) = node_id
+        WITH p, collect(n._uuid__tech_) AS nodes
+        SET p.nodes__tech_ = nodes,
+            p.positions__tech_ = $positions
+        RETURN p;
         """
-
-        self._run(query, pid=pid, arr=arr)
+        self._run(query, pid=pid, nodes=list(data.keys()), positions=positions)
 
     def _set_perspective_relations(self, pid, data):
-        """Update out_relations from perspective.
-        Set out_relations__tech_ property of each perspective node to include
-        relation IDs contained in data.
+        """Update relations contained in perspective. Set relations__tech_ property of the
+        perspective node to include relation UUIDs contained in data.
+
         Args:
-            pid: perspective ID (string).
-            data: array of relation IDs.
-        """
-        rel_query = """
-        UNWIND $arr AS rel_id
-        MATCH (p)-[pos:pos__tech_]->(n)-[r]->()
-        WHERE id(r) = rel_id
-              AND r._uuid__tech_ IS NOT NULL
-              AND elementid(p) = $pid
-        SET pos.out_relations__tech_ = [r._uuid__tech_] + pos.out_relations__tech_
+            pid: elementId of the perspective ID (string).
+            data: list of elementIDs of relations.
+
+        Notes:
+            - Updates the 'relations__tech_' property of the perspective node with the provided
+                relation UUIDs.
+            - Only relation UUIDs present in the database are included.
         """
 
-        rel_arr = [id_handling.get_internal_id(rid) for rid in data]
-        current_app.logger.debug(f"rel_arr: {rel_arr}")
-        if rel_arr:
-            self._run(rel_query, pid=pid, arr=rel_arr)
+        rel_query = """
+        MATCH (p)
+        WHERE elementId(p) = $pid
+        WITH p
+        UNWIND $arr AS rel_id
+        MATCH ()-[r]->()
+        WHERE elementId(r) = rel_id 
+        WITH p, collect(r._uuid__tech_) AS relations
+        SET p.relations__tech_ = relations
+        RETURN p;
+        """
+
+        current_app.logger.debug(f"rel_arr: {data}")
+        if data:
+            self._run(rel_query, pid=pid, arr=data)
 
     def create_perspective(self, perspective_data):
-        """Create a perspective from a dictionary of node ID's and the
-        corresponding positions.
+        """CreateS a perspective from a dictionary of elementID's and the corresponding positions.
+
+        Args:
+            perspective_data: Dictionary containing the perspective's metadata ('name' and
+                'description'), a map of node IDs to their positions ('node_positions'), and a list
+                of relation IDs ('relation_ids').
+
+        Returns:
+            The generated ID of the new perspective node as a string.
+
         """
 
         create_query = """CREATE (p: Perspective__tech_)
@@ -1127,26 +1140,47 @@ class CypherDatabase(GraphDatabase):
 
     def _collect_perspective_graph(self, query_result):
         """Given a query result corresponding to a perspective, return the
-        corresponding perspective name, grapheditor nodes and relations found in it.
+        corresponding perspective name and subgraph structure.
+
+        Args:
+            query_result: An one line database query result, containing the perspective node,
+            its associated nodes and relations.
+
+        Returns:
+            A dictionary:
+                - 'name': The name of the perspective.
+                - 'description': The description of the perspective.
+                - 'nodes': A dictionary mapping node elementIDs to BaseNode objects, including
+                    position data.
+                - 'relations': A dictionary mapping relation elementIDs to BaseRelation objects.
         """
         nodes = {}
         relations = {}
-        perspective_name = None
-        perspective_desc = None
 
-        for row in query_result:
-            if not perspective_name:
-                perspective_name = row["p"]["name__tech_"]
-            if not perspective_desc:
-                perspective_desc = row["p"]["description__tech_"]
-            pos = row["pos"]
-            node = BaseNode.from_neo_node(row["b"])
-            node.style["x"] = pos["x__tech_"]
-            node.style["y"] = pos["y__tech_"]
-            if row["rel_uid"] != "last_element" and row["r"] is not None:
-                new_rel = BaseRelation.from_neo_relation(row["r"])
-                relations[f"id::{row['rel_id']}"] = new_rel
+        result = next(query_result, None)
+        if result is None:
+            current_app.logger.error("Failed loading perspective.")
+            abort_with_json(400, "Failed loading perspective.")
+        positions_list = [
+            msgspec.json.decode(pos)
+            for pos in result['p']['positions__tech_']
+        ]
+        positions = {pos["_uuid"]: pos for pos in positions_list}
+
+        perspective_name = result["p"]["name__tech_"]
+        perspective_desc = result["p"]["description__tech_"]
+
+        for orig_node in result["nodes"]:
+            node = BaseNode.from_neo_node(orig_node)
+            node_pos = positions[node.properties["_uuid__tech_"]]
+            node.style["x"] = node_pos["x"]
+            node.style["y"] = node_pos["y"]
+            node.style["z"] = node_pos["z"]
             nodes[node.id] = node
+
+        for rel in result["relations"]:
+            new_rel = BaseRelation.from_neo_relation(rel)
+            relations[new_rel.id] = new_rel
 
         return {
             "name": perspective_name,
@@ -1156,22 +1190,37 @@ class CypherDatabase(GraphDatabase):
         }
 
     def get_perspective_by_id(self, pid):
-        """Get perspective by ID.
+        """Get perspective by elementID and its nodes and relations.
 
-        The result contains the perspective nodes and relations.
+        Args:
+            pid: elementId of the perspective ID (string).
+
+        Returns:
+            A dictionary containing:
+                - 'id': The perspective elementID.
+                - 'name': The name of the perspective.
+                - 'description': The description of the perspective.
+                - 'nodes': A dictionary mapping node IDs to BaseNode objects.
+                - 'relations': A dictionary mapping relation IDs to BaseRelation objects.
         """
         raw_db_id = parse_db_id(pid)
         if not raw_db_id:
             abort_with_json(404, f"Invalid perspective ID: {pid}")
 
-        # in the UNWIND call we add a dummy string to the list (out_relations),
-        # so that we still get results even when out_relations is empty.
+        # in the UNWIND call we add a dummy string to the lists nodes__tech_
+        # and relations__tech_ so that we still get results even when they are empty.
         query = """
-        MATCH (p:Perspective__tech_)-[pos:pos__tech_]->(b)
+        MATCH (p:Perspective__tech_)
         WHERE elementid(p)=$raw_db_id
-        UNWIND pos.out_relations__tech_ + 'last_element' as rel_uid
-        OPTIONAL MATCH ()-[r]->(c) where r._uuid__tech_=rel_uid
-        RETURN p, pos, b, r, rel_uid, elementid(r) AS rel_id
+        WITH p
+        UNWIND p.nodes__tech_+ [null]  AS node_uuid
+        OPTIONAL MATCH (b)
+        WHERE b._uuid__tech_ = node_uuid
+        WITH p, collect(b) AS nodes 
+        UNWIND p.relations__tech_ + [null] AS rel_uuid 
+        OPTIONAL MATCH ()-[r]->()
+        WHERE r._uuid__tech_ = rel_uuid
+        RETURN p, nodes, collect(r) AS relations
         """
 
         result = self._run(query, raw_db_id=raw_db_id)
@@ -1189,17 +1238,25 @@ class CypherDatabase(GraphDatabase):
         return {**{"id": pid}, **pers_data}
 
     def replace_perspective_by_id(self, pid, json):
-        """Replace perspective with ID <pid> by data provided in json (a dict).
+        """Replace perspective with elementID <pid> by data provided in json (a dict).
 
-        Note: previously existing "pos"-edges are removed and replaced by new
-        ones.
+        Args:
+            pid: The elementID of the perspective node to replace (string).
+            json: Dictionary containing the new perspective data, including 'name',
+                'node_positions', and 'relation_ids'.
+
+        Returns:
+            The elementID of the updated perspective node as a string.
         """
         raw_db_id = parse_db_id(pid)
         query = """
-        MATCH (p)-[pos:pos__tech_]->()
+        MATCH (p)
         WHERE elementid(p) = $raw_db_id
-        SET p.name__tech_ = $name
-        DELETE pos
+        SET p.name__tech_ = $name,
+        p.nodes__tech_ = [], 
+        p.positions__tech_ = [], 
+        p.relations__tech_ = []
+        return p
         """
         self._run(
             query,
@@ -1226,27 +1283,37 @@ class CypherDatabase(GraphDatabase):
                 current_app.logger.warn("selection__tech_ return empty entries.")
         return suggestions
 
-    def get_paraqueries(self):
+    def get_paraqueries(self) -> dict[str, str]:
+        "Return a dict of paraquery db IDs and their descriptions."
         result = g.conn.run("""
-        MATCH (param:Parameter__tech_)-[rel:parameter__tech_]->(pquery:Paraquery__tech_)
-        RETURN elementid(pquery) AS pquery_id, pquery,
-               elementid(param) AS param_id, param,
-               rel
+        MATCH (pquery:Paraquery__tech_)
+        RETURN elementid(pquery) AS pquery_id,
+               pquery.description__tech_ AS desc
+          ORDER BY desc
         """)
         pquery_dict = dict()
         for row in result:
-            pquery_id = f"id::{row['pquery_id']}"
-            param_id = f"id::{row['param_id']}"
-            pquery_node = row["pquery"]
-            param_node = row["param"]
-            rel = row["rel"]
-            param_name = rel.get("parameter_name__tech_", None)
-            if not param_name:
-                current_app.logger.warning(f"Parameter doesn't have a name {param_id}")
-                continue
+            pquery_dict[row["pquery_id"]] = row.get("desc", "")
+        return pquery_dict
 
-            if pquery_id not in pquery_dict:
-                pquery_dict[pquery_id] = {
+    def get_paraquery(self, pquery_id: str) -> dict:
+        "Return a single paraquery and its parameters (if any)."
+        result = g.conn.run(
+            """
+            MATCH (pquery:Paraquery__tech_) WHERE elementid(pquery) = $pquery_id
+            OPTIONAL MATCH (param:Parameter__tech_)-[rel:parameter__tech_]->(pquery)
+            RETURN pquery, elementid(param) AS param_id, param, rel
+            """, pquery_id = pquery_id
+        )
+        pquery = dict()
+        for row in result:
+            pquery_node = row["pquery"]
+            param_node = row.get("param")
+            rel = row.get("rel")
+            param_name = rel.get("parameter_name__tech_") if rel else None
+
+            if not pquery: # first run pquery is still empty
+                pquery = {
                     "uuid": pquery_node.get("_uuid__tech_", ""),
                     "name": pquery_node.get("name__tech_", ""),
                     "description": pquery_node.get("description__tech_", ""),
@@ -1254,8 +1321,8 @@ class CypherDatabase(GraphDatabase):
                     "cypher": pquery_node.get("cypher__tech_", ""),
                     "parameters": dict()
                 }
-            params = pquery_dict[pquery_id]["parameters"]
-            if param_name not in params:
+            params = pquery["parameters"]
+            if param_name and param_name not in params:
                 new_param = {
                     "help_text": param_node.get("help_text__tech_", ""),
                     "type": param_node.get("type__tech_", "")
@@ -1266,7 +1333,7 @@ class CypherDatabase(GraphDatabase):
                     suggestions = self._get_parameter_suggestions(param_node["selection__tech_"])
                     new_param["suggestions"] = suggestions
                 params[param_name] = new_param
-        return pquery_dict
+        return pquery
 
 
     # ---------------------- General information ------------------------------
@@ -1316,6 +1383,7 @@ class CypherDatabase(GraphDatabase):
             RETURN DISTINCT l AS label
             UNION
             MATCH (m:MetaLabel__tech_)
+            WHERE m.name__tech_ IS NOT NULL
             RETURN DISTINCT m.name__tech_ AS label
             """
             result = self._run(query)
@@ -1332,6 +1400,7 @@ class CypherDatabase(GraphDatabase):
         RETURN DISTINCT type(r) AS type
         UNION
         MATCH (m:MetaRelation__tech_)
+        WHERE m.name__tech_ IS NOT NULL
         RETURN DISTINCT m.name__tech_ AS type
         """
         result = self._run(query)

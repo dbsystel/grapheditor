@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { Node, NodeId, PatchNode } from 'src/models/node';
-import { backendApi } from 'src/utils/api';
+import { backendApi } from 'src/utils/backend-api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PatchNodesParameters = Array<PatchNode>;

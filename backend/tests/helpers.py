@@ -27,6 +27,7 @@ def fetch_sample_node(client, text="bob", labels=None):
         query_string=query_string,
         headers=HEADERS,
     )
+    assert response.status_code == 200
     return response.json[0]
 
 

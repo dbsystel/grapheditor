@@ -1,14 +1,14 @@
 import './NetworkGraphNodeRelationMouseover.scss';
 import { AttributeUpdatePayload } from 'graphology-types';
-import { CSSProperties, useEffect, useRef, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SigmaEdgeEventPayload, SigmaNodeEventPayload } from 'sigma/types';
-import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { GraphEditorSigmaNodeAttributes } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { StateManager } from 'src/components/network-graph/state-manager';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
+import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 
@@ -20,32 +20,45 @@ export const NetworkGraphNodeRelationMouseover = () => {
 		item: Node | Relation;
 		offset: number;
 	}>(null);
-	const tooltipRef = useRef<HTMLDivElement | null>(null);
-	const hoveredItemId = useRef('');
 
 	useEffect(() => {
-		StateManager.getInstance().on('NODE_TOOLTIP', onItemTooltip);
-		StateManager.getInstance().on('NODE_LEAVE', onLeaveItem);
-		StateManager.getInstance().on('NODE_CLICK', resetTooltipRender);
-		StateManager.getInstance().on('NODE_CONTEXT_MENU', resetTooltipRender);
+		StateManager.getInstance().subscribe('nodeTooltip', onItemTooltip);
+		StateManager.getInstance().subscribe('nodeLeave', onLeaveItem);
+		StateManager.getInstance().subscribe('nodeClick', resetTooltipRender);
+		StateManager.getInstance().subscribe('nodeContextMenu', resetTooltipRender);
+		StateManager.getInstance().subscribe('nodeDown', resetTooltipRender);
 
-		StateManager.getInstance().on('RELATION_TOOLTIP', onItemTooltip);
-		StateManager.getInstance().on('RELATION_LEAVE', onLeaveItem);
-		StateManager.getInstance().on('RELATION_CLICK', resetTooltipRender);
-		StateManager.getInstance().on('RELATION_CONTEXT_MENU', resetTooltipRender);
+		StateManager.getInstance().subscribe('relationTooltip', onItemTooltip);
+		StateManager.getInstance().subscribe('relationLeave', onLeaveItem);
+		StateManager.getInstance().subscribe('relationClick', resetTooltipRender);
+		StateManager.getInstance().subscribe('relationContextMenu', resetTooltipRender);
 
 		return () => {
-			StateManager.getInstance().off('NODE_TOOLTIP', onItemTooltip);
-			StateManager.getInstance().off('NODE_LEAVE', onLeaveItem);
-			StateManager.getInstance().off('NODE_CLICK', resetTooltipRender);
-			StateManager.getInstance().off('NODE_CONTEXT_MENU', resetTooltipRender);
+			StateManager.getInstance().unsubscribe('nodeTooltip', onItemTooltip);
+			StateManager.getInstance().unsubscribe('nodeLeave', onLeaveItem);
+			StateManager.getInstance().unsubscribe('nodeClick', resetTooltipRender);
+			StateManager.getInstance().unsubscribe('nodeContextMenu', resetTooltipRender);
+			StateManager.getInstance().unsubscribe('nodeDown', resetTooltipRender);
 
-			StateManager.getInstance().off('RELATION_TOOLTIP', onItemTooltip);
-			StateManager.getInstance().off('RELATION_LEAVE', onLeaveItem);
-			StateManager.getInstance().off('RELATION_CLICK', resetTooltipRender);
-			StateManager.getInstance().off('RELATION_CONTEXT_MENU', resetTooltipRender);
+			StateManager.getInstance().unsubscribe('relationTooltip', onItemTooltip);
+			StateManager.getInstance().unsubscribe('relationLeave', onLeaveItem);
+			StateManager.getInstance().unsubscribe('relationClick', resetTooltipRender);
+			StateManager.getInstance().unsubscribe('relationContextMenu', resetTooltipRender);
 		};
 	}, []);
+
+	const onRefChange = useCallback(
+		(element: HTMLDivElement | null) => {
+			if (element && selectedGraphItem) {
+				useItemOverviewPopoverStore.getState().registerOverview({
+					triggerElement: element,
+					item: selectedGraphItem.item,
+					popoverOffset: selectedGraphItem.offset
+				});
+			}
+		},
+		[selectedGraphItem]
+	);
 
 	// disable tooltip if any node moved (we use either this approach or manually
 	// do it via StateManager/Sigma/Graph events)
@@ -101,49 +114,39 @@ export const NetworkGraphNodeRelationMouseover = () => {
 	const onLeaveItem = () => {
 		sigma.getGraph().off('nodeAttributesUpdated', onNodeAttributesUpdated);
 
-		window.setTimeout(() => {
-			if (!hoveredItemId.current) {
-				setSelectedGraphItem(null);
+		useItemOverviewPopoverStore.getState().initializeMouseLeaveTimeout(() => {
+			const currentlyHoveredOverview = useItemOverviewPopoverStore
+				.getState()
+				.getCurrentlyHoveredOverview();
+
+			if (!currentlyHoveredOverview) {
+				resetTooltipRender();
 			}
-		}, 50);
+		});
 	};
 
 	const resetTooltipRender = () => {
-		hoveredItemId.current = '';
 		setSelectedGraphItem(null);
+		useItemOverviewPopoverStore.getState().reset();
 	};
 
-	const onTooltipParentMouseEnter = () => {
-		if (selectedGraphItem) {
-			hoveredItemId.current = selectedGraphItem.item.id;
-		}
-	};
+	const tooltipParentStyle: CSSProperties = selectedGraphItem
+		? {
+				top: selectedGraphItem.y + 'px',
+				left: selectedGraphItem.x + 'px'
+			}
+		: {};
 
-	const onTooltipParentMouseLeave = () => {
-		resetTooltipRender();
-	};
+	if (selectedGraphItem) {
+		return createPortal(
+			<div
+				className="network-graph__node-relation-mouseover"
+				ref={onRefChange}
+				style={tooltipParentStyle}
+			/>,
+			sigma.getContainer()
+		);
+	}
 
-	const tooltipParentStyle: CSSProperties = {
-		top: selectedGraphItem?.y + 'px',
-		left: selectedGraphItem?.x + 'px'
-	};
-
-	return createPortal(
-		<div
-			className="network-graph__node-relation-mouseover"
-			onMouseEnter={onTooltipParentMouseEnter}
-			onMouseLeave={onTooltipParentMouseLeave}
-			ref={tooltipRef}
-			style={tooltipParentStyle}
-		>
-			{selectedGraphItem && (
-				<ItemOverviewPopover
-					item={selectedGraphItem.item}
-					popoverRef={tooltipRef.current}
-					popoverOffset={selectedGraphItem.offset}
-				/>
-			)}
-		</div>,
-		sigma.getContainer()
-	);
+	return null;
 };

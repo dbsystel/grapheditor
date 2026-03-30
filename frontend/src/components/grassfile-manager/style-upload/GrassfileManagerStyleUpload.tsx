@@ -6,8 +6,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { usePostStyleUpload } from 'src/utils/hooks/usePostStyleUpload';
 import {
@@ -27,7 +28,8 @@ export const GrassFileManagerStyleUpload = ({
 	const rootElementClassName = clsx('grassfile_manager__style-upload', className);
 	const searchStore = useSearchStore((store) => store);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const { setIsLoading, perspectiveId, isLoading } = useGraphStore((state) => state);
+	const { setIsLoading, isLoading } = useGraphStore((state) => state);
+	const perspective = usePerspectiveStore((store) => store.perspective);
 	const { control, handleSubmit } = useForm<GrassfileManagerUploadDialogForm>({
 		mode: 'onSubmit',
 		reValidateMode: 'onChange',
@@ -51,9 +53,9 @@ export const GrassFileManagerStyleUpload = ({
 			const uploadedFileName = uploadButtonRef.current?.files?.[0]?.name || '';
 			searchStore.setNewlyUploadedStyle(uploadedFileName);
 
-			if (perspectiveId) {
-				nodesApi
-					.getPerspective({ perspectiveId: perspectiveId })
+			if (perspective) {
+				api.perspectives.fetch
+					.getPerspective({ perspectiveId: perspective.id })
 					.then((response) => processPerspective(response.data));
 			}
 		},

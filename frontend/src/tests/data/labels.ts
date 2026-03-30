@@ -1,5 +1,5 @@
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 export const labelIds: Array<string> = [
 	idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_LABEL, 'label-0', 'tech'),

@@ -12,10 +12,9 @@
 			z-index: 9999;
 
 			// temporary solution until the tooltip component is fixed with ticket: https://github.com/db-ux-design-system/core-web/issues/4451
-			position: absolute !important;
+			position: fixed !important;
 			inset-inline: auto !important;
 			inset-block: auto !important;
-			inset-block-start: 100% !important;
 
 			// prevent the element causing overflow (where possible) although it is not visible
 			[data-open='false'] {
@@ -23,6 +22,13 @@
 				inline-size: 0;
 				overflow: hidden;
 			}
+		}
+	}
+
+	&.menu-button--inline-end-fix {
+		.db-popover-content {
+			inset-inline-end: var(--db-spacing-fixed-md) !important;
+			inset-inline-start: auto !important;
 		}
 	}
 

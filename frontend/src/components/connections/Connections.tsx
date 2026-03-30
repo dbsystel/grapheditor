@@ -11,10 +11,10 @@ import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { useGraphStore } from 'src/stores/graph';
+import { api } from 'src/utils/api/api';
 import { processNodeConnections, sortNodeConnections } from 'src/utils/helpers/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { ConnectionObject, ConnectionsBoxProps, ConnectionsProps } from './Connections.interfaces';
 import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelation';
 
@@ -30,7 +30,7 @@ export const Connections = ({ node, isEditMode, id, className, testId }: Connect
 
 	useEffect(() => {
 		(async () => {
-			const response = await nodesApi.postNodeConnections({ nodeId: node.id });
+			const response = await api.nodes.fetch.postNodeConnections({ nodeId: node.id });
 			const connectionsArray = processNodeConnections(node, response.data.relations);
 
 			setConnectionBoxData(connectionsArray);
@@ -38,7 +38,7 @@ export const Connections = ({ node, isEditMode, id, className, testId }: Connect
 	}, [node, renderKey]);
 
 	const onDelete = (relation: Relation) => {
-		relationsApi.deleteRelationsAndUpdateApplication([relation.id]).then(() => {
+		api.relations.actions.deleteRelationsAndUpdateApplication([relation.id]).then(() => {
 			setConnectionBoxData((prevState) => {
 				return prevState.filter((connection) => {
 					if (!connection.relation) {
@@ -48,6 +48,9 @@ export const Connections = ({ node, isEditMode, id, className, testId }: Connect
 					return connection.relation.id !== relation.id;
 				});
 			});
+
+			useGraphStore.getState().indexParallelRelations();
+			useGraphStore.getState().adaptRelationsTypeAndCurvature();
 		});
 	};
 
@@ -157,11 +160,24 @@ const ConnectionsBox = ({
 						</TableCell>
 
 						<TableCell className="connections__cell connections__icon-only">
-							{direction === 'outgoing' && <div data-icon="arrow_right"></div>}
-							{direction === 'incoming' && <div data-icon="arrow_left"></div>}
-							{sourceNode?.semanticId === targetNode?.semanticId && (
-								<div data-icon="undo"></div>
-							)}
+							{(() => {
+								// Determine the "other" node (not the current node)
+								const otherNode =
+									direction === 'incoming' ? sourceNode : targetNode;
+								const isSelfReference = otherNode?.id === node.id;
+
+								if (direction === 'outgoing' && !isSelfReference) {
+									return <div data-icon="arrow_right"></div>;
+								}
+								if (direction === 'incoming' && !isSelfReference) {
+									return <div data-icon="arrow_left"></div>;
+								}
+
+								if (isSelfReference) {
+									return <div data-icon="undo"></div>;
+								}
+								return null;
+							})()}
 						</TableCell>
 
 						<TableCell className="connections__cell connections__relation-name">
@@ -186,12 +202,13 @@ const ConnectionsBox = ({
 							>
 								<MenuButton
 									optionsPlacement="bottom-end"
-									className="connections__menu-button"
+									className="connections__menu-button menu-button--ignore-position-fix menu-button--inline-end-fix"
 									options={[
 										{
 											icon: 'bin',
 											title: t('connections-delete-relation-button'),
-											onClick: () => onDelete(relation)
+											onClick: () => onDelete(relation),
+											closeMenuOnClick: true
 										}
 									]}
 								/>

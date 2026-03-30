@@ -13,20 +13,29 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_PARALLAX,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
+	GRAPH_LAYOUT_FORCE,
 	GRAPH_LAYOUT_FORCE_ATLAS_2,
+	GRAPH_LAYOUT_GRAPH_STYLESHEET,
+	GRAPH_LAYOUT_NOVERLAP,
+	GRAPH_LAYOUT_PERSPECTIVE,
+	GRAPH_LAYOUT_RANDOM,
 	GRAPH_PRESENTATION_GRAPH
 } from 'src/utils/constants';
 import { clone, downloadFile } from 'src/utils/helpers/general';
+import { isCypherQueryOrFullText, isValidAlgorithmType } from 'src/utils/helpers/search';
 import { create } from 'zustand';
 import { createJSONStorage, persist, subscribeWithSelector } from 'zustand/middleware';
 
-export type LayoutModuleType =
-	| 'random'
-	| 'force-atlas-2'
-	| 'force'
-	| 'noverlap'
-	| 'perspective'
-	| 'none';
+export const algorithmTypes = [
+	GRAPH_LAYOUT_RANDOM,
+	GRAPH_LAYOUT_FORCE_ATLAS_2,
+	GRAPH_LAYOUT_FORCE,
+	GRAPH_LAYOUT_NOVERLAP,
+	GRAPH_LAYOUT_PERSPECTIVE,
+	GRAPH_LAYOUT_GRAPH_STYLESHEET
+] as const;
+
+export type AlgorithmType = (typeof algorithmTypes)[number];
 
 export type SearchResultType =
 	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
@@ -48,7 +57,7 @@ type SearchStore = {
 	cypherQueryParameters: Record<string, string>;
 	key: string;
 	presentation: string;
-	algorithm: LayoutModuleType;
+	algorithm: AlgorithmType;
 	style: string;
 	result: SearchStoreResult;
 	isResultProcessed: boolean;
@@ -67,7 +76,7 @@ type SearchStore = {
 	isLoading: boolean;
 	setIsLoading: (value: boolean) => void;
 	setPresentation: (presentation: string) => void;
-	setAlgorithm: (algorithm: LayoutModuleType) => void;
+	setAlgorithm: (algorithm: AlgorithmType) => void;
 	setStyle: (style: string) => void;
 	setSearchValue: (searchValue: string) => void;
 	getDefaultSearchValue: (type: SearchStoreSearchType) => string;
@@ -77,7 +86,6 @@ type SearchStore = {
 	getSelectedHistory: () => SearchStoreHistoryItem | undefined;
 	exportSelectedHistory: () => void;
 	clearSelectedHistory: () => void;
-	isSearchType: (type: unknown) => type is SearchStoreSearchType;
 };
 
 /**
@@ -110,7 +118,6 @@ export type SearchStoreSearchType =
 
 /**
  * Store for keeping tracking user search results.
- * TODO consider migrating search results to a new store, something like "application" store
  */
 export const useSearchStore = create<SearchStore>()(
 	subscribeWithSelector(
@@ -175,18 +182,24 @@ export const useSearchStore = create<SearchStore>()(
 					const type = params.get(GLOBAL_SEARCH_TYPE_KEY);
 					const query = params.get(GLOBAL_SEARCH_QUERY_KEY);
 					const presentation = params.get(GLOBAL_SEARCH_PRESENTATION_KEY);
-					// TODO use type-guard instead of type assertion
-					const algorithm = params.get(GLOBAL_SEARCH_ALGORITHM_KEY) as LayoutModuleType;
+					const algorithmParameter = params.get(GLOBAL_SEARCH_ALGORITHM_KEY);
+					let algorithm: AlgorithmType;
+
+					if (!isValidAlgorithmType(algorithmParameter)) {
+						algorithm = GRAPH_LAYOUT_FORCE_ATLAS_2;
+					} else {
+						algorithm = algorithmParameter;
+					}
 
 					set({
 						type:
-							type && get().isSearchType(type)
+							type && isCypherQueryOrFullText(type)
 								? type
 								: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
 					});
 					set({ query: query || '' });
 					set({ presentation: presentation || GRAPH_PRESENTATION_GRAPH });
-					set({ algorithm: algorithm || GRAPH_LAYOUT_FORCE_ATLAS_2 });
+					set({ algorithm: algorithm });
 					set({
 						searchValue: query ? query : GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE
 					});
@@ -196,7 +209,7 @@ export const useSearchStore = create<SearchStore>()(
 					const history = clone(get().history);
 					let selectedHistory;
 
-					if (get().isSearchType(type)) {
+					if (isCypherQueryOrFullText(type)) {
 						selectedHistory = history[type];
 
 						if (selectedHistory[0] !== value) {
@@ -213,7 +226,7 @@ export const useSearchStore = create<SearchStore>()(
 					const type = get().type;
 					let selectedHistory;
 
-					if (get().isSearchType(type)) {
+					if (isCypherQueryOrFullText(type)) {
 						selectedHistory = history[type];
 					}
 
@@ -247,7 +260,7 @@ export const useSearchStore = create<SearchStore>()(
 				clearSelectedHistory: () => {
 					const type = get().type;
 
-					if (!get().isSearchType(type)) {
+					if (!isCypherQueryOrFullText(type)) {
 						return;
 					}
 
@@ -264,13 +277,6 @@ export const useSearchStore = create<SearchStore>()(
 							history: history
 						});
 					}
-				},
-				// TODO move to helpers
-				isSearchType: (type): type is SearchStoreSearchType => {
-					return (
-						type === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY ||
-						type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
-					);
 				}
 			}),
 			{

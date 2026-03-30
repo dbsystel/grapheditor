@@ -1,10 +1,13 @@
+import { UUID } from 'src/models/general';
 import { NodeLabelId } from 'src/models/node';
 
 export type ParaQuery = {
 	cypher: string;
 	description: string;
-	user_text: string;
+	name: string;
 	parameters: Record<string, ParaQueryParameter>;
+	user_text: string;
+	uuid: UUID;
 };
 
 export type ParaQueryParameter = {

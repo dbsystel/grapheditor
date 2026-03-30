@@ -1,0 +1,30 @@
+.breadcrumb {
+	max-width: 150px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	cursor: pointer;
+	color: var(--db-neutral-on-bg-basic-emphasis-80-default);
+	font-weight: 400;
+	font: var(--db-type-body-sm);
+	min-block-size: auto;
+	min-inline-size: auto;
+	display: block;
+	white-space: nowrap;
+
+	&:hover {
+		color: var(--db-neutral-on-bg-basic-emphasis-100-default);
+	}
+
+	&--active {
+		font-weight: 700;
+		color: var(--db-neutral-on-bg-basic-emphasis-100-default);
+	}
+
+	&__delimiter {
+		color: var(--db-neutral-on-bg-basic-emphasis-80-default);
+
+		&:before {
+			margin: 0;
+		}
+	}
+}

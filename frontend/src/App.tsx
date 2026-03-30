@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Auth } from 'src/components/auth/Auth';
 import { ContextMenu } from 'src/components/context-menu/ContextMenu';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
+import { ItemOverviewsRenderer } from 'src/components/item-overviews-renderer/ItemOverviewsRenderer';
 import { Notifications } from 'src/components/notifications/Notifications';
 import { RootWrapper } from 'src/components/root-wrapper/RootWrapper';
 import { useSearchStore } from 'src/stores/search';
@@ -28,6 +29,9 @@ export const App = () => {
 
 			<ErrorBoundary>
 				<Notifications />
+			</ErrorBoundary>
+			<ErrorBoundary>
+				<ItemOverviewsRenderer />
 			</ErrorBoundary>
 		</BrowserRouter>
 	);

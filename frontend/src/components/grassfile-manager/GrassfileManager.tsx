@@ -10,9 +10,9 @@ import { MenuButtonOption } from 'src/components/menu-button/MenuButton.interfac
 import { Modal } from 'src/components/modal/Modal';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
-import { nodesApi } from 'src/utils/api/nodes';
-import { searchApi } from 'src/utils/api/search';
+import { api } from 'src/utils/api/api';
 import { GRAPH_STYLE_DEFAULT_VALUE } from 'src/utils/constants';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { useDeleteStyle } from 'src/utils/hooks/useDeleteStyle';
@@ -29,12 +29,12 @@ export const GrassfileManager = ({ id, className, testId }: GrassfileManagerProp
 	const { t } = useTranslation();
 	const searchStore = useSearchStore((store) => store);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const perspectiveId = useGraphStore((store) => store.perspectiveId);
+	const perspective = usePerspectiveStore((store) => store.perspective);
 	const setIsLoading = useGraphStore((state) => state.setIsLoading);
 	const isLoading = useGraphStore((state) => state.isLoading);
 	const isDefaultStyleSelected = searchStore.style === GRAPH_STYLE_DEFAULT_VALUE;
 	const onStyleSuccess = () => {
-		searchApi.executeSearch();
+		api.search.actions.executeSearch();
 	};
 
 	const { reFetch: getCurrentStyle } = useGetStyleCurrent({
@@ -53,12 +53,12 @@ export const GrassfileManager = ({ id, className, testId }: GrassfileManagerProp
 				type: 'successful'
 			});
 
-			if (perspectiveId) {
-				nodesApi
-					.getPerspective({ perspectiveId: perspectiveId })
+			if (perspective) {
+				api.perspectives.fetch
+					.getPerspective({ perspectiveId: perspective.id })
 					.then((response) => processPerspective(response.data));
 			} else {
-				searchApi.executeSearch();
+				api.search.actions.executeSearch();
 			}
 		},
 		onError: (error) => {
@@ -134,9 +134,9 @@ export const GrassfileManager = ({ id, className, testId }: GrassfileManagerProp
 
 			searchStore.setResetStyles(true);
 
-			if (perspectiveId) {
-				nodesApi
-					.getPerspective({ perspectiveId: perspectiveId })
+			if (perspective) {
+				api.perspectives.fetch
+					.getPerspective({ perspectiveId: perspective.id })
 					.then((response) => processPerspective(response.data));
 			}
 		},
@@ -244,7 +244,6 @@ export const GrassfileManager = ({ id, className, testId }: GrassfileManagerProp
 				/>
 				<Loading isLoading={isLoading} renderChildrenWhileLoading={false}>
 					<MenuButton
-						className="menu-button--ignore-position-fix"
 						optionsPlacement="bottom-end"
 						buttonSize="medium"
 						options={menuOptions}

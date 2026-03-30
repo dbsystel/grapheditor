@@ -1,8 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import {
-	getDatabaseCurrent,
-	GetDatabasesCurrentResponse
-} from 'src/utils/fetch/getDatabaseCurrent';
+import { api } from 'src/utils/api/api';
+import { GetDatabasesCurrentResponse } from 'src/utils/fetch/getDatabaseCurrent';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetDatabasesParameters = {
@@ -26,6 +24,6 @@ export const useGetDatabaseCurrent = ({
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,
-		fetchFunction: getDatabaseCurrent
+		fetchFunction: api.databases.fetch.getDatabaseCurrent
 	});
 };

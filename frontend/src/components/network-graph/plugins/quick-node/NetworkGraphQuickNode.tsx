@@ -4,10 +4,10 @@ import { StateManager } from 'src/components/network-graph/state-manager';
 
 export const NetworkGraphQuickNode = () => {
 	useEffect(() => {
-		StateManager.getInstance().on('NODE_QUICK', addNewGraphNode);
+		StateManager.getInstance().subscribe('nodeQuick', addNewGraphNode);
 
 		return () => {
-			StateManager.getInstance().off('NODE_QUICK', addNewGraphNode);
+			StateManager.getInstance().unsubscribe('nodeQuick', addNewGraphNode);
 		};
 	}, []);
 

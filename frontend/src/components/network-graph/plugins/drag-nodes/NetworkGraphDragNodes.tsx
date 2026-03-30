@@ -16,13 +16,13 @@ export const NetworkGraphDragNodes = () => {
 
 	useEffect(() => {
 		// enable node dragging
-		StateManager.getInstance().on('NODE_DRAG', {
+		StateManager.getInstance().subscribe('nodeDrag', {
 			beforeCallback: nodeDragPreparation,
 			callback: mouseMoveBody
 		});
 
 		return () => {
-			StateManager.getInstance().off('NODE_DRAG', mouseMoveBody);
+			StateManager.getInstance().unsubscribe('nodeDrag', mouseMoveBody);
 		};
 	}, []);
 
@@ -41,14 +41,10 @@ export const NetworkGraphDragNodes = () => {
 			});
 
 			delayedCallback(() => {
-				setNodePosition(
-					nodeId,
-					{
-						x: graph.getNodeAttribute(nodeId, 'x'),
-						y: graph.getNodeAttribute(nodeId, 'y')
-					},
-					true
-				);
+				setNodePosition(nodeId, {
+					x: graph.getNodeAttribute(nodeId, 'x'),
+					y: graph.getNodeAttribute(nodeId, 'y')
+				});
 			});
 		});
 

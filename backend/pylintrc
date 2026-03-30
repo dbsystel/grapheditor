@@ -8,7 +8,8 @@ disable=
     missing-function-docstring,
     too-many-locals,
     use-dict-literal,
-    unnecessary-pass
+    unnecessary-pass,
+    too-few-public-methods
 
 good-names=f,d,i,j,k,l,x,y,v,r,tx,n,p,ns,s,e,sk,db,ppu
 

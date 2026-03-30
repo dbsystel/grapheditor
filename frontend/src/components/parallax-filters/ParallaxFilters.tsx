@@ -8,10 +8,10 @@ import { Loading } from 'src/components/loading/Loading';
 import { NodeLabelId } from 'src/models/node';
 import { ParallaxFilters as ParallaxFiltersType } from 'src/models/parallax';
 import { useParallaxStore } from 'src/stores/parallax';
-import { parallaxApi } from 'src/utils/api/parallax';
+import { api } from 'src/utils/api/api';
 import { clone } from 'src/utils/helpers/general';
 import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { ParallaxFiltersProps } from './ParallaxFilters.interfaces';
 
 export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps) => {
@@ -78,7 +78,7 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 		const slicedHistory = history.slice(0, currentHistoryIndex + 1);
 
 		useParallaxStore.getState().setApiTriggerType('filters');
-		parallaxApi.triggerFilters(initialQuery, slicedHistory);
+		api.parallax.actions.triggerFilters(initialQuery, slicedHistory);
 	};
 
 	const onLabelsFilterChange = (values: Array<NodeLabelId>) => {

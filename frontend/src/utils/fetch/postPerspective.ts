@@ -1,7 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { NodePositions, Perspective } from 'src/models/perspective';
 import { RelationId } from 'src/models/relation';
-import { backendApi } from 'src/utils/api';
+import { backendApi } from 'src/utils/backend-api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PostPerspectiveParameters = {

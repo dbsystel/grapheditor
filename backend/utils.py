@@ -1,7 +1,7 @@
 # small helpers to avoid circular import
 
-from flask import request
 import os
+from flask import request
 from database.settings import config
 
 basedir = os.path.dirname(__file__)

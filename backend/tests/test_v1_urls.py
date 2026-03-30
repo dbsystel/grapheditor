@@ -69,18 +69,27 @@ def reset_db(logged_in):
 
 
 @pytest.fixture(autouse=True)
-def create_app_context():
+def create_app_context(request):
     """This creates an application context for every test
     (ctx.push()), with doom_transaction=True, ensuring a rollback
     after each test. This is necessary to avoid side effects between
     tests.  After the completion of a test, the context is destroyed
     (ctx.pop()).
+
+    You may disable the fixture by setting the mark no_app_context.  This is
+    useful, for instance, if you want to keep querying the database after an
+    exception occured inside the transaction. You should only disable the
+    fixture if your test doesn't change the database, so that it cannot
+    affect other tests.
     """
-    with app.app_context() as ctx:
-        ctx.push()
-        g.doom_transaction = True
+    if 'no_app_context' in request.keywords:
         yield
-        ctx.pop()
+    else:
+        with app.app_context() as ctx:
+            ctx.push()
+            g.doom_transaction = True
+            yield
+            ctx.pop()
 
 
 def test_all_labels():
@@ -257,9 +266,12 @@ def test_get_node_with_datetime():
     )
     assert response.status_code == 200
     props = dict(response.json['result'][0])['n']['properties']
+    birth_prop = props['MetaProperty::birth']
     assert (
-        props['MetaProperty::birth']['value']
-        == 'Sat, 12 May 1956 20:00:00 GMT'
+        birth_prop['value'] == "1956-05-12T20:00:00.142000000+00:00"
+    )
+    assert (
+        birth_prop['type'] == "datetime"
     )
 
 
@@ -300,7 +312,9 @@ def test_put_pseudo_node():
 
 
 def test_patch_node():
-    nid = fetch_sample_node_id(client)
+    bob = fetch_sample_node(client)
+    nid = bob["id"]
+    assert "MetaProperty::name__dummy_" in bob["properties"]
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
         headers=HEADERS,
@@ -312,11 +326,31 @@ def test_patch_node():
         "MetaLabel::Person__dummy_",
         "MetaLabel::___tech_",
     ]
+    # we didn't update properties, so we expect to have the same as before
+    # the patch.
+    assert "MetaProperty::name__dummy_" in response.json["properties"]
+
+    # Now we do patch the properties...
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
         headers=HEADERS,
-        json={"labels": ["MetaLabel::Person__dummy_"]},
+        json={
+            "properties": {
+                "MetaProperty::age__dummy_": {
+                    "type": "integer", "value": 32
+                }
+            }
+        },
     )
+    assert response.status_code == 200
+    assert "MetaProperty::name__dummy_" not in response.json["properties"]
+    assert "MetaProperty::age__dummy_" in response.json["properties"]
+    # ... and this time labels are unchanged.
+    assert sorted(response.json["labels"]) == [
+        "MetaLabel::Human",
+        "MetaLabel::Person__dummy_",
+        "MetaLabel::___tech_",
+    ]
 
 
 def test_patch_node_with_invalid_id():
@@ -714,6 +748,35 @@ def test_bulk_patch_nodes():
                             "type": "string",
                             "value": "Sideshow",
                         },
+                        "MetaProperty::birth": {
+                            "edit": False,
+                            "type": "datetime",
+                            "value": "1956-05-12T20:00:00.142",
+                        },
+                        "MetaProperty::int_list": {
+                            "edit": False,
+                            "type": "list",
+                            "value": [
+                                {
+                                    "type": "integer",
+                                    "value": 1
+                                },
+                                {
+                                    "type": "integer",
+                                    "value": 2
+                                }
+                            ]
+                        },
+                        "MetaProperty::cartesian_2d": {
+                            "edit": False,
+                            "type": "cartesian_2d",
+                            "value": {"x": 3, "y": 0}
+                        },
+                        "MetaProperty::wgs84_3d": {
+                            "edit": False,
+                            "type": "wgs84_3d",
+                            "value": {"longitude": 13.4049 , "latitude": 52.52, "height": 47}
+                        }
                     },
                 },
                 {
@@ -742,6 +805,20 @@ def test_bulk_patch_nodes():
     bob = fetch_node_by_id(client, bob_id)
     assert bob["properties"]["MetaProperty::lastname"]["value"] == "Sideshow"
     assert "MetaLabel::Human" in bob["labels"]
+    assert bob["properties"]["MetaProperty::birth"]["value"].startswith("1956-05-12T20:00:00.142")
+    assert bob["properties"]["MetaProperty::birth"]["type"] == "datetime"
+    int_list = bob["properties"]["MetaProperty::int_list"]
+    assert int_list["type"] == "list"
+    assert int_list["value"][0]["type"] == "integer"
+    assert int_list["value"][0]["value"] == 1
+    cartesian_2d = bob["properties"]["MetaProperty::cartesian_2d"]
+    assert cartesian_2d["type"] == "cartesian_2d"
+    assert cartesian_2d["value"] == {"x": 3, "y": 0}
+
+    wgs84_3d = bob["properties"]["MetaProperty::wgs84_3d"]
+    assert wgs84_3d["type"] == "wgs84_3d"
+    assert wgs84_3d["value"]["longitude"] == 13.4049
+    assert wgs84_3d["value"]["height"] == 47
 
     alice = fetch_node_by_id(client, alice_id)
     assert "MetaLabel::Human" in alice["labels"]
@@ -1246,12 +1323,12 @@ def test_post_query():
     )
     assert response.status_code == 200
     row = dict(response.json["result"][0])
-    assert row["23"] == 23
+    assert row["23"] == {"type": "integer", "value": 23}
     assert row["a"]["_grapheditor_type"] == "node"
     assert row["r"]["_grapheditor_type"] == "relation"
-    assert row["{x: a}"]["x"]["_grapheditor_type"] == "node"
+    assert row["{x: a}"]["value"]["x"]["_grapheditor_type"] == "node"
     assert len(row["[a, b]"]) == 2
-    assert row["[a, b]"][0]["_grapheditor_type"] == "node"
+    assert row["[a, b]"]['value'][0]["_grapheditor_type"] == "node"
     # This doesn't work if row contains a Restriction
     # assert "name" in row["keys(a)"]
 
@@ -1309,9 +1386,10 @@ def test_path_query():
     p = row["p"]
     bob_id = fetch_sample_node_id(client, "bob")
     alice_id = fetch_sample_node_id(client, "alice")
-    assert alice_id.split(':')[-1] in p[0]["style"]["caption"]
-    assert "likes__dummy_" in p[1]["style"]["caption"]
-    assert bob_id.split(':')[-1] in p[2]["style"]["caption"]
+    assert p["type"] == "path"
+    assert alice_id.split(':')[-1] in p["value"][0]["style"]["caption"]
+    assert "likes__dummy_" in p["value"][1]["style"]["caption"]
+    assert bob_id.split(':')[-1] in p["value"][2]["style"]["caption"]
 
 
 def test_path_query_undirected():
@@ -1330,11 +1408,12 @@ def test_path_query_undirected():
     since_id = fetch_sample_node_id(client, "since__dummy_").split(':')[-1]
     likes_id = fetch_sample_node_id(client, "likes__dummy_").split(':')[-1]
 
-    assert since_id in p[0]["style"]["caption"]
-    assert p[1]["style"]["caption"] == "prop__tech_"
-    assert likes_id in p[2]["style"]["caption"]
-    assert p[3]["style"]["caption"] == "restricts__tech_"
-    assert p[4]["description"] == "Person likes Person"
+    assert p["type"] == "path"
+    assert since_id in p["value"][0]["style"]["caption"]
+    assert p["value"][1]["style"]["caption"] == "prop__tech_"
+    assert likes_id in p["value"][2]["style"]["caption"]
+    assert p["value"][3]["style"]["caption"] == "restricts__tech_"
+    assert p["value"][4]["description"] == "Person likes Person"
 
 
 def test_get_relation_between_two_nodes():
@@ -1582,7 +1661,6 @@ def test_post_perspectives():
     )
 
 
-# must be executed after test_post_perspectives
 def test_patch_relation_updates_perspectives():
     g.skip_ft = True
 
@@ -1603,15 +1681,15 @@ def test_patch_relation_updates_perspectives():
         headers=HEADERS,
         json={
             "querytext": """
-            MATCH (a {name__tech_:'Sample_Perspective'})-[r:pos__tech_]->(b {name__dummy_:'Alice'})
-            RETURN r.out_relations__tech_ AS out_rels
+            MATCH (a {name__tech_:'Sample_Perspective'})
+            RETURN a.relations__tech_ AS rels
             """
         },
     )
     assert query_response.status_code == 200
-    out_rels = dict(query_response.json["result"][0])["out_rels"]
+    rels = dict(query_response.json["result"][0])["rels"]
     knows_props = knows_rel['properties']
-    assert out_rels[0] == knows_props['MetaProperty::_uuid__tech_']['value']
+    assert rels['value'][0]['value'] == knows_props['MetaProperty::_uuid__tech_']['value']
 
     # switch back to "likes"
     second_patch_response = client.patch(
@@ -1928,7 +2006,7 @@ def test_current_database():
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert response.json["name"] == "neo4j"
+    assert {"name": "neo4j", "status": "online", "type": "standard"} == response.json
 
 
 def test_all_databases():
@@ -1937,7 +2015,9 @@ def test_all_databases():
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert {"name": "neo4j", "status": "online"} in response.json["databases"]
+    assert {
+        "name": "neo4j", "status": "online", "type": "standard"
+    } in response.json["databases"]
 
 
 def test_context_menu():
@@ -2432,17 +2512,39 @@ def test_parallax_step_filters():
     assert namespace_nid in response.json["nodes"]
 
 
+def test_get_paraqueries():
+    """Test listing paraqueries"""
+    response = client.get(BASE_URL + "/api/v1/paraqueries",
+                          headers=HEADERS)
+    assert response.status_code == 200
+
+    paraqueries = response.json["paraqueries"]
+    assert len(paraqueries) == 3
+    # A sample paraquery is in the list.
+    assert any("Return all persons" in pquery[1]
+               for pquery in paraqueries)
+    # All UUIDs differ.
+    assert len(set(pquery[0] for pquery in paraqueries)) == 3
+
+
 def test_paraquery():
-    """Test if getting paraqueries return info from Paraquery node and
+    """Test if GET auf paraqueries/<pquery_id> returns info from Paraquery node and
     corresponding parameters.
     """
     paraquery_id = fetch_sample_node_id(client, "Query by label and property")
+    # invalid paraquery ID causes 404
     response = client.get(
-        BASE_URL + "/api/v1/paraquery",
-        headers=HEADERS,
+        BASE_URL + "/api/v1/paraqueries/abc",
+        headers=HEADERS
+    )
+    assert response.status_code == 404
+
+    response = client.get(
+        BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
+        headers=HEADERS
     )
     assert response.status_code == 200
-    paraquery = response.json["paraqueries"][paraquery_id]
+    paraquery = response.json["paraquery"]
     label_suggestions = paraquery["parameters"]["label"]["suggestions"]
     property_name_suggestions = paraquery["parameters"]["propertyName"]["suggestions"]
 
@@ -2471,8 +2573,9 @@ def test_paraquery():
         "propertyValue": "Alice",
     }
     # the cypher query is valid and can be executed.
+    # Execute using name.
     response = client.post(
-        BASE_URL + "/api/v1/paraquery",
+        BASE_URL + "/api/v1/paraqueries",
         headers=HEADERS,
         json={
             "name": "Query by label and property",
@@ -2483,8 +2586,9 @@ def test_paraquery():
     row = dict(response.json["result"][0])
     assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
 
+    # Execute using ID.
     response = client.post(
-        BASE_URL + "/api/v1/paraquery",
+        BASE_URL + "/api/v1/paraqueries",
         headers=HEADERS,
         json={
             "id": paraquery_id,
@@ -2495,20 +2599,40 @@ def test_paraquery():
     row = dict(response.json["result"][0])
     assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
 
+    # Execute using UUID.
     response = client.post(
-        BASE_URL + "/api/v1/paraquery",
+        BASE_URL + "/api/v1/paraqueries",
         headers=HEADERS,
         json={
             "uuid": paraquery["uuid"],
-            "parameters": {
-                "label": "Person__dummy_",
-                "propertyName": "name__dummy_",
-                "propertyValue": "Alice",
-            }
+            "parameters": parameters
         }
     )
     row = dict(response.json["result"][0])
     assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
+
+def test_parameterless_paraquery():
+    "Fetching and executing paraqueries without parameters should work."
+
+    paraquery_id = fetch_sample_node_id(client, "Query persons")
+    response = client.get(
+        BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    paraquery = response.json["paraquery"]
+
+    response = client.post(
+        BASE_URL + "/api/v1/paraqueries",
+        headers=HEADERS,
+        json={
+            "uuid": paraquery["uuid"]
+        }
+    )
+    assert response.status_code == 200
+    row = dict(response.json["result"][0])
+    assert "MetaLabel::Person__dummy_" in row["a"]["labels"]
+
 
 def test_parameter_selection():
     """Test parameter selection corner cases.
@@ -2535,11 +2659,11 @@ def test_parameter_selection():
 
     paraquery_id = fetch_sample_node_id(client, "Query by label")
     response = client.get(
-        BASE_URL + "/api/v1/paraquery",
+        BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
         headers=HEADERS,
     )
     assert response.status_code == 200
-    paraquery = response.json["paraqueries"][paraquery_id]
+    paraquery = response.json["paraquery"]
     suggestions = paraquery["parameters"]["label"]["suggestions"]
     # ordering is not changed. No None in results.
     assert suggestions == ["b", "a"]
@@ -2560,14 +2684,330 @@ def test_parameter_selection():
     )
     assert response.status_code == 200
     response = client.get(
-        BASE_URL + "/api/v1/paraquery",
+        BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
         headers=HEADERS,
     )
     assert response.status_code == 200
-    paraquery = response.json["paraqueries"][paraquery_id]
+    paraquery = response.json["paraquery"]
     suggestions = paraquery["parameters"]["label"]["suggestions"]
     # ordering is not changed. No None in results.
     assert suggestions == []
+
+def test_retrieving_all_datatypes():
+    query_text = """
+    RETURN 1 AS int, 1.1 AS float, 'abc' AS string, [1, 2, 3] AS int_list,
+           {a: 1, b: 2} AS int_map, {a: 'A', b: 'B'} AS str_map,
+           {a: ['A', 2, 3]} AS mixed_map, date("2025-11-05") AS date,
+           datetime("2025-11-05") AS datetime,
+           datetime("2025-11-05T07:10:20.000000123+0200") AS datetime_ns_tz,
+           localtime("12:34:56.000000789") AS localtime,
+           localdatetime("2025-02-18T12:34:56") AS localdatetime,
+           duration('P14DT16H12M') AS duration,
+           point({x: 3, y: 0}) AS cartesian_2d,
+           point({x: 0, y: 4, z: 1}) AS cartesian_3d,
+           point({latitude: 12, longitude: 56}) AS geo_2d,
+           point({latitude: 12, longitude: 56, height: 1000}) AS geo_3d,
+           null AS null_val
+    """
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": query_text
+        }
+    )
+    assert response.status_code == 200
+    result = dict(response.json["result"][0])
+    assert result['int']['value'] == 1
+    assert result['float']['value'] == 1.1
+    assert result['string']['value'] == "abc"
+    assert result['int_list']['value'] == [
+        {'type': 'integer', 'value': 1},
+        {'type': 'integer', 'value': 2},
+        {'type': 'integer', 'value': 3}]
+    assert result['int_map'] == {
+        'type': 'map', 'value': {
+            'a': {'type': 'integer', 'value': 1},
+            'b': {'type': 'integer', 'value': 2}
+        }
+    }
+    assert result['str_map']['type'] == 'map'
+    assert result['str_map']['value']['a'] == {'type': 'string', 'value': 'A'}
+    assert result['mixed_map']['type'] == 'map'
+    assert result['mixed_map']['value']['a']['type'] == 'list'
+    assert result['mixed_map']['value']['a']['value'][0]['value'] == 'A'
+    assert result['date'] == {'type': 'date', 'value': "2025-11-05"}
+    assert result['datetime'] == {
+        'type': 'datetime', 'value': "2025-11-05T00:00:00.000000000+00:00"
+    }
+    assert result['datetime_ns_tz'] == {
+        'type': 'datetime', 'value': "2025-11-05T07:10:20.000000123+02:00"
+    }
+    assert result['localtime'] == {'type': 'time', 'value': "12:34:56.000000789"}
+    assert result['localdatetime'] == {
+        'type': 'datetime', 'value': "2025-02-18T12:34:56.000000000"
+    }
+    assert result['duration'] == {'type': 'duration', 'value': "P14DT16H12M"}
+    assert result['cartesian_2d'] == {'type': 'cartesian_2d', 'value': {'x': 3, 'y': 0}}
+    assert result['cartesian_3d'] == {'type': 'cartesian_3d', 'value': {'x': 0, 'y': 4, 'z': 1}}
+    assert result['geo_2d']['type'] == 'wgs84_2d'
+    assert result['geo_2d']['value']['latitude'] == 12
+    assert result['geo_2d']['value']['latitude'] == result['geo_2d']['value']['latitude']
+    assert result['geo_3d']['type'] == 'wgs84_3d'
+    assert result['geo_3d']['value']['height'] == 1000
+    assert result['null_val']['value'] is None
+
+
+def test_update_all_datatypes():
+    # retrieve tha sample complex object from /dev/reset and
+    # try restoring it, since it contains properties with all
+    # datatypes.
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": """MATCH (a:ComplexObject)
+                            RETURN {a: a} AS obj"""
+        }
+    )
+    assert response.status_code == 200
+    result = dict(response.json["result"][0])
+    assert 'obj' in result
+    complex_object = result['obj']['value']['a']
+    response = client.patch(
+        BASE_URL + "/api/v1/nodes/bulk_patch",
+        headers=HEADERS,
+        json={
+            "patches": [
+                {
+                    "id": complex_object["id"],
+                    "labels": complex_object["labels"],
+                    "properties": complex_object["properties"]
+                }
+            ]
+        }
+    )
+    assert response.status_code == 200
+    result = response.json["nodes"][complex_object["id"]]
+    assert complex_object["labels"] == result["labels"]
+    for pname, pvalue in complex_object["properties"].items():
+        assert pvalue == result["properties"][pname]
+
+
+def test_creating_complex_properties():
+    # we check if node creation with non-trivial properties work.
+    # Properties containing lists should also be supported, as well
+    # as time conversion properly handled.
+    response = client.post(
+        BASE_URL + "/api/v1/nodes",
+        headers=HEADERS,
+        json={
+            "labels": ["MetaLabel::ComplexObject"],
+            "properties": {
+                "MetaProperty::int_list": {
+                    "edit": True,
+                    "type": "list",
+                    "value": [
+                        {
+                            "type": "int",
+                            "value": 1
+                        },
+                        {
+                            "type": "int",
+                            "value": 2
+                        },
+                        {
+                            "type": "int",
+                            "value": 3
+                        }
+                    ]
+                },
+                "MetaProperty::str_list": {
+                    "edit": True,
+                    "type": "list",
+                    "value": [
+                        {
+                            "type": "string",
+                            "value": "a"
+                        },
+                        {
+                            "type": "string",
+                            "value": "b"
+                        },
+                        {
+                            "type": "string",
+                            "value": "c"
+                        }
+                    ],
+                },
+                "MetaProperty::time": {
+                    "edit": True,
+                    "type": "time",
+                    "value": "12:34:56+00:00"
+                },
+                "MetaProperty::time_ns": {
+                    "edit": True,
+                    "type": "time",
+                    "value": "12:34:56.000000789+00:00"
+                },
+                "MetaProperty::time_ns_tz": {
+                    "edit": True,
+                    "type": "time",
+                    "value": "12:34:56.2000001+03:00"
+                },
+                "MetaProperty::name__tech_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": "sample_complex_object"
+                }
+            },
+        },
+    )
+    assert response.status_code == 200
+    props = response.json["properties"]
+    assert props["MetaProperty::time"]["type"] == "time"
+    assert props["MetaProperty::time"]["value"] == "12:34:56.000000000+00:00"
+    assert props["MetaProperty::time_ns"]["value"] == "12:34:56.000000789+00:00"
+    assert props["MetaProperty::time_ns_tz"]["value"] == "12:34:56.200000100+03:00"
+
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": """MATCH (a:ComplexObject {name__tech_: "sample_complex_object"})
+                            RETURN {a: a} AS obj"""
+        }
+    )
+    assert response.status_code == 200
+    result = dict(response.json["result"][0])
+    assert 'obj' in result
+    complex_object = result['obj']['value']['a']
+    assert complex_object['_grapheditor_type'] == "node"
+    props = complex_object['properties']
+    assert props['MetaProperty::int_list']['value'] == [
+        {
+            "type": "integer",
+            "value": 1
+        },
+        {
+            "type": "integer",
+            "value": 2
+        },
+        {
+            "type": "integer",
+            "value": 3
+        }
+    ]
+    assert props['MetaProperty::int_list']['type'] == "list"
+    assert props['MetaProperty::str_list']['value'] == [
+            {
+                "type": "string",
+                "value": "a"
+            },
+            {
+                "type": "string",
+                "value": "b"
+            },
+            {
+                "type": "string",
+                "value": "c"
+            }
+        ]
+
+
+def _try_property(ptype, pvalue):
+    response = client.post(
+    BASE_URL + "/api/v1/nodes",
+    headers=HEADERS,
+    json={
+        "labels": ["MetaLabel::ComplexObject"],
+        "properties": {
+            "MetaProperty::prop": {
+                "edit": True,
+                "type": ptype,
+                "value": pvalue
+            }
+       }
+    })
+    return response
+
+
+def test_invalid_property_values():
+    """Some ill-formatted properties to test."""
+    # > 24 hours
+    assert _try_property("time", "25:00:00").status_code == 400
+
+    # < 0 hours
+    assert _try_property("time", "-01:00:00").status_code == 400
+
+    # > 60 minutes
+    assert _try_property("time", "00:61:00").status_code == 400
+
+    # < 0 minutes
+    assert _try_property("time", "00:-00:00").status_code == 400
+
+    # > 60 seconds
+    assert _try_property("datetime", "2019-06-01T18:40:65.1-1:00").status_code == 400
+
+    # > 12 months (datetime)
+    assert _try_property("datetime", "2019-13-01T18:40:55.1-1:00").status_code == 400
+
+
+    # tz less than -24 hours
+    assert _try_property("datetime", "2019-12-01T18:40:55.1-25:00").status_code == 400
+
+    # > invalid tz format
+    assert _try_property("datetime", "2019-13-01T18:40:55.1-001:00").status_code == 400
+
+    # > 12 months (date)
+    assert _try_property("date", "2019-13-01").status_code == 400
+
+
+def test_multi_statement_queries():
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": (
+                "return 23 as a; return \"abc;def'ghi'\" as b"
+            )
+        }
+    )
+    assert response.status_code == 200
+    row = dict(response.json["result"][0])
+
+    # first result is ignored
+    assert 'a' not in row
+    assert row['b']['value'] == "abc;def'ghi'"
+
+
+# If create_app_context is active, everything is executed inside a single
+# transaction. This causes a problem that after the first exception thrown by a
+# transaction no other cypher queries are possible (request always return a
+# 500-error). So we disable it. That's safe because this test should have no
+# persistent side-effects anyway.
+@pytest.mark.no_app_context
+def test_multi_statement_queries_with_error():
+    # an error should break the transaction
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": (
+                'create (n:Test {name: "ignore_me"}); return 1 / 0;'
+            )
+        }
+    )
+    assert response.status_code == 400
+
+    # Since we work transaction-based, the first part of the query
+    # is not committed and the node is not created.
+    response = client.get(
+        BASE_URL + "/api/v1/nodes",
+        query_string={"text": "ignore_me"},
+        headers=HEADERS,
+    )
+    assert not response.json
 
 
 if __name__ == "__main__":

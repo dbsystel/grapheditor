@@ -1,8 +1,8 @@
-import { Node } from 'src/models/node';
+import { AxiosResponse } from 'axios';
 import { getRelationsTypes } from 'src/utils/fetch/getRelationsTypes';
-import { postNodesBulkFetch } from 'src/utils/fetch/postNodesBulkFetch';
+import { postNodesBulkFetch, PostNodesBulkFetchResponse } from 'src/utils/fetch/postNodesBulkFetch';
 
-export type GetRelationsTypesNodesResponse = Array<Node>;
+export type GetRelationsTypesNodesResponse = AxiosResponse<PostNodesBulkFetchResponse>;
 
 export const getRelationsTypesNodes = async () => {
 	return getRelationsTypes().then(async (response) => {

@@ -1,0 +1,47 @@
+.item-property-value {
+	display: flex;
+	gap: var(--db-spacing-fixed-sm);
+	flex-grow: 1;
+
+	&__grid {
+		> * {
+			display: grid;
+			gap: var(--db-spacing-fixed-xs);
+		}
+	}
+
+	&__property-editor {
+		flex-grow: 1;
+
+		> * {
+			display: grid;
+			gap: var(--db-spacing-fixed-xs);
+		}
+	}
+
+	&__add-property-button {
+		inline-size: 100%;
+		aspect-ratio: auto;
+
+		&:first-child {
+			margin-bottom: var(--db-spacing-fixed-md);
+		}
+
+		&:last-child {
+			margin-top: var(--db-spacing-fixed-md);
+		}
+	}
+
+	label {
+		font: var(--db-type-body-sm);
+		padding: 0;
+		max-inline-size: none;
+		overflow: initial;
+	}
+
+	.textarea-autosize {
+		&__row-numbers {
+			opacity: 0.5;
+		}
+	}
+}

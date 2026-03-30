@@ -3,9 +3,9 @@ import { Node } from 'src/models/node';
 import { labelIds } from 'src/tests/data/labels';
 import { testRelations } from 'src/tests/data/relations';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { generateNode, labelsContainMetaLabels } from 'src/utils/helpers/nodes';
+import { generateNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { generateTestProperty } from '../helpers';
 
 let labels: Array<string> = [];
@@ -13,14 +13,14 @@ let labels: Array<string> = [];
 export const generateTestNode = (
 	id: string,
 	labels: Array<string>,
-	propertyIds: Array<string>
+	propertyIds: Array<string>,
+	semanticId?: string
 ): Node => {
 	return {
 		_grapheditor_type: 'node',
 		id: id,
 		dbId: id,
-		// TODO use a correct value instead of empty string
-		semanticId: labelsContainMetaLabels(labels) ? '' : null,
+		semanticId: semanticId || null,
 		title: 'Title',
 		description: 'Description',
 		longDescription: 'Long description',
@@ -46,10 +46,11 @@ export const testNodes: Array<Node> = [
 	generateTestNode(
 		'node-0',
 		[labelIds[0], labelIds[1]],
-		['property-1', 'property-2', 'property-3']
+		['property-1', 'property-2', 'property-3'],
+		'MetaLabel::node-0'
 	),
-	generateTestNode('node-1', [labelIds[1], labelIds[2]], ['property-2']),
-	generateTestNode('node-2', [labelIds[1], labelIds[3]], ['property-3'])
+	generateTestNode('node-1', [labelIds[1], labelIds[2]], ['property-2'], 'MetaLabel::node-1'),
+	generateTestNode('node-2', [labelIds[1], labelIds[3]], ['property-3'], 'MetaLabel::node-2')
 ];
 
 testNodes.forEach((node, index) => {
@@ -74,7 +75,7 @@ const processedNodes: Array<Node> = [];
 	}
 
 	ids.forEach((id) => {
-		if (processedIds.includes(id) === false) {
+		if (!processedIds.includes(id)) {
 			processedNodes.push(generateNode(id));
 			processedIds.push(id);
 		}

@@ -1,7 +1,7 @@
 import { allApplicationStoresObservers } from 'src/observers/index';
 import { useItemsStore } from 'src/stores/items';
 import { useParallaxStore } from 'src/stores/parallax';
-import { parallaxApi } from 'src/utils/api/parallax';
+import { api } from 'src/utils/api/api';
 
 export const initializeItemsStoreObservers = () => {
 	const unsubscribeItemsStoreNodesObserver = useItemsStore.subscribe(
@@ -41,6 +41,6 @@ const conditionallyTriggerParallax = () => {
 	const apiTriggerType = useParallaxStore.getState().apiTriggerType;
 
 	if (apiTriggerType === 'initial' || apiTriggerType === 'refresh') {
-		parallaxApi.triggerStart();
+		api.parallax.actions.triggerStart();
 	}
 };

@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ToggleGroup } from 'src/components/toggle-group/ToggleGroup';
 import { ToggleGroupOption } from 'src/components/toggle-group/ToggleGroup.interfaces';
-import { useGraphStore } from 'src/stores/graph';
 import { SearchStoreType, useSearchStore } from 'src/stores/search';
 import {
 	GLOBAL_SEARCH_QUERY_KEY,
@@ -9,21 +8,14 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT,
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
-	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
-	GRAPH_LAYOUT_FORCE_ATLAS_2
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
 import { SearchOptionsProps } from './SearchOptions.interfaces';
 
 export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => {
 	const { t } = useTranslation();
-	const {
-		type,
-		setType,
-		setSearchValue,
-		getUrlSearchParameter,
-		setAlgorithm,
-		getDefaultSearchValue
-	} = useSearchStore((store) => store);
+	const { type, setType, setSearchValue, getUrlSearchParameter, getDefaultSearchValue } =
+		useSearchStore((store) => store);
 
 	const onTypeChange = (newType: SearchStoreType) => {
 		setType(newType);
@@ -38,10 +30,6 @@ export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => 
 				setSearchValue(getDefaultSearchValue(newType));
 			}
 		} else if (newType === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY) {
-			setAlgorithm(GRAPH_LAYOUT_FORCE_ATLAS_2);
-			useGraphStore.getState().setPerspectiveId('');
-			useGraphStore.getState().setPerspectiveName('');
-
 			if (urlType === GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY && urlQuery) {
 				setSearchValue(urlQuery);
 			} else {

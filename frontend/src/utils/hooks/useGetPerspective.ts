@@ -1,9 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import {
-	getPerspective,
-	GetPerspectiveParameters,
-	GetPerspectiveResponse
-} from 'src/utils/fetch/getPerspective';
+import { api } from 'src/utils/api/api';
+import { GetPerspectiveParameters, GetPerspectiveResponse } from 'src/utils/fetch/getPerspective';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UseGetPerspectiveParameters = {
@@ -33,7 +30,9 @@ export const useGetPerspective = (
 		onFinally: onFinally,
 		dependencies: dependencies,
 		fetchFunction: (parameters?: GetPerspectiveParameters) => {
-			return getPerspective({ perspectiveId: parameters?.perspectiveId || perspectiveId });
+			return api.perspectives.fetch.getPerspective({
+				perspectiveId: parameters?.perspectiveId || perspectiveId
+			});
 		}
 	});
 };

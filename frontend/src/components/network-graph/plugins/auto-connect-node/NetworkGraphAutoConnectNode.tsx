@@ -11,12 +11,11 @@ import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
 import { generateNode } from 'src/utils/helpers/nodes';
 import { generateRelation } from 'src/utils/helpers/relations';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 const defaultData = {
 	sourceNodeId: '',
@@ -63,17 +62,17 @@ export const NetworkGraphAutoConnectNode = () => {
 	const removeRelation = useItemsStore((store) => store.removeRelation);
 
 	useEffect(() => {
-		StateManager.getInstance().on('NODE_DOWN', onNodeDown);
-		StateManager.getInstance().on('NODE_AUTO_CONNECT', {
+		StateManager.getInstance().subscribe('nodeDown', onNodeDown);
+		StateManager.getInstance().subscribe('nodeAutoConnect', {
 			beforeCallback: onAutoConnectNodeBefore,
 			callback: onAutoConnectNode
 		});
-		StateManager.getInstance().on('MOUSE_UP', saveAutoConnectNodeData);
+		StateManager.getInstance().subscribe('mouseUp', saveAutoConnectNodeData);
 
 		return () => {
-			StateManager.getInstance().off('NODE_DOWN', onNodeDown);
-			StateManager.getInstance().off('NODE_AUTO_CONNECT', onAutoConnectNode);
-			StateManager.getInstance().off('MOUSE_UP', saveAutoConnectNodeData);
+			StateManager.getInstance().unsubscribe('nodeDown', onNodeDown);
+			StateManager.getInstance().unsubscribe('nodeAutoConnect', onAutoConnectNode);
+			StateManager.getInstance().unsubscribe('mouseUp', saveAutoConnectNodeData);
 		};
 	}, [defaultNodeLabels, defaultRelationType]);
 
@@ -269,7 +268,7 @@ export const NetworkGraphAutoConnectNode = () => {
 				? defaultNodeLabels.map((label) => label.id)
 				: [];
 			// store new node on server
-			const newNodeResponse = await nodesApi.postNode({
+			const newNodeResponse = await api.nodes.fetch.postNode({
 				labels: defaultNodeLabelIds,
 				properties: {}
 			});
@@ -288,7 +287,7 @@ export const NetworkGraphAutoConnectNode = () => {
 		}
 
 		// store new relation on server
-		const newRelationResponse = await relationsApi.postRelation({
+		const newRelationResponse = await api.relations.fetch.postRelation({
 			properties: {},
 			sourceId: relation.source_id,
 			targetId: targetNodeId,

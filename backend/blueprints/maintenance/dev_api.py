@@ -7,7 +7,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 
 from blueprints.maintenance.login_api import require_tab_id
-from database.utils import abort_with_json
+from database.utils import abort_with_json, split_statements
 
 blp = Blueprint("Dev tools", __name__, description="For development only")
 TIMEOUT_LIMIT = 200
@@ -24,7 +24,7 @@ def _run_file(filename):
     file_path = os.path.join(os.environ["GRAPHEDITOR_BASEDIR"], filename)
     current_app.logger.debug(f'Running cypher file {file_path}')
     with open(file_path, encoding="utf-8") as file:
-        statements = file.read().strip().split(";\n")
+        statements = split_statements(file.read().strip())
         for statement in statements:
             if "// commit" in statement:
                 g.conn.commit()

@@ -18,6 +18,7 @@ import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemCenterButton } from 'src/components/item-center-button/ItemCenterButton';
 import { ItemProperties } from 'src/components/item-properties/ItemProperties';
 import { ItemPropertiesHandle } from 'src/components/item-properties/ItemProperties.interfaces';
+import { ItemPropertiesTableEntryWithTopFlag } from 'src/components/item-properties-table/ItemPropertiesTable.interfaces';
 import { useItemsDrawerContext } from 'src/components/items-drawer/context/ItemsDrawerContext';
 import { LoadPerspective } from 'src/components/load-perspective/LoadPerspective';
 import { Loading } from 'src/components/loading/Loading';
@@ -27,20 +28,20 @@ import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/Nod
 import { NodeLabelsItemFinderHandle } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder.interfaces';
 import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
 import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
-import { ItemPropertyWithKey } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
-import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useSearchStore } from 'src/stores/search';
-import { metaForMetaApi } from 'src/utils/api/metaForMeta';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 import { GraphEditorType } from 'src/utils/constants';
 import { GRAPH_PRESENTATION_GRAPH } from 'src/utils/constants';
-import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
-import { getItemDBId, getItemMissingPropertiesForMeta } from 'src/utils/helpers/items';
+import { getAt, twoObjectValuesAreEqual } from 'src/utils/helpers/general';
+import {
+	getItemDBId,
+	getItemMissingPropertiesForMeta,
+	openInItemsDrawer
+} from 'src/utils/helpers/items';
 import { areNodesSameById, isNodePerspective, isPseudoNode } from 'src/utils/helpers/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
-import { formatItemId } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { SingleNodeEditMode, SingleNodeProps } from './SingleNode.interfaces';
 
 /**
@@ -69,7 +70,6 @@ export const SingleNode = ({
 	const [labelsMeta, setLabelsMeta] = useState<MetaForMeta | null>(null);
 	const [isLabelsMetaLoading, setIsLabelsMetaLoading] = useState(false);
 	const [labelsValue, setLabelsValue] = useState<Array<Node>>([]);
-	const [highlightedLabelTagIds, setHighlightedLabelTagIds] = useState<Array<NodeId>>([]);
 	const [markedLabelIdsAsWarning, setMarkedLabelIdsAsWarning] = useState<Array<NodeId>>([]);
 	const [currentEditMode, setCurrentEditMode] = useState<SingleNodeEditMode>('none');
 	const [unsavedChangesData, setUnsavedChangesData] = useState<UnsavedChangedModalProps | null>(
@@ -91,15 +91,15 @@ export const SingleNode = ({
 	}, [node]);
 
 	const getNodeLabelsNodes = () => {
-		nodesApi.postNodesBulkFetch({ nodeIds: node.labels }).then((labelsNodes) => {
-			setLabelsValue(labelsNodes);
+		api.nodes.fetch.postNodesBulkFetch({ nodeIds: node.labels }).then((response) => {
+			setLabelsValue(Object.values(response.data.nodes));
 		});
 	};
 
 	const getMetaForMeta = () => {
 		setIsLabelsMetaLoading(true);
 
-		metaForMetaApi
+		api.metaForMeta.fetch
 			.postMetaForMeta({
 				ids: node.labels,
 				resultType: GraphEditorType.META_PROPERTY
@@ -119,14 +119,12 @@ export const SingleNode = ({
 	};
 
 	const onUserSelectedLabelsChange = (selectedLabels: Array<Node>) => {
-		if (selectedLabels.length) {
-			setSelectedLabelIds(selectedLabels.map((label) => label.id));
-		} else {
-			setSelectedLabelIds([]);
-		}
+		setSelectedLabelIds(selectedLabels.map((label) => label.id));
 	};
 
-	const onPropertyRowMouseEnter = (propertyWithKey: ItemPropertyWithKey, propertyNode: Node) => {
+	const onPropertyRowMouseEnter = (entry: ItemPropertiesTableEntryWithTopFlag) => {
+		const propertyNode = getAt(entry, 2);
+
 		if (!labelsMeta) {
 			return;
 		}
@@ -141,11 +139,11 @@ export const SingleNode = ({
 			});
 		}
 
-		setHighlightedLabelTagIds(highlightedLabelIds);
+		nodeLabelsHandleRef.current?.setHighlightedTagIds(highlightedLabelIds);
 	};
 
 	const onPropertyRowMouseLeave = () => {
-		setHighlightedLabelTagIds([]);
+		nodeLabelsHandleRef.current?.setHighlightedTagIds([]);
 	};
 
 	const LoadPerspectiveButton = () => {
@@ -192,9 +190,7 @@ export const SingleNode = ({
 	};
 
 	const onUndoPropertiesClick = () => {
-		if (
-			!twoObjectValuesAreEqual(node.properties, nodePropertiesHandleRef.current?.properties)
-		) {
+		if (!nodePropertiesHandleRef.current?.validateProperties()) {
 			setUnsavedChangesData({
 				unsavedSectionName: t('single_view_properties_title'),
 				onCancelClick: undoProperties,
@@ -206,8 +202,11 @@ export const SingleNode = ({
 	};
 
 	const onSavePropertiesClick = async () => {
-		await nodePropertiesHandleRef.current?.handleSave();
-		resetEditModeAndUnsavedChangesData();
+		const saveOk = await nodePropertiesHandleRef.current?.handleSave();
+
+		if (saveOk) {
+			resetEditModeAndUnsavedChangesData();
+		}
 	};
 
 	const undoProperties = () => {
@@ -219,15 +218,11 @@ export const SingleNode = ({
 		setCurrentEditMode('connections');
 	};
 
-	const openInItemsDrawer = () => {
-		if (isInsideItemsDrawer) {
-			useDrawerStore.getState().addEntry({ item: node });
-		} else {
-			useDrawerStore.getState().setEntry({ item: node });
-		}
+	const localOpenInItemsDrawer = () => {
+		openInItemsDrawer(node, isInsideItemsDrawer);
 	};
 
-	const renderPseudoNodeWarning = isPseudoNode(node) || !node.dbId;
+	const renderPseudoNodeWarning = isPseudoNode(node);
 
 	return (
 		<DBSection id={id} className={rootElementClassName} data-testid={testId} spacing="none">
@@ -256,7 +251,8 @@ export const SingleNode = ({
 						options={[
 							{
 								title: t('single-node-delete-item-button'),
-								onClick: () => nodesApi.deleteNodesAndUpdateApplication([node.id]),
+								onClick: () =>
+									api.nodes.actions.deleteNodesAndUpdateApplication([node.id]),
 								icon: 'bin'
 							}
 						]}
@@ -268,7 +264,7 @@ export const SingleNode = ({
 						)}
 
 						{shouldShowOpenButton && (
-							<DBButton size="small" variant="ghost" onClick={openInItemsDrawer}>
+							<DBButton size="small" variant="ghost" onClick={localOpenInItemsDrawer}>
 								{t('single_item_open')}
 							</DBButton>
 						)}
@@ -280,7 +276,7 @@ export const SingleNode = ({
 				<div className="single-item__header-id">
 					<p className="single-item__header-headline">ID</p>
 					<p className="single-item__header-content">
-						{formatItemId(nodeId)}
+						{idFormatter.formatId(nodeId)}
 						<DBTooltip
 							className="db-tooltip-fix db-tooltip-fix--bottom"
 							width="auto"
@@ -319,7 +315,6 @@ export const SingleNode = ({
 						node={node}
 						value={labelsValue}
 						onTagsSelected={onUserSelectedLabelsChange}
-						highlightedTagIds={highlightedLabelTagIds}
 						markTagIdsAsWarning={markedLabelIdsAsWarning}
 						isEditMode={currentEditMode === 'labels'}
 						isSelectAllDisabled={variant === 'small'}

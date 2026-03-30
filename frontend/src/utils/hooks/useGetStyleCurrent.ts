@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
-import { getStyleCurrent, GetStyleCurrentResponse } from 'src/utils/fetch/getStyleCurrent';
+import { api } from 'src/utils/api/api';
+import { GetStyleCurrentResponse } from 'src/utils/fetch/getStyleCurrent';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetStyleCurrent = {
@@ -26,6 +27,6 @@ export const useGetStyleCurrent = ({
 		onError: onError,
 		onFinally: onFinally,
 		waitBeforeReFetch: waitBeforeReFetch,
-		fetchFunction: getStyleCurrent
+		fetchFunction: api.styles.fetch.getStyleCurrent
 	});
 };

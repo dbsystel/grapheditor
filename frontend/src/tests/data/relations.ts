@@ -3,7 +3,7 @@ import { Relation } from 'src/models/relation';
 import { typeIds } from 'src/tests/data/types';
 import { generateTestProperty } from 'src/tests/helpers';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 export const generateTestRelation = (
 	id: string,

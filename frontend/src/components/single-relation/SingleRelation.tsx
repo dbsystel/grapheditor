@@ -25,18 +25,15 @@ import { RelationTypeChangerHandle } from 'src/components/relation-type-changer/
 import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
 import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
 import { MetaForMeta, Node } from 'src/models/node';
-import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
-import { metaForMetaApi } from 'src/utils/api/metaForMeta';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { GraphEditorType } from 'src/utils/constants';
 import { GRAPH_PRESENTATION_GRAPH } from 'src/utils/constants';
-import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
+import { openInItemsDrawer } from 'src/utils/helpers/items';
 import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
-import { formatItemId, idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { SingleRelationEditMode, SingleRelationProps } from './SingleRelation.interfaces';
 
 /**
@@ -81,16 +78,26 @@ export const SingleRelation = ({
 		(async () => {
 			setIsLoadingSourceAndTargetNodes(true);
 
-			const nodes = await nodesApi.postNodesBulkFetch({
+			const response = await api.nodes.fetch.postNodesBulkFetch({
 				nodeIds: [relation.source_id, relation.target_id]
 			});
+			const nodes = Object.values(response.data.nodes);
 			const sourceNode = getNodeByIdFromArrayOfNodes(nodes, relation.source_id);
 			const targetNode = getNodeByIdFromArrayOfNodes(nodes, relation.target_id);
 
 			getMetaForMeta();
 
 			if (sourceNode && targetNode) {
-				setSourceAndTargetNodes(nodes);
+				// if relation is self-loop
+				if (nodes.length === 1 && relation.source_id === relation.target_id) {
+					const sourceTargetNode = nodes.at(0);
+
+					if (sourceTargetNode) {
+						setSourceAndTargetNodes([sourceTargetNode, sourceTargetNode]);
+					}
+				} else {
+					setSourceAndTargetNodes(nodes);
+				}
 			} else {
 				addNotification({
 					title: t('notifications_failure_relation_fetch'),
@@ -105,7 +112,7 @@ export const SingleRelation = ({
 	const getMetaForMeta = () => {
 		setIsTypeMetaLoading(true);
 
-		metaForMetaApi
+		api.metaForMeta.fetch
 			.postMetaForMeta({
 				ids: [relation.type],
 				resultType: GraphEditorType.META_PROPERTY
@@ -154,12 +161,7 @@ export const SingleRelation = ({
 	};
 
 	const onUndoPropertiesClick = () => {
-		if (
-			!twoObjectValuesAreEqual(
-				relation.properties,
-				relationPropertiesHandleRef.current?.properties
-			)
-		) {
+		if (relationPropertiesHandleRef.current?.validateProperties) {
 			setUnsavedChangesData({
 				unsavedSectionName: t('single_view_properties_title'),
 				onCancelClick: undoProperties,
@@ -171,8 +173,11 @@ export const SingleRelation = ({
 	};
 
 	const onSavePropertiesClick = async () => {
-		await relationPropertiesHandleRef.current?.handleSave();
-		resetEditModeAndUnsavedChangesData();
+		const saveOk = await relationPropertiesHandleRef.current?.handleSave();
+
+		if (saveOk) {
+			resetEditModeAndUnsavedChangesData();
+		}
 	};
 
 	const undoProperties = () => {
@@ -180,12 +185,8 @@ export const SingleRelation = ({
 		resetEditModeAndUnsavedChangesData();
 	};
 
-	const openInItemsDrawer = () => {
-		if (isInsideItemsDrawer) {
-			useDrawerStore.getState().addEntry({ item: relation });
-		} else {
-			useDrawerStore.getState().setEntry({ item: relation });
-		}
+	const localOpenInItemsDrawer = () => {
+		openInItemsDrawer(relation, isInsideItemsDrawer);
 	};
 
 	return (
@@ -209,7 +210,9 @@ export const SingleRelation = ({
 							{
 								title: t('single-relation-delete-item-button'),
 								onClick: () =>
-									relationsApi.deleteRelationsAndUpdateApplication([relation.id]),
+									api.relations.actions.deleteRelationsAndUpdateApplication([
+										relation.id
+									]),
 								icon: 'bin'
 							}
 						]}
@@ -221,7 +224,7 @@ export const SingleRelation = ({
 						)}
 
 						{shouldShowOpenButton && (
-							<DBButton size="small" variant="ghost" onClick={openInItemsDrawer}>
+							<DBButton size="small" variant="ghost" onClick={localOpenInItemsDrawer}>
 								{t('single_item_open')}
 							</DBButton>
 						)}
@@ -231,7 +234,7 @@ export const SingleRelation = ({
 				<div className="single-item__header-id">
 					<p className="single-item__header-headline">ID</p>
 					<p className="single-item__header-content">
-						{formatItemId(relation.id)}
+						{idFormatter.formatId(relation.id)}
 						<DBTooltip
 							className="db-tooltip-fix db-tooltip-fix--bottom"
 							width="auto"

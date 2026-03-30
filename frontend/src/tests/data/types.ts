@@ -1,5 +1,5 @@
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 export const typeIds: Array<string> = [
 	idFormatter.formatSemanticId(GraphEditorTypeSimplified.META_RELATION, 'type-1'),

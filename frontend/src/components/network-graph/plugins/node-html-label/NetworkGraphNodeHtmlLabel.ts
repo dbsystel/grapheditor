@@ -18,12 +18,18 @@ import { isNumber, isString } from 'src/utils/helpers/general';
 const HTMLLabelContainerClassName = 'network-graph__node-label-container';
 const HTMLLabelContainerHighlightedClassName = HTMLLabelContainerClassName + '--highlighted';
 const HTMLLabelContainerHoverClassName = HTMLLabelContainerClassName + '--hover';
+const HTMLLabelLinesClassName = 'network-graph__node-label';
 
 export const NetworkGraphNodeHtmlLabel = () => {
 	const sigma = useGraphStore((store) => store.sigma);
 	const nodeLabelsContainerRef = useRef<HTMLDivElement | null>(null);
 	const nodeLabelsCacheRef = useRef<{
-		[key: NodeId]: { element: HTMLDivElement | null; processed: boolean; label: string | null };
+		[key: NodeId]: {
+			element: HTMLDivElement | null;
+			processed: boolean;
+			label: string | null;
+			numberOfSelfLoops: number;
+		};
 	}>({});
 	const isModeActiveRef = useRef(false);
 	const nodeIdToScrollRef = useRef('');
@@ -70,7 +76,7 @@ export const NetworkGraphNodeHtmlLabel = () => {
 	};
 
 	const initializeEvents = () => {
-		StateManager.getInstance().on('NODE_DRAG', {
+		StateManager.getInstance().subscribe('nodeDrag', {
 			beforeCallback: setDraggingModeActive,
 			callback: onNodeDrag,
 			afterCallback: setDraggingModeInactive
@@ -81,7 +87,7 @@ export const NetworkGraphNodeHtmlLabel = () => {
 	};
 
 	const destroyEvents = () => {
-		StateManager.getInstance().off('NODE_DRAG', onNodeDrag);
+		StateManager.getInstance().unsubscribe('nodeDrag', onNodeDrag);
 		sigma.off('enterNode', onNodeEnter);
 		sigma.off('leaveNode', onNodeLeave);
 		sigma.getMouseCaptor().off('wheel', onScroll);
@@ -160,14 +166,21 @@ export const NetworkGraphNodeHtmlLabel = () => {
 	};
 
 	const onScroll = (event: WheelCoords) => {
+		event.preventSigmaDefault();
 		const nodeIdToScroll = nodeIdToScrollRef.current;
 		const cacheEntryElement = getCacheEntryElement(nodeIdToScroll);
 
-		if (cacheEntryElement && cacheEntryElement.scrollHeight > cacheEntryElement.clientHeight) {
+		if (cacheEntryElement) {
 			sigma.getCamera().disable();
 
 			// scroll the element by x pixels
-			cacheEntryElement.scrollBy(0, -Math.sign(event.delta) * 20);
+			const labelLines = cacheEntryElement
+				.getElementsByClassName(HTMLLabelLinesClassName)
+				.item(0);
+
+			if (labelLines) {
+				labelLines.scrollBy(0, -Math.sign(event.delta) * 20);
+			}
 
 			window.setTimeout(() => {
 				sigma.getCamera().enable();
@@ -231,12 +244,17 @@ export const NetworkGraphNodeHtmlLabel = () => {
 			let cacheEntry = nodeLabelsCacheRef.current[nodeId];
 			// improve performance by applying multiple styles at once, instead of one by one
 			const labelContainerStyles: Array<string> = [];
+			// get number of self-loops for current node ID
+			const selfLoops = sigma
+				.getGraph()
+				.filterEdges(nodeId, (edgeKey, attrs, source, target) => source === target).length;
 
 			if (!cacheEntry) {
 				nodeLabelsCacheRef.current[nodeId] = {
 					element: null,
 					processed: false,
-					label: ''
+					label: '',
+					numberOfSelfLoops: 0
 				};
 
 				cacheEntry = nodeLabelsCacheRef.current[nodeId];
@@ -269,7 +287,7 @@ export const NetworkGraphNodeHtmlLabel = () => {
 				if (nodeDisplayData.label) {
 					// label text lines
 					const labelLines = document.createElement('div');
-					labelLines.classList.add('network-graph__node-label');
+					labelLines.classList.add(HTMLLabelLinesClassName);
 
 					const ll = nodeDisplayData.label.split('\n');
 					ll.forEach((line: string) => {
@@ -283,6 +301,12 @@ export const NetworkGraphNodeHtmlLabel = () => {
 				}
 
 				cacheEntry.label = nodeDisplayData.label;
+			}
+
+			// if number of self-loops has changed, update the data-attribute
+			if (cacheEntry.numberOfSelfLoops !== selfLoops) {
+				cacheEntry.numberOfSelfLoops = selfLoops;
+				labelContainer.dataset.numberOfSelfLoops = selfLoops.toString();
 			}
 
 			// properties we need to update on each sigma render (e.g. due to our

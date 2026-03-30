@@ -5,8 +5,8 @@ import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { ToggleGroup } from 'src/components/toggle-group/ToggleGroup';
-import { useGraphStore } from 'src/stores/graph';
-import { LayoutModuleType, useSearchStore } from 'src/stores/search';
+import { usePerspectiveStore } from 'src/stores/perspective';
+import { useSearchStore } from 'src/stores/search';
 import {
 	GLOBAL_SEARCH_ALGORITHM_KEY,
 	GLOBAL_SEARCH_PRESENTATION_KEY,
@@ -20,15 +20,15 @@ import {
 	GRAPH_PRESENTATION_OBJECT_TABLE,
 	GRAPH_PRESENTATION_RESULT_TABLE
 } from 'src/utils/constants';
+import { isValidAlgorithmType } from 'src/utils/helpers/search';
 import { GrassfileManager } from '../grassfile-manager/GrassfileManager';
 import { GraphOptionsProps } from './GraphOptions.interfaces';
 
 export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 	const { t } = useTranslation();
 	const searchStore = useSearchStore((store) => store);
-	const [searchParams, setSearchParams] = useSearchParams();
-	const perspectiveName = useGraphStore((store) => store.perspectiveName);
-	const perspectiveId = useGraphStore((store) => store.perspectiveId);
+	const [searchParams, setSearchParameters] = useSearchParams();
+	const perspective = usePerspectiveStore((store) => store.perspective);
 	const rootElementClassName = clsx('graph-options', className);
 	const isPerspectiveAlgorithm = searchStore.algorithm === GRAPH_LAYOUT_PERSPECTIVE;
 
@@ -81,9 +81,9 @@ export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 		}
 	];
 
-	if (isPerspectiveAlgorithm || perspectiveId) {
+	if (isPerspectiveAlgorithm || perspective) {
 		algorithmOptions.push({
-			label: `Perspective${perspectiveName ? ': ' + perspectiveName : ''}`,
+			label: `Perspective${perspective?.name ? ': ' + perspective.name : ''}`,
 			value: GRAPH_LAYOUT_PERSPECTIVE,
 			key: GRAPH_LAYOUT_PERSPECTIVE
 		});
@@ -99,12 +99,16 @@ export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 	)?.label;
 
 	const onAlgorithmChange = (event: ChangeEvent<HTMLSelectElement>) => {
-		searchStore.setAlgorithm(event.target.value as LayoutModuleType);
-		setUrlParams(GLOBAL_SEARCH_ALGORITHM_KEY, event.target.value);
+		const value = event.target.value;
+
+		if (isValidAlgorithmType(value)) {
+			searchStore.setAlgorithm(value);
+			setUrlParams(GLOBAL_SEARCH_ALGORITHM_KEY, event.target.value);
+		}
 	};
 
 	const setUrlParams = (key: string, value: string) => {
-		setSearchParams({
+		setSearchParameters({
 			...Object.fromEntries(searchParams),
 			[key]: value
 		});
@@ -119,6 +123,7 @@ export const GraphOptions = ({ id, className, testId }: GraphOptionsProps) => {
 				onChange={onPresentationToggleChange}
 				selectedLabel={selectedPresentationLabel}
 				size="medium"
+				tooltipFixClassName="db-tooltip-fix db-tooltip-fix--bottom-start"
 			/>
 			<DBSelect
 				className="graph-options__layout-select"

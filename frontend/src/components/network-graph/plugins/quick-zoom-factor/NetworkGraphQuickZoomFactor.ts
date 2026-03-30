@@ -14,10 +14,10 @@ export const NetworkGraphQuickZoomFactor = () => {
 	} = useGraphStore((store) => store);
 
 	useEffect(() => {
-		StateManager.getInstance().on('ZOOM_FACTOR', onZoomFactor);
+		StateManager.getInstance().subscribe('zoomFactor', onZoomFactor);
 
 		return () => {
-			StateManager.getInstance().off('ZOOM_FACTOR', onZoomFactor);
+			StateManager.getInstance().unsubscribe('zoomFactor', onZoomFactor);
 		};
 	}, [zoomFactor]);
 

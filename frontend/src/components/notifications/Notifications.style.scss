@@ -21,7 +21,8 @@
 	&__notification {
 		display: grid;
 		align-items: flex-start;
-		animation: animateNotification ease-in-out 0.5s;
+		animation: none;
+		transition: none;
 
 		p {
 			word-wrap: break-word;

@@ -11,8 +11,10 @@ import { drawNodeLabel } from 'src/components/network-graph/overrides/nodes/labe
 import { drawRelationLabel } from 'src/components/network-graph/overrides/relations/straight/edge-labels';
 import { SquareNodeWithBorderProgram } from 'src/components/network-graph/programs/nodes/squareWithBorder';
 import { CurvedEdgeArrowProgram } from 'src/components/network-graph/programs/relations/curved';
+import { SelfLoopEdgeArrowProgram } from 'src/components/network-graph/programs/relations/self-loop';
 import { StraightEdgeArrowProgram } from 'src/components/network-graph/programs/relations/straight';
 import { StateManager } from 'src/components/network-graph/state-manager';
+import { useExpandNodeStore } from 'src/stores/expand-node';
 import { useGraphStore } from 'src/stores/graph';
 import {
 	GRAPH_DEFAULT_EDGE_LABEL_FONT,
@@ -28,7 +30,6 @@ import {
 export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 	const setSigma = useGraphStore((store) => store.setSigma);
 	const setIsSigmaReady = useGraphStore((store) => store.setIsSigmaReady);
-	const resetButExclude = useGraphStore((store) => store.resetButExclude);
 	const [graphSigmaIsSet, setGraphSigmaIsSet] = useState(false);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -61,7 +62,8 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 				},
 				edgeProgramClasses: {
 					straight: StraightEdgeArrowProgram,
-					curved: CurvedEdgeArrowProgram
+					curved: CurvedEdgeArrowProgram,
+					selfLoop: SelfLoopEdgeArrowProgram
 				},
 				zoomingRatio: useGraphStore.getState().zoomFactor,
 				minEdgeThickness: GRAPH_DEFAULT_EDGE_MIN_THICKNESS,
@@ -97,7 +99,9 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 
 				sigmaToClear.kill();
 
-				resetButExclude(['perspectiveId', 'perspectiveName']);
+				// cleanups
+				useGraphStore.getState().reset();
+				useExpandNodeStore.getState().reset();
 			}
 		};
 	}, []);

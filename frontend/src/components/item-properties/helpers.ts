@@ -1,9 +1,9 @@
 import {
 	ItemPropertiesTableEntries,
 	ItemPropertiesTableEntry
-} from 'src/components/item-properties/table/ItemPropertiesTable.interfaces';
+} from 'src/components/item-properties-table/ItemPropertiesTable.interfaces';
 import i18n from 'src/i18n';
-import { ItemProperties, ItemPropertyKey, ItemPropertyType } from 'src/models/item';
+import { ItemProperties, ItemProperty, ItemPropertyKey } from 'src/models/item';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { clone } from 'src/utils/helpers/general';
@@ -62,10 +62,7 @@ export const processItemPropertiesEntries = ({
 	}
 
 	Object.entries(itemProperties).forEach(([key, property]) => {
-		const arrayEntry: ItemPropertiesTableEntry = [
-			{ ...property, key: key },
-			propertyNodesCache[key]
-		];
+		const arrayEntry: ItemPropertiesTableEntry = [property, key, propertyNodesCache[key]];
 
 		if (topEntriesPropertyKeys.includes(key)) {
 			newTopEntries.push(arrayEntry);
@@ -77,7 +74,7 @@ export const processItemPropertiesEntries = ({
 	// filter data by (selected) labels meta data
 	const filterTableEntriesByMetaPropertyIds = (tableEntries: ItemPropertiesTableEntries) => {
 		return tableEntries.filter((tableEntry) => {
-			return processedPropertyIds.includes(tableEntry[0].key);
+			return processedPropertyIds.includes(tableEntry[1]);
 		});
 	};
 
@@ -94,70 +91,47 @@ export const processItemPropertiesEntries = ({
 	};
 };
 
-export const parsePropertyValue = (propertyType: ItemPropertyType, propertyValue: string) => {
-	const lowerCaseValue = propertyValue.toLowerCase();
-
-	try {
-		switch (propertyType) {
-			case 'boolean':
-				if (lowerCaseValue === 'false') {
-					return false;
-				} else if (lowerCaseValue === 'true') {
-					return true;
-				} else {
-					return null;
-				}
-			case 'float':
-			case 'integer': {
-				const floatParsedValue = parseFloat(propertyValue);
-
-				if (isNaN(floatParsedValue)) {
-					return null;
-				}
-
-				return floatParsedValue;
-			}
-			default:
-				return propertyValue;
-		}
-	} catch {
-		return null;
-	}
-};
-
-export const validateItemProperties = (properties: ItemProperties) => {
-	for (const key in properties) {
-		const itemProperty = properties[key];
-
-		if (parsePropertyValue(itemProperty.type, itemProperty.value.toString()) === null) {
-			// item property is not valid
-			return false;
-		}
-	}
-
-	// item properties are valid
-	return true;
-};
-
-export const getPropertyValuePlaceholder = (propertyType: ItemPropertyType) => {
-	switch (propertyType) {
-		case 'boolean':
-			return i18n.t('form_property_value_boolean_placeholder');
-		case 'float':
-			return i18n.t('form_property_value_float_placeholder');
-		case 'integer':
-			return i18n.t('form_property_value_integer_placeholder');
-		default:
-			return i18n.t('form_property_value_string_placeholder');
-	}
-};
-
-export const showNotificationForPropertyTypeAndValueMismatch = () => {
+export const showNotificationForInvalidProperties = (propertyKeys: Array<string>) => {
 	useNotificationsStore.getState().addNotification({
-		title: i18n.t('notifications_warning_property_type_value_mismatch_title'),
-		description: i18n.t('notifications_warning_property_type_value_mismatch_description'),
+		title: i18n.t('notifications_warning_properties_not_valid_title'),
+		description: i18n.t('notifications_warning_properties_not_valid_description', {
+			propertyKeys: propertyKeys.join(',')
+		}),
 		type: 'warning',
 		autoCloseAfterMilliseconds: 0,
 		isClosable: true
 	});
 };
+
+export class PropertiesStorageClass {
+	properties: ItemProperties;
+
+	constructor(defaultProperties?: ItemProperties) {
+		this.properties = defaultProperties || {};
+	}
+
+	getProperty(key: ItemPropertyKey) {
+		const properties = this.properties;
+		return properties[key];
+	}
+	setProperty(key: ItemPropertyKey, property: ItemProperty) {
+		const propertiesClone = clone(this.properties);
+
+		propertiesClone[key] = property;
+
+		this.setProperties(propertiesClone);
+	}
+	deleteProperty(key: ItemPropertyKey) {
+		const propertiesClone = clone(this.properties);
+
+		delete propertiesClone[key];
+
+		this.setProperties(propertiesClone);
+	}
+	setProperties(properties: ItemProperties) {
+		this.properties = properties;
+	}
+	reset() {
+		this.properties = {};
+	}
+}

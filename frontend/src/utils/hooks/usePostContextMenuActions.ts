@@ -1,6 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import { api } from 'src/utils/api/api';
 import {
-	postContextMenuActions,
 	PostContextMenuActionsParameters,
 	PostContextMenuActionsRequestResponse
 } from 'src/utils/fetch/postContextMenuActions';
@@ -41,7 +41,7 @@ export const usePostContextMenuActions = (
 					? { nodeIds: nodeIds, relationIds: relationIds }
 					: { nodeIds: parameters.nodeIds, relationIds: parameters.relationIds };
 
-			return postContextMenuActions(params);
+			return api.contextMenu.fetch.postContextMenuActions(params);
 		},
 		dependencies: dependencies
 	});

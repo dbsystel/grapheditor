@@ -8,4 +8,5 @@ import { GlobalComponentProps } from 'src/types/components';
 export type TextareaAutosizeProps = GlobalComponentProps &
 	Omit<DBTextareaProps & AllHTMLAttributes<HTMLTextAreaElement>, 'onChange'> & {
 		onChange?: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+		textareaId?: string;
 	};

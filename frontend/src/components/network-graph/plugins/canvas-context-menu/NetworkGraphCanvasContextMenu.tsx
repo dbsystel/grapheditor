@@ -6,10 +6,10 @@ import { useContextMenuStore } from 'src/stores/context-menu';
 
 export const NetworkGraphCanvasContextMenu = () => {
 	useEffect(() => {
-		StateManager.getInstance().on('STAGE_CONTEXT_MENU', onStageContextMenu);
+		StateManager.getInstance().subscribe('stageContextMenu', onStageContextMenu);
 
 		return () => {
-			StateManager.getInstance().off('STAGE_CONTEXT_MENU', onStageContextMenu);
+			StateManager.getInstance().unsubscribe('stageContextMenu', onStageContextMenu);
 		};
 	}, []);
 

@@ -1,5 +1,5 @@
 import { AxiosResponse } from 'axios';
-import { backendApi } from 'src/utils/api';
+import { backendApi } from 'src/utils/backend-api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PostLoginParameters = {
@@ -7,7 +7,11 @@ export type PostLoginParameters = {
 	username: string;
 	password: string;
 };
-export type PostLoginResponse = string;
+
+export type PostLoginResponse = {
+	host: string;
+	username: string;
+};
 
 export const postLogin = ({ host, username, password }: PostLoginParameters) => {
 	return backendApi.post<

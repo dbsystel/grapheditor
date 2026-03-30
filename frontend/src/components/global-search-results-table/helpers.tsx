@@ -1,11 +1,10 @@
 import { CopyToClipboard } from 'src/components/copy-to-clipboard/CopyToClipboard';
+import { RenderContent } from 'src/components/render-content/RenderContent';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { useItemsStore } from 'src/stores/items';
 import { CypherQuerySearchResultItem } from 'src/types/cypherQuerySearchResult';
-import { isString } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
-import { RenderContent } from 'src/utils/helpers/search';
 
 export const RenderSearchResultCellElement = ({
 	result
@@ -16,7 +15,6 @@ export const RenderSearchResultCellElement = ({
 
 	return Object.values(result).map((rowValue, index) => {
 		const resultValue = rowValue[1];
-		const isResultValueString = isString(resultValue);
 		const storeItem =
 			isNode(resultValue) || isRelation(resultValue) ? getStoreItem(resultValue.id) : null;
 		const isResultNode = isNode(storeItem);
@@ -24,11 +22,7 @@ export const RenderSearchResultCellElement = ({
 
 		return (
 			<TableCell key={index}>
-				<RenderContent
-					content={resultValue}
-					applyMarkdown={isResultValueString}
-					key={index}
-				/>
+				<RenderContent content={resultValue} key={index} />
 				{storeItem && (
 					<CopyToClipboard
 						nodes={isResultNode ? [storeItem] : []}

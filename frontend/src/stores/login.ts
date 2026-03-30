@@ -1,10 +1,12 @@
-import { setApiHeaderTabId } from 'src/utils/api';
+import { setBackendApiHeaderTabId } from 'src/utils/backend-api';
 import { create } from 'zustand';
 
 type LoginStore = {
 	isConnected: boolean;
 	isConnecting: boolean;
 	setIsConnecting: (isConnecting: boolean) => void;
+	checkIfLoggedInDone: boolean;
+	setCheckIfLoggedInDone: (done: boolean) => void;
 	// TODO find a way to have unique tab IDs per tab. Previously we would store tab ID in the sessionStorage,
 	//  but this caused issues when duplicating tabs (the sessionStorage would also be duplicated).
 	tabId: string;
@@ -12,6 +14,11 @@ type LoginStore = {
 	host: string;
 	connect: (host: string, username: string) => void;
 	disconnect: () => void;
+	// TODO: Move to AuthStore?
+	database: string;
+	setDatabase: (database: string) => void;
+	isDatabaseLoading: boolean;
+	setIsDatabaseLoading: (isLoading: boolean) => void;
 };
 
 /**
@@ -23,11 +30,15 @@ export const useLoginStore = create<LoginStore>((set, get) => ({
 	tabId: window.crypto.randomUUID(),
 	username: '',
 	host: '',
+	checkIfLoggedInDone: false,
+	setCheckIfLoggedInDone: (done) => {
+		set({ checkIfLoggedInDone: done });
+	},
 	disconnect: () => {
 		set({ isConnected: false, isConnecting: false, host: '', username: '' });
 	},
-	connect: (host: string, username: string) => {
-		setApiHeaderTabId(get().tabId);
+	connect: (host, username) => {
+		setBackendApiHeaderTabId(get().tabId);
 
 		set({
 			isConnected: true,
@@ -40,5 +51,13 @@ export const useLoginStore = create<LoginStore>((set, get) => ({
 		set({
 			isConnecting: isConnecting
 		});
+	},
+	database: '',
+	setDatabase: (database) => {
+		set({ database: database });
+	},
+	isDatabaseLoading: false,
+	setIsDatabaseLoading: (isLoading) => {
+		set({ isDatabaseLoading: isLoading });
 	}
 }));

@@ -1,13 +1,15 @@
-import { DEFAULT_EDGE_CURVATURE, indexParallelEdgesIndex } from '@sigma/edge-curve';
+import { indexParallelEdgesIndex } from '@sigma/edge-curve';
 import { getNodesInViewport } from '@sigma/utils';
 import { MultiDirectedGraph } from 'graphology';
 import { Attributes } from 'graphology-types';
 import Sigma from 'sigma';
 import {
 	clearCanvasContexts,
+	getCurvature,
 	getNodeGraphData,
 	getRelationColor,
-	getRelationGraphData
+	getRelationGraphData,
+	getSelfLoopCurvature
 } from 'src/components/network-graph/helpers';
 import {
 	GraphEditorSigma,
@@ -27,6 +29,7 @@ import {
 	GRAPH_HIDE_ALL_LABELS_THRESHOLD,
 	GRAPH_SELECTED_EDGE_COLOR
 } from 'src/utils/constants';
+import { isNumber } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { create } from 'zustand';
@@ -41,12 +44,7 @@ type GraphStore = {
 	setIsSigmaReady: (isSigmaReady: boolean) => void;
 	isGraphRendered: boolean;
 	setIsGraphRendered: (isGraphRendered: boolean) => void;
-	perspectiveId: string | null;
-	perspectiveName: string | null;
-	clearPerspective: () => void;
 	setIsLoading: (isLoading: boolean) => void;
-	setPerspectiveId: (perspectiveId: string | null) => void;
-	setPerspectiveName: (name: string | null) => void;
 	defaultRelationType: Node | null;
 	setDefaultRelationType: (relationType: Node | null) => void;
 	defaultNodeLabels: Array<Node> | null;
@@ -119,10 +117,7 @@ type InitialState = Omit<
 	| 'setSigma'
 	| 'setIsSigmaReady'
 	| 'setIsGraphRendered'
-	| 'clearPerspective'
 	| 'setIsLoading'
-	| 'setPerspectiveId'
-	| 'setPerspectiveName'
 	| 'setDefaultRelationType'
 	| 'setDefaultNodeLabels'
 	| 'highlightNode'
@@ -186,8 +181,6 @@ const getInitialState: () => InitialState = () => {
 		isSigmaReady: false,
 		isGraphRendered: false,
 		isLoading: false,
-		perspectiveId: null,
-		perspectiveName: null,
 		defaultNodeLabels: null,
 		defaultRelationType: null,
 		highlightedNodeIds: new Map(),
@@ -226,11 +219,6 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 			set({ isGraphRendered: isGraphRendered });
 		},
 		setIsLoading: (isLoading: boolean) => set({ isLoading: isLoading }),
-		clearPerspective: () => set({ perspectiveId: null, perspectiveName: null }),
-		setPerspectiveId: (perspectiveId) => {
-			set({ perspectiveId: perspectiveId });
-		},
-		setPerspectiveName: (name) => set({ perspectiveName: name }),
 		setDefaultNodeLabels: (nodeLabels: Array<Node> | null) =>
 			set({ defaultNodeLabels: nodeLabels }),
 		setDefaultRelationType: (relationType: Node | null) =>
@@ -331,25 +319,31 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 				});
 		},
 		adaptRelationTypeAndCurvature: (relationId, attributes) => {
-			function getCurvature(index: number, maxIndex: number): number {
-				if (maxIndex <= 0) throw new Error('Invalid maxIndex');
-				if (index < 0) return -getCurvature(-index, maxIndex);
-				const amplitude = 3.5;
-				const maxCurvature =
-					amplitude * (1 - Math.exp(-maxIndex / amplitude)) * DEFAULT_EDGE_CURVATURE;
-				return (maxCurvature * index) / maxIndex;
-			}
-
 			const graph = get().sigma.getGraph();
 			const { parallelIndex, parallelMinIndex, parallelMaxIndex } =
 				attributes || graph.getEdgeAttributes(relationId);
 
-			if (typeof parallelMinIndex === 'number') {
+			if (
+				isRelation(attributes?.data) &&
+				attributes.data.source_id === attributes.data.target_id
+			) {
 				graph.mergeEdgeAttributes(relationId, {
-					type: parallelIndex ? 'curved' : 'straight',
-					curvature: getCurvature(parallelIndex, parallelMaxIndex)
+					type: 'selfLoop',
+					curvature: getSelfLoopCurvature(parallelIndex, parallelMinIndex),
+					forceLabel: true
 				});
-			} else if (typeof parallelIndex === 'number') {
+			} else if (isNumber(parallelMinIndex)) {
+				// Guard against stale parallelMinIndex: if parallelIndex or
+				// parallelMaxIndex are not numbers, fall through to straight.
+				if (!isNumber(parallelIndex) || !isNumber(parallelMaxIndex)) {
+					graph.setEdgeAttribute(relationId, 'type', 'straight');
+				} else {
+					graph.mergeEdgeAttributes(relationId, {
+						type: parallelIndex ? 'curved' : 'straight',
+						curvature: getCurvature(parallelIndex, parallelMaxIndex)
+					});
+				}
+			} else if (isNumber(parallelIndex)) {
 				graph.mergeEdgeAttributes(relationId, {
 					type: 'curved',
 					curvature: getCurvature(parallelIndex, parallelMaxIndex)
@@ -359,10 +353,24 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 			}
 		},
 		indexParallelRelations: () => {
-			indexParallelEdgesIndex(get().sigma.getGraph(), {
+			const graph = get().sigma.getGraph();
+
+			indexParallelEdgesIndex(graph, {
 				edgeIndexAttribute: 'parallelIndex',
 				edgeMinIndexAttribute: 'parallelMinIndex',
 				edgeMaxIndexAttribute: 'parallelMaxIndex'
+			});
+
+			// @sigma/edge-curve does not clear parallelMinIndex when an edge
+			// becomes the sole edge between two nodes (directedCount === 1 &&
+			// undirectedCount === 1, or directedCount === 1 with opposite edges).
+			// This leaves a stale numeric parallelMinIndex while parallelIndex
+			// and parallelMaxIndex are set to null, which causes "Invalid maxIndex"
+			// errors downstream. Clean it up here:
+			graph.forEachEdge((edge) => {
+				if (graph.getEdgeAttribute(edge, 'parallelIndex') === null) {
+					graph.setEdgeAttribute(edge, 'parallelMinIndex', null);
+				}
 			});
 		},
 		addNode: (node) => {
@@ -548,13 +556,13 @@ export const useGraphStore = create<GraphStore>((set, get) => {
 		},
 		resizeLabels: () => {
 			const camera = get().sigma.getCamera();
-			get().sigma.updateSetting(
+			get().sigma.setSetting(
 				'labelSize',
-				() => (GRAPH_DEFAULT_NODE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
+				(GRAPH_DEFAULT_NODE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
 			);
-			get().sigma.updateSetting(
+			get().sigma.setSetting(
 				'edgeLabelSize',
-				() => (GRAPH_DEFAULT_EDGE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
+				(GRAPH_DEFAULT_EDGE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
 			);
 			get().toggleLabelsVisibility();
 		}

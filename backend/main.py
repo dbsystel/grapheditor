@@ -7,13 +7,15 @@ import sys
 import platform
 
 import waitress
-from flask import Flask, abort, request, current_app, g, send_from_directory, render_template
+from flask import Flask, abort, request, current_app, g, send_from_directory, \
+    redirect, render_template, session, url_for
 from flask_cors import CORS
 from flask_smorest import Api
 from werkzeug._reloader import run_with_reloader
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from flask_session import Session
+from authlib.common.security import generate_token
 
 from blueprints.display.style_support import load_default_style
 from blueprints.maintenance.info_api_v1 import blp as info_api
@@ -30,6 +32,7 @@ from blueprints.display.perspective_api_v1 import blp as perspective_api
 from blueprints.display.style_api_v1 import blp as style_api
 from blueprints.context_menu_api_v1 import blp as context_menu_api
 
+from database.auth import oauth
 from database.cypher_database import CypherDatabase
 from database.neo4j_connection import neo4j_connect
 from database.settings import config
@@ -98,8 +101,6 @@ app.config["OPENAPI_REDOC_URL"] = (
     "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"
 )
 
-
-
 app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger"
 app.config["OPENAPI_SWAGGER_UI_URL"] = (
     "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
@@ -108,6 +109,20 @@ app.config["OPENAPI_RAPIDOC_PATH"] = "/rapidoc"
 app.config["OPENAPI_RAPIDOC_URL"] = (
     "https://unpkg.com/rapidoc/dist/rapidoc-min.js"
 )
+
+def register_oauth():
+    code_verifier = generate_token(48)
+    oauth.register(
+        name='oidc',
+        client_id=app.config["OIDC_CLIENT_ID"],
+        client_secret=app.config["OIDC_CLIENT_SECRET"],
+        server_metadata_url=app.config["OIDC_METADATA_URL"],
+        code_challenge_method='S256',
+        code_verifier=code_verifier,
+        # offline_access needed in order to get a refresh token
+        client_kwargs={"scope": "openid profile email offline_access"}
+    )
+    oauth.init_app(app)
 
 app.logger.setLevel(config.log_level)
 
@@ -153,7 +168,7 @@ api.register_blueprint(meta_api, url_prefix=f"{api_prefix}/api/v1/meta")
 
 api.register_blueprint(parallax_api, url_prefix=f"{api_prefix}/api/v1/parallax")
 
-api.register_blueprint(paraquery_api, url_prefix=f"{api_prefix}/api/v1/paraquery")
+api.register_blueprint(paraquery_api, url_prefix=f"{api_prefix}/api/v1/paraqueries")
 
 api.register_blueprint(query_api, url_prefix=f"{api_prefix}/api/v1/query")
 
@@ -166,6 +181,35 @@ api.register_blueprint(
 )
 
 api.register_blueprint(info_api, url_prefix=f"{api_prefix}/api/v1/info")
+
+oauth_enabled = "OIDC_CLIENT_ID" in os.environ
+
+# we don't mandate OAuth support. So if the env var OIDC_CLIENT_ID is
+# set, we assume it's enabled and activate OAuth.
+# It's an error if any required env var is missing, leading to a startup
+# crash.
+if oauth_enabled:
+    app.config["OIDC_CLIENT_ID"] = os.environ.get("OIDC_CLIENT_ID", False)
+    app.config["OIDC_CLIENT_SECRET"] = os.environ.get("OIDC_CLIENT_SECRET")
+    app.config["OIDC_METADATA_URL"] = os.environ.get("OIDC_METADATA_URL")
+    app.config["OIDC_REDIRECT_URL"] = os.environ.get("OIDC_REDIRECT_URL")
+    register_oauth()
+
+
+@app.route('/sso_login')
+def sso_login():
+    redirect_uri = app.config.get("OIDC_REDIRECT_URL") or url_for('authorize', _external=True)
+    auth_uri = oauth.oidc.authorize_redirect(redirect_uri).location
+    return {
+        "authorizationUrl": auth_uri
+    }
+
+
+@app.route('/authorize')
+def authorize():
+    token = oauth.oidc.authorize_access_token()
+    session["oidc_auth_token"] = token
+    return redirect('/')
 
 
 # Make sure that transactions are finished etc.
@@ -184,7 +228,7 @@ def route_requires_connection():
         "/api/v1/meta",
         "/api/v1/nodes",
         "/api/v1/parallax",
-        "/api/v1/paraquery",
+        "/api/v1/paraqueries",
         "/api/v1/perspectives",
         "/api/v1/query",
         "/api/v1/relations",
@@ -302,8 +346,6 @@ def run_server_debug():
 
 
 if __name__ == "__main__":
-
-
     if IS_FROZEN:
         print(
             f"Welcome to GraphEditor!\n\n\
@@ -313,7 +355,9 @@ if __name__ == "__main__":
         run_server()
 
     # https://stackoverflow.com/questions/70396641/how-to-run-gunicorn-inside-python-not-as-a-command-line
-    elif platform.uname().system.lower()=='linux':
+    # On Linux default to gunicorn. You may still force using werkzeug by setting
+    # the env variable GUI_FORCE_WERKZEUG.
+    elif platform.uname().system.lower()=='linux' and not config.force_werkzeug:
         print("Detected Linux, Preparing gunicorn")
 
         # pylint: disable=import-error
@@ -336,8 +380,6 @@ if __name__ == "__main__":
 
             def load(self):
                 return self.application
-
-
         options = {
             'bind': f"0.0.0.0:{config.port}",
             'workers': multiprocessing.cpu_count() + 1,
@@ -345,9 +387,6 @@ if __name__ == "__main__":
             'timeout': 120,
         }
         StandaloneApplication(app, options).run()
-
-
-
     else:
         print(
             f"Welcome to GraphEditor!\n\n\

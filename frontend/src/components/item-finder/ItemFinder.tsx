@@ -5,11 +5,12 @@ import clsx from 'clsx';
 import { KeyboardEvent, MouseEvent, useEffect, useRef, useState } from 'react';
 import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import { Node } from 'src/models/node';
-import { ITEM_OVERVIEW_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
+import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
+import { ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { isObject, isString } from 'src/utils/helpers/general';
 import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 import { ItemFinderProps } from './ItemFinder.interfaces';
 
 /**
@@ -52,15 +53,20 @@ export const ItemFinder = <T extends Node>({
 	const [selectedOptions, setSelectedOptions] = useState<Array<T>>(
 		intersectOptions(defaultSelectedOptions || [], options)
 	);
-	const [selectedItemTooltipId, setSelectedItemTooltipId] = useState<string | null>(null);
-	const tooltipRef = useRef<HTMLElement | null>(null);
-	const tooltipTimeoutRef = useRef(0);
 	const delayedCallback = useDebounce(searchTimeoutMilliseconds);
 	const inputFocusEventTriggered = useRef(false);
 	const ref = useOutsideClick<HTMLDivElement>({
 		callback: () => {
+			const currentlyHoveredOverview = useItemOverviewPopoverStore
+				.getState()
+				.getCurrentlyHoveredOverview();
+
+			if (currentlyHoveredOverview) {
+				return;
+			}
+
 			if (showList) {
-				setShowList(false);
+				shouldShowList(false);
 			}
 
 			// set selected option title as input value if user cleared the input and clicked outside
@@ -88,6 +94,13 @@ export const ItemFinder = <T extends Node>({
 			setInternalInputValue('');
 		}
 	}, [value]);
+
+	const shouldShowList = (showList: boolean) => {
+		if (!showList) {
+			useItemOverviewPopoverStore.getState().reset();
+		}
+		setShowList(showList);
+	};
 
 	/**
 	 * Function executed on the input field change.
@@ -152,7 +165,7 @@ export const ItemFinder = <T extends Node>({
 			freshSelectedOptions = [option];
 
 			// hide the list on each option click
-			setShowList(false);
+			shouldShowList(false);
 			// update input value
 			setInternalInputValue(isString(option) ? option : option.title);
 		}
@@ -171,7 +184,7 @@ export const ItemFinder = <T extends Node>({
 
 	const inputFocusHandler = () => {
 		inputFocusEventTriggered.current = true;
-		setShowList(true);
+		shouldShowList(true);
 	};
 
 	const inputBlurHandler = () => {
@@ -182,25 +195,10 @@ export const ItemFinder = <T extends Node>({
 		// toggle list only after 2nd click (important since the "click" event is
 		// triggered after "focus" event) on the focused input
 		if (document.activeElement === event.target && !inputFocusEventTriggered.current) {
-			setShowList(!showList);
+			shouldShowList(!showList);
 		}
 
 		inputFocusEventTriggered.current = false;
-	};
-
-	const mouseEnterHandler = (event: MouseEvent<HTMLSpanElement>, option: T) => {
-		tooltipRef.current = event.currentTarget;
-
-		tooltipTimeoutRef.current = window.setTimeout(() => {
-			setSelectedItemTooltipId(option.id);
-		}, ITEM_OVERVIEW_TIMEOUT_MILLISECONDS);
-	};
-
-	const mouseLeaveHandler = () => {
-		tooltipRef.current = null;
-
-		window.clearTimeout(tooltipTimeoutRef.current);
-		setSelectedItemTooltipId(null);
 	};
 
 	const listClassName = clsx(
@@ -234,12 +232,7 @@ export const ItemFinder = <T extends Node>({
 					<ul className={listClassName}>
 						{options.map((option, index) => {
 							const isOptionString = isString(option);
-							const isNode = !isOptionString;
 							const isSelected = isOptionSelected(option);
-							const renderTooltip =
-								selectedItemTooltipId &&
-								isNode &&
-								selectedItemTooltipId === option.id;
 							const listItemClassName = clsx(
 								'item-finder__list-item',
 								isMultiselect && 'item-finder__list-item--checkbox',
@@ -256,10 +249,16 @@ export const ItemFinder = <T extends Node>({
 											<span>{idFormatter.parseIdToName(option)}</span>
 										) : (
 											<span
-												onMouseEnter={(event) =>
-													mouseEnterHandler(event, option)
-												}
-												onMouseLeave={mouseLeaveHandler}
+												ref={(element) => {
+													if (element) {
+														useItemOverviewPopoverStore
+															.getState()
+															.registerTriggerElement({
+																triggerElement: element,
+																item: option
+															});
+													}
+												}}
 											>
 												<span className="item-finder__list-item-title">
 													<strong>
@@ -269,13 +268,6 @@ export const ItemFinder = <T extends Node>({
 												<span className="item-finder__list-item-description">
 													{option.description}
 												</span>
-
-												{renderTooltip && (
-													<ItemOverviewPopover
-														item={option}
-														popoverRef={tooltipRef.current}
-													/>
-												)}
 											</span>
 										)}
 									</div>

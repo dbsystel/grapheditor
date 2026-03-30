@@ -1,13 +1,7 @@
-import { MouseEvent } from 'react';
+import { BreadcrumbEntry } from 'src/components/breadcrumb/Breadcrumb.interfaces';
 import { GlobalComponentProps } from 'src/types/components';
 
 export type BreadcrumbsProps = GlobalComponentProps & {
-	breadcrumbs: Array<Breadcrumb>;
+	breadcrumbs: Array<BreadcrumbEntry>;
 	activeBreadcrumbIndex?: number;
-};
-
-export type Breadcrumb = {
-	text: string;
-	title?: string;
-	onClick?: (event: MouseEvent<HTMLSpanElement>) => void;
 };

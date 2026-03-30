@@ -1,7 +1,14 @@
 import './MenuButton.scss';
 import { DBButton, DBCard, DBIcon, DBPopover } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ReactNode, useState } from 'react';
+import {
+	createContext,
+	PropsWithChildren,
+	ReactNode,
+	useContext,
+	useEffect,
+	useState
+} from 'react';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
 import {
 	MenuButtonOption,
@@ -20,95 +27,124 @@ export const MenuButton = ({
 	testId
 }: MenuButtonProps) => {
 	const rootElementClassName = clsx('menu-button', className);
-	const [isMenuOpen, setIsMenuOpen] = useState(false);
-	const rootElementRef = useOutsideClick<HTMLDivElement>({
-		callback: () => {
-			setIsMenuOpen(false);
-		}
-	});
+
+	const [isMenuOpenState, setIsMenuOpenState] = useState(false);
+	const rootElementRef = useOutsideClick<HTMLDivElement>(
+		{
+			callback: () => {
+				if (isMenuOpenState) {
+					setIsMenuOpenState(false);
+				}
+			}
+		},
+		[isMenuOpenState]
+	);
 	const buttonIcon = icon || 'more_vertical';
 
-	const handleOptionClick = (option: MenuButtonOption) => {
-		option.onClick?.();
-
-		setIsMenuOpen(false);
-	};
+	function setItMenuOpen(isOpen: boolean) {
+		setIsMenuOpenState(isOpen);
+	}
 
 	return (
-		<DBPopover
-			id={id}
-			className={rootElementClassName}
-			data-testid={testId}
-			ref={rootElementRef}
-			spacing="none"
-			placement={optionsPlacement}
-			open={isMenuOpen}
-			trigger={
-				<DBButton
-					className={className}
-					icon={buttonIcon}
-					type="button"
-					size={buttonSize}
-					noText
-					variant="ghost"
-					onClick={() => setIsMenuOpen(!isMenuOpen)}
-					disabled={false}
-				/>
-			}
+		<MenuButtonContext
+			value={{
+				setItMenuOpen: setItMenuOpen,
+				isMenuOpen: isMenuOpenState
+			}}
 		>
-			<OptionsContent options={options} onOptionClick={handleOptionClick} />
-		</DBPopover>
+			<DBPopover
+				id={id}
+				className={rootElementClassName}
+				data-testid={testId}
+				ref={rootElementRef}
+				spacing="none"
+				width="fixed"
+				placement={optionsPlacement}
+				open={isMenuOpenState}
+				trigger={
+					<DBButton
+						className={className}
+						icon={buttonIcon}
+						type="button"
+						size={buttonSize}
+						noText
+						variant="ghost"
+						onClick={() => setIsMenuOpenState(!isMenuOpenState)}
+						disabled={false}
+					/>
+				}
+			>
+				{isMenuOpenState && <OptionsContent options={options} />}
+			</DBPopover>
+		</MenuButtonContext>
 	);
 };
 
-const MenuButtonWithSubMenu = ({
-	option: { options, onClick, icon, title, optionsPlacement, buttonSize, shouldRenderTitleAsIs }
-}: {
-	option: MenuButtonOption;
-}) => {
+export const MenuButtonContext = createContext({
+	isMenuOpen: false,
+	setItMenuOpen: (isMenuOpen: boolean) => {}
+});
+
+const OptionsContent = ({
+	options,
+	handleMenuBlockOpenState
+}: MenuButtonOptionsContentProps & { handleMenuBlockOpenState?: () => void }) => {
+	return (
+		<DBCard spacing="none">
+			{options.map((option, index) => {
+				if (option.options) {
+					return <MenuButtonWithSubMenu key={index} option={option} />;
+				} else {
+					return (
+						<MenuButtonSingleButton
+							key={index}
+							option={option}
+							handleMenuBlockOpenState={handleMenuBlockOpenState}
+						/>
+					);
+				}
+			})}
+		</DBCard>
+	);
+};
+
+const MenuButtonWithSubMenu = ({ option }: { option: MenuButtonOption }) => {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const context = useContext(MenuButtonContext);
 	const rootElementRef = useOutsideClick<HTMLDivElement>({
 		callback: () => {
 			setIsMenuOpen(false);
 		}
 	});
+
+	useEffect(() => {
+		if (!context.isMenuOpen) {
+			setIsMenuOpen(false);
+		}
+	}, [context.isMenuOpen]);
 
 	const localOnClick = () => {
 		setIsMenuOpen(!isMenuOpen);
 
-		if (onClick) {
-			onClick();
+		if (option.onClick) {
+			option.onClick();
 		}
 	};
 
-	if (!options) {
-		if (shouldRenderTitleAsIs) {
-			return title;
-		}
-
-		return (
-			<DBButton icon={icon} type="button" size="small" variant="ghost" onClick={onClick}>
-				{title}
-			</DBButton>
-		);
+	if (!option.options) {
+		return <MenuButtonSingleButton option={option} />;
 	} else {
 		let titleContent: ReactNode = (
 			<>
-				{title} <DBIcon icon="chevron_right" />
+				{option.title} <DBIcon icon="chevron_right" />
 			</>
 		);
 
-		if (!shouldRenderTitleAsIs) {
+		if (!option.shouldRenderTitleAsIs) {
 			titleContent = (
-				<DBButton
-					icon={icon}
-					type="button"
-					size={buttonSize}
-					variant="ghost"
-					onClick={localOnClick}
-				>
+				<MenuButtonSingleButton option={option} handleMenuBlockOpenState={localOnClick}>
 					{titleContent}
-				</DBButton>
+				</MenuButtonSingleButton>
 			);
 		}
 
@@ -116,42 +152,56 @@ const MenuButtonWithSubMenu = ({
 			<DBPopover
 				ref={rootElementRef}
 				spacing="none"
-				placement={optionsPlacement}
+				placement={option.optionsPlacement}
 				open={isMenuOpen}
 				trigger={titleContent}
 			>
-				<OptionsContent options={options} />
+				<OptionsContent options={option.options} handleMenuBlockOpenState={localOnClick} />
 			</DBPopover>
 		);
 	}
 };
 
-const OptionsContent = ({ options, onOptionClick }: MenuButtonOptionsContentProps) => {
-	return (
-		<DBCard spacing="none">
-			{options.map((option, index) => {
-				if (option.options) {
-					return <MenuButtonWithSubMenu key={index.toString()} option={option} />;
-				} else {
-					if (option.shouldRenderTitleAsIs) {
-						return option.title;
-					}
+const MenuButtonSingleButton = ({
+	option,
+	children,
+	handleMenuBlockOpenState
+}: {
+	option: MenuButtonOption;
+	handleMenuBlockOpenState?: () => void;
+} & PropsWithChildren) => {
+	const context = useContext(MenuButtonContext);
 
-					return (
-						<DBButton
-							icon={option.icon}
-							type="button"
-							size={option.buttonSize}
-							variant="ghost"
-							onClick={() => onOptionClick?.(option)}
-							disabled={option.isDisabled}
-							key={index.toString()}
-						>
-							{option.title}
-						</DBButton>
-					);
-				}
-			})}
-		</DBCard>
+	const localOnClick = () => {
+		// handle parent menu open state
+		if (handleMenuBlockOpenState) {
+			handleMenuBlockOpenState();
+		}
+
+		// handle main menu open state
+		if (option.closeMenuOnClick) {
+			context.setItMenuOpen(false);
+		}
+
+		if (option.onClick) {
+			option.onClick();
+		}
+	};
+
+	if (option.shouldRenderTitleAsIs) {
+		return option.title;
+	}
+
+	return (
+		<DBButton
+			icon={option.icon}
+			type="button"
+			size={option.buttonSize}
+			variant="ghost"
+			onClick={localOnClick}
+			disabled={option.isDisabled}
+		>
+			{children || option.title}
+		</DBButton>
 	);
 };

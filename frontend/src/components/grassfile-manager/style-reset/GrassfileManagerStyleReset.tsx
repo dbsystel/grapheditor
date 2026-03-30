@@ -3,8 +3,9 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 import { processPerspective } from 'src/utils/helpers/nodes';
 import { useGetStyleReset } from 'src/utils/hooks/useGetStyleReset';
 import { GrassfileManagerStyleResetProps } from './GrassfileManagerStyleReset.interfaces';
@@ -17,7 +18,8 @@ export const GrassfileManagerStyleReset = ({
 }: GrassfileManagerStyleResetProps) => {
 	const { t } = useTranslation();
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const { setIsLoading, perspectiveId } = useGraphStore((state) => state);
+	const { setIsLoading } = useGraphStore((state) => state);
+	const perspective = usePerspectiveStore((store) => store.perspective);
 	const searchStore = useSearchStore((store) => store);
 
 	const { isLoading, reFetch } = useGetStyleReset({
@@ -33,9 +35,9 @@ export const GrassfileManagerStyleReset = ({
 
 			searchStore.setResetStyles(true);
 
-			if (perspectiveId) {
-				nodesApi
-					.getPerspective({ perspectiveId: perspectiveId })
+			if (perspective) {
+				api.perspectives.fetch
+					.getPerspective({ perspectiveId: perspective.id })
 					.then((response) => processPerspective(response.data));
 			}
 		},

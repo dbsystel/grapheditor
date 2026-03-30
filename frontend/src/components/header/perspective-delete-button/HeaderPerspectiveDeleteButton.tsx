@@ -8,8 +8,9 @@ import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
 import { GRAPH_LAYOUT_FORCE_ATLAS_2 } from 'src/utils/constants';
 import { HeaderPerspectiveDeleteButtonProps } from './HeaderPerspectiveDeleteButton.interfaces';
 
@@ -29,7 +30,7 @@ export const HeaderPerspectiveDeleteButton = ({
 	const perspectiveDelete = () => {
 		setIsLoading(true);
 
-		nodesApi
+		api.nodes.actions
 			.deleteNodesAndUpdateApplication([perspectiveId])
 			.then((response) => {
 				if (response.num_deleted > 0) {
@@ -42,8 +43,7 @@ export const HeaderPerspectiveDeleteButton = ({
 						type: 'successful'
 					});
 
-					useGraphStore.getState().setPerspectiveId(null);
-					useGraphStore.getState().setPerspectiveName(null);
+					usePerspectiveStore.getState().reset();
 
 					setAlgorithm(GRAPH_LAYOUT_FORCE_ATLAS_2);
 				}

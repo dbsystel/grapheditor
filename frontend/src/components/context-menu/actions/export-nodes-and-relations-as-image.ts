@@ -1,10 +1,10 @@
 import { getNodesViewportCoordinates } from 'src/components/network-graph/helpers';
-import { Point } from 'src/models/graph';
+import { Cartesian2D } from 'src/models/graph';
 import { NodeId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { downloadFile, getFormattedCurrentDateTime, parseError } from 'src/utils/helpers/general';
+import { downloadFile, getFormattedCurrentDatetime, parseError } from 'src/utils/helpers/general';
 
 export const exportNodesAndTheirRelationsAsImageAction = async (
 	nodeIds: Array<NodeId>,
@@ -56,8 +56,8 @@ export const exportNodesAndTheirRelationsAsImageAction = async (
 			// get nodes viewport coordinates
 			const nodesViewportCoordinates = getNodesViewportCoordinates(nodeIds);
 			// variables for the most top-left and bottom-right coordinates
-			const topLeft: Point = { x: Infinity, y: Infinity };
-			const bottomRight: Point = { x: -Infinity, y: -Infinity };
+			const topLeft: Cartesian2D = { x: Infinity, y: Infinity };
+			const bottomRight: Cartesian2D = { x: -Infinity, y: -Infinity };
 
 			Object.values(nodesViewportCoordinates).forEach((value) => {
 				if (value.topLeft.x < topLeft.x) {
@@ -74,11 +74,11 @@ export const exportNodesAndTheirRelationsAsImageAction = async (
 				}
 			});
 
-			const topLeftTranslated: Point = {
+			const topLeftTranslated: Cartesian2D = {
 				x: topLeft.x + sigmaContainerViewportOffset.left,
 				y: topLeft.y + sigmaContainerViewportOffset.top
 			};
-			const bottomRightTranslated: Point = {
+			const bottomRightTranslated: Cartesian2D = {
 				x: bottomRight.x + sigmaContainerViewportOffset.left,
 				y: bottomRight.y + sigmaContainerViewportOffset.top
 			};
@@ -117,7 +117,7 @@ export const exportNodesAndTheirRelationsAsImageAction = async (
 						if (blob) {
 							downloadFile({
 								name:
-									'export-' + getFormattedCurrentDateTime() + '.' + fileExtension,
+									'export-' + getFormattedCurrentDatetime() + '.' + fileExtension,
 								content: blob
 							});
 

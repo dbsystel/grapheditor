@@ -3,14 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder';
 import { Node } from 'src/models/node';
 import { useGraphStore } from 'src/stores/graph';
-import { nodesApi } from 'src/utils/api/nodes';
+import { api } from 'src/utils/api/api';
+import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 import { useGetNodesDefaultLabelsNodes } from 'src/utils/hooks/useGetNodesDefaultLabelsNodes';
 
 export const NetworkGraphNodeLabelsDefault = () => {
 	const { defaultNodeLabels, setDefaultNodeLabels } = useGraphStore((store) => store);
 	const { t } = useTranslation();
 	const initialDefaultLabelsFetched = useRef(false);
-	const { reFetch, isLoading } = useGetNodesDefaultLabelsNodes({
+	const { isLoading } = useGetNodesDefaultLabelsNodes({
 		executeImmediately: true,
 		onSuccess: (data) => {
 			setDefaultNodeLabels(data.data.nodes);
@@ -23,11 +24,10 @@ export const NetworkGraphNodeLabelsDefault = () => {
 		isItemSelected: boolean,
 		selectedItems: Array<Node>
 	) => {
-		nodesApi
-			.postNodesLabelsDefault({ labelIds: selectedItems.map((label) => label.id) })
-			.then(() => {
-				reFetch();
-			});
+		setDefaultNodeLabels(selectedItems);
+		api.nodes.fetch.postNodesLabelsDefault({
+			labelIds: selectedItems.map((label) => getNodeSemanticIdOrId(label))
+		});
 	};
 
 	const defaultNodeLabelsLabel = t('graph_default_node_labels_label');

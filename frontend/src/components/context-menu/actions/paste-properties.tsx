@@ -9,22 +9,17 @@ import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableHead } from 'src/components/table-head/TableHead';
 import { TableRow } from 'src/components/table-row/TableRow';
 import i18n from 'src/i18n';
-import {
-	ItemPropertyKey,
-	ItemPropertyType,
-	ItemPropertyValue,
-	ItemPropertyWithKey
-} from 'src/models/item';
+import { ItemPropertyKey, ItemPropertyWithKey } from 'src/models/item';
 import { NodeId, PatchNode } from 'src/models/node';
 import { RelationId } from 'src/models/relation';
 import { useClipboardStore } from 'src/stores/clipboard';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { clone } from 'src/utils/helpers/general';
+import { extractItemPropertyFromItemPropertyWithKey } from 'src/utils/helpers/items';
 import { isNode } from 'src/utils/helpers/nodes';
-import { idFormatter } from 'src/utils/idFormatter';
+import { idFormatter } from 'src/utils/id-formatter';
 
 // list of properties
 export const PastePropertiesAction = ({
@@ -39,11 +34,7 @@ export const PastePropertiesAction = ({
 			ItemPropertyKey,
 			{
 				itemId: NodeId | RelationId;
-				property: {
-					key: ItemPropertyKey;
-					value: ItemPropertyValue;
-					type: ItemPropertyType;
-				};
+				property: ItemPropertyWithKey;
 			}
 		>
 	>({});
@@ -52,7 +43,7 @@ export const PastePropertiesAction = ({
 
 	const handleCheckboxChange = (
 		itemId: NodeId | RelationId,
-		property: Omit<ItemPropertyWithKey, 'edit'>,
+		property: ItemPropertyWithKey,
 		isChecked: boolean
 	) => {
 		const selectedPropertiesClone = clone(selectedProperties);
@@ -60,11 +51,7 @@ export const PastePropertiesAction = ({
 		if (isChecked) {
 			selectedPropertiesClone[property.key] = {
 				itemId: itemId,
-				property: {
-					key: property.key,
-					value: property.value,
-					type: property.type
-				}
+				property: property
 			};
 		} else {
 			delete selectedPropertiesClone[property.key];
@@ -84,16 +71,15 @@ export const PastePropertiesAction = ({
 				};
 
 				Object.values(selectedProperties).forEach(({ property }) => {
-					patchNode.properties[property.key] = {
-						type: property.type,
-						value: property.value,
-						edit: true
-					};
+					patchNode.properties[property.key] =
+						extractItemPropertyFromItemPropertyWithKey(property);
 				});
 
 				const patchApi = isNode(pasteTo)
-					? nodesApi.patchNodesAndUpdateApplication.bind(null, [patchNode])
-					: relationsApi.patchRelationsAndUpdateApplication.bind(null, [patchNode]);
+					? api.nodes.actions.patchNodesAndUpdateApplication.bind(null, [patchNode])
+					: api.relations.actions.patchRelationsAndUpdateApplication.bind(null, [
+							patchNode
+						]);
 
 				useContextMenuStore.getState().setIsActionLoading(true);
 
@@ -149,8 +135,7 @@ export const PastePropertiesAction = ({
 																copiedItem.id,
 																{
 																	key: propertyKey,
-																	value: property.value,
-																	type: property.type
+																	...property
 																},
 																event.target.checked
 															)
@@ -166,7 +151,9 @@ export const PastePropertiesAction = ({
 												<TableCell>
 													{idFormatter.parseIdToName(propertyKey)}
 												</TableCell>
-												<TableCell>{property.value}</TableCell>
+												<TableCell>
+													{JSON.stringify(property.value)}
+												</TableCell>
 												<TableCell>{property.type}</TableCell>
 											</TableRow>
 										);

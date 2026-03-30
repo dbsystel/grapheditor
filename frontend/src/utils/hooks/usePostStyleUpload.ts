@@ -1,6 +1,6 @@
 import { AxiosError, AxiosResponse } from 'axios';
+import { api } from 'src/utils/api/api';
 import {
-	postStyleUpload,
 	PostStyleUploadParameters,
 	PostStyleUploadResponse
 } from 'src/utils/fetch/postStyleUpload';
@@ -33,7 +33,7 @@ export const usePostStyleUpload = (
 		onFinally: onFinally,
 		dependencies: dependencies,
 		fetchFunction: (parameters?: PostStyleUploadParameters) => {
-			return postStyleUpload({ file: parameters?.file || file });
+			return api.styles.fetch.postStyleUpload({ file: parameters?.file || file });
 		}
 	});
 };

@@ -1,6 +1,7 @@
 import { StyleProperties } from 'src/models/general';
 import { Node, NodeId, NonPseudoNode } from 'src/models/node';
 import { Relation, RelationId } from 'src/models/relation';
+import { eventBus } from 'src/utils/event-bus';
 import { isNode, isNonPseudoNode } from 'src/utils/helpers/nodes';
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -12,14 +13,6 @@ type RelationsStorage = Map<string, Relation>;
  * the state. It should be used/seen as the main source of truth when it comes
  * to nodes and relations, meaning components should rely on data stored in this
  * store.
- * Additionally, it provides an callback system enabling to hook into specific
- * actions, such as executing a callback when a node/relation/item is added.
- * Please note that the items store event API is WIP and current state is just
- * an example (or even better - a preparation for the upcoming application
- * functionality changes).
- *
- * TODO consider replacing Promise.allSettled with Promise.all,
- *  or creating additional methods (e.g. getNodesAsyncSettled)
  */
 type ItemsStore = {
 	// get only locally available store item
@@ -40,11 +33,7 @@ type ItemsStore = {
 	getStoreNonPseudoNodes: () => Array<NonPseudoNode>;
 	removeNode: (nodeId: NodeId, preventRerender?: boolean) => void;
 	removeNodes: (nodeIds: Array<NodeId>, preventRerender?: boolean) => void;
-	setNodePosition: (
-		nodeId: NodeId,
-		coordinates: { x: number; y: number; z?: number },
-		preventRerender?: boolean
-	) => void;
+	setNodePosition: (nodeId: NodeId, coordinates: { x: number; y: number; z?: number }) => void;
 	// relations storage API
 	relations: Map<RelationId, Relation>;
 	setRelation: (relation: Relation, preventRerender?: boolean) => void;
@@ -55,23 +44,6 @@ type ItemsStore = {
 	getStoreRelations: (relationIds: Array<RelationId>) => Array<Relation>;
 	removeRelation: (relationId: RelationId, preventRerender?: boolean) => void;
 	removeRelations: (relationIds: Array<RelationId>, preventRerender?: boolean) => void;
-	// callbacks API (example, WIP)
-	callbacks: {
-		[T in ItemsStoreEventListenerType]: Array<(item: ItemsStoreEventCallbackItem<T>) => void>;
-	};
-	// TODO rename to "on" or "onCallback" or ... since instead of events we work with callbacks
-	addEventListener: <T extends ItemsStoreEventListenerType>(
-		eventType: T,
-		callback: (item: ItemsStoreEventCallbackItem<T>) => void
-	) => void;
-	removeEventListener: <T extends ItemsStoreEventListenerType>(
-		eventType: T,
-		callback: (item: ItemsStoreEventCallbackItem<T>) => void
-	) => void;
-	executeCallbacks: <T extends ItemsStoreEventListenerType>(
-		eventType: T,
-		item: ItemsStoreEventCallbackItem<T>
-	) => void;
 	// rest
 	refreshNodes: () => void;
 	refreshRelations: () => void;
@@ -105,9 +77,6 @@ type InitialState = Omit<
 	| 'setRelation'
 	| 'removeRelation'
 	| 'removeRelations'
-	| 'addEventListener'
-	| 'removeEventListener'
-	| 'executeCallbacks'
 	| 'refreshNodes'
 	| 'refreshRelations'
 	| 'refreshNodesAndRelations'
@@ -118,57 +87,13 @@ type InitialState = Omit<
 const getInitialState: () => InitialState = () => {
 	return {
 		nodes: new Map(),
-		relations: new Map(),
-		callbacks: {
-			onNodesAdd: [],
-			onNodesUpdate: [],
-			onNodesRemove: [],
-			onRelationsAdd: [],
-			onRelationsUpdate: [],
-			onRelationsRemove: []
-		}
+		relations: new Map()
 	};
 };
-
-type ItemsStoreEventListenerType =
-	| 'onNodesAdd'
-	| 'onNodesRemove'
-	| 'onNodesUpdate'
-	| 'onRelationsAdd'
-	| 'onRelationsRemove'
-	| 'onRelationsUpdate';
-type ItemsStoreEventCallbackItem<T> = T extends 'onNodesAdd' | 'onNodesUpdate' | 'onNodesRemove'
-	? Array<Node>
-	: T extends 'onRelationsAdd' | 'onRelationsUpdate' | 'onRelationsRemove'
-		? Array<Relation>
-		: never;
 
 export const useItemsStore = create<ItemsStore>()(
 	subscribeWithSelector((set, get) => ({
 		...getInitialState(),
-		addEventListener: (eventType, callback) => {
-			set({
-				callbacks: {
-					...get().callbacks,
-					[eventType]: [...get().callbacks[eventType], callback]
-				}
-			});
-		},
-		removeEventListener: (eventType, callback) => {
-			set({
-				callbacks: {
-					...get().callbacks,
-					[eventType]: get().callbacks[eventType].filter((existingCallback) => {
-						return existingCallback !== callback;
-					})
-				}
-			});
-		},
-		executeCallbacks: (eventType, item) => {
-			get().callbacks[eventType].forEach((callback) => {
-				callback(item);
-			});
-		},
 		getStoreItem: (itemId) => {
 			return get().nodes.get(itemId) || get().relations.get(itemId);
 		},
@@ -228,7 +153,7 @@ export const useItemsStore = create<ItemsStore>()(
 				});
 			}
 
-			get().executeCallbacks(nodeExists ? 'onNodesUpdate' : 'onNodesAdd', [node]);
+			eventBus.publish(nodeExists ? 'nodesUpdate' : 'nodesAdd', { nodes: [node] });
 		},
 		setNodes: (nodes, preventRerender) => {
 			const newNodes: Array<Node> = [];
@@ -251,13 +176,13 @@ export const useItemsStore = create<ItemsStore>()(
 			}
 
 			if (newNodes.length) {
-				get().executeCallbacks('onNodesAdd', newNodes);
+				eventBus.publish('nodesAdd', { nodes: newNodes });
 			}
 			if (updatedNodes.length) {
-				get().executeCallbacks('onNodesUpdate', updatedNodes);
+				eventBus.publish('nodesUpdate', { nodes: updatedNodes });
 			}
 		},
-		setNodePosition: (nodeId, coordinates, preventRerender) => {
+		setNodePosition: (nodeId, coordinates) => {
 			const node = get().getStoreNode(nodeId);
 
 			if (node) {
@@ -271,16 +196,13 @@ export const useItemsStore = create<ItemsStore>()(
 					newStyleObject.z = coordinates.z.toString();
 				}
 
-				get().setNode(
-					{
-						...node,
-						style: {
-							...node.style,
-							...newStyleObject
-						}
-					},
-					preventRerender
-				);
+				// style changes must trigger separate event (not yet implemented) since style changes
+				// are mostly GUI changes, so we don't want to trigger full node update event which
+				// might trigger some API calls etc.
+				node.style = {
+					...node.style,
+					...newStyleObject
+				};
 			}
 		},
 		removeNode: (nodeId, preventRerender) => {
@@ -307,7 +229,7 @@ export const useItemsStore = create<ItemsStore>()(
 				});
 			}
 
-			get().executeCallbacks('onNodesRemove', [node]);
+			eventBus.publish('nodesRemove', { nodes: [node] });
 		},
 		removeNodes: (nodeIds, preventRerender) => {
 			const deletedNodes: Array<Node> = [];
@@ -338,7 +260,7 @@ export const useItemsStore = create<ItemsStore>()(
 				});
 			}
 
-			get().executeCallbacks('onNodesRemove', deletedNodes);
+			eventBus.publish('nodesRemove', { nodes: deletedNodes });
 		},
 		setRelation: (relation, preventRerender) => {
 			const relationExists = get().relations.has(relation.id);
@@ -350,9 +272,9 @@ export const useItemsStore = create<ItemsStore>()(
 				});
 			}
 
-			get().executeCallbacks(relationExists ? 'onRelationsUpdate' : 'onRelationsAdd', [
-				relation
-			]);
+			eventBus.publish(relationExists ? 'relationsUpdate' : 'relationsAdd', {
+				relations: [relation]
+			});
 		},
 		setRelations: (relations, preventRerender) => {
 			const newRelations: Array<Relation> = [];
@@ -375,10 +297,10 @@ export const useItemsStore = create<ItemsStore>()(
 			}
 
 			if (newRelations.length) {
-				get().executeCallbacks('onRelationsAdd', newRelations);
+				eventBus.publish('relationsAdd', { relations: newRelations });
 			}
 			if (updatedRelations.length) {
-				get().executeCallbacks('onRelationsUpdate', updatedRelations);
+				eventBus.publish('relationsUpdate', { relations: updatedRelations });
 			}
 		},
 		clearRelations: (preventRerender) => {
@@ -416,7 +338,7 @@ export const useItemsStore = create<ItemsStore>()(
 				});
 			}
 
-			get().executeCallbacks('onRelationsRemove', [relation]);
+			eventBus.publish('relationsRemove', { relations: [relation] });
 		},
 		removeRelations: (relationIds, preventRerender) => {
 			const removedRelations: Array<Relation> = [];
@@ -438,7 +360,7 @@ export const useItemsStore = create<ItemsStore>()(
 				});
 			}
 
-			get().executeCallbacks('onRelationsRemove', removedRelations);
+			eventBus.publish('relationsRemove', { relations: removedRelations });
 		},
 		refreshNodes: () => {
 			set({

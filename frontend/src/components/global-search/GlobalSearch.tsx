@@ -5,9 +5,9 @@ import { ChangeEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { TextareaAutosize } from 'src/components/textarea-autosize/TextareaAutosize';
-import { useGraphStore } from 'src/stores/graph';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { SearchStoreSearchType, useSearchStore } from 'src/stores/search';
-import { searchApi } from 'src/utils/api/search';
+import { api } from 'src/utils/api/api';
 import {
 	GLOBAL_SEARCH_QUERY_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
@@ -15,6 +15,7 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT
 } from 'src/utils/constants';
 import { clone } from 'src/utils/helpers/general';
+import { isCypherQueryOrFullText } from 'src/utils/helpers/search';
 import { GlobalSearchProps } from './GlobalSearch.interfaces';
 
 /**
@@ -27,7 +28,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 	const type = useSearchStore.getState().type;
 
 	// exit early if "type" is not a search type
-	if (!useSearchStore.getState().isSearchType(type)) {
+	if (!isCypherQueryOrFullText(type)) {
 		return;
 	}
 
@@ -39,7 +40,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 	const addHistoryEntry = useSearchStore((store) => store.addHistoryEntry);
 	const exportSelectedHistory = useSearchStore((store) => store.exportSelectedHistory);
 	const clearSelectedHistory = useSearchStore((store) => store.clearSelectedHistory);
-	const clearPerspective = useGraphStore((store) => store.clearPerspective);
+	const resetPerspective = usePerspectiveStore((store) => store.reset);
 	const rootElementClassName = clsx('global-search', className);
 	const [searchState, setSearchState] = useState<
 		Record<
@@ -79,14 +80,14 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 		}
 	}, [type, searchValue]);
 
-	const triggerSearch = () => {
+	searchFunctionRef.current.searchFunction = () => {
 		const searchQuery = getValue();
 
-		clearPerspective();
+		resetPerspective();
 		// update search store
 		setQuery(searchQuery);
 		addHistoryEntry(type, searchQuery);
-		searchApi.executeSearch();
+		api.search.actions.executeSearch();
 
 		setSearchParameters({
 			...Object.fromEntries(searchParams),
@@ -94,8 +95,6 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 			[GLOBAL_SEARCH_QUERY_KEY]: searchQuery
 		});
 	};
-
-	searchFunctionRef.current = { triggerSearch: triggerSearch };
 
 	const getValue = () => {
 		return getSelectedSearchState().value;
@@ -134,7 +133,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 		// if not new line
 		else if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
-			triggerSearch();
+			searchFunctionRef.current.triggerSearch();
 		}
 	};
 
@@ -163,7 +162,6 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 			historyIndex += direction === 'backward' ? 1 : -1;
 		}
 
-		//
 		if (historyIndex < -1) {
 			historyIndex = -1;
 		} else if (historyIndex >= selectedHistory.length) {

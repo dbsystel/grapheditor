@@ -16,7 +16,7 @@ blp = Blueprint(
 
 # don't need a return after abort_with_json
 # pylint: disable=inconsistent-return-statements
-def execute_query(query_text:str, parameters:dict=None):
+def execute_query(query_text:str, parameters:dict|None=None):
     raw_parameters = {
         k: get_base_id(v) if isinstance(v, str) else v
         for k, v in parameters.items()

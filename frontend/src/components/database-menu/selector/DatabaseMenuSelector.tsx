@@ -2,9 +2,10 @@ import './DatabaseMenuSelector.scss';
 import { DBCustomSelect } from '@db-ux/react-core-components';
 import { GeneralEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DatabaseInfo } from 'src/models/database';
+import { Database } from 'src/models/database';
+import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { resetApplicationStates } from 'src/utils/helpers/general';
 import { useGetDatabaseCurrent } from 'src/utils/hooks/useGetDatabaseCurrent';
@@ -13,13 +14,14 @@ import { usePostDatabaseCurrent } from 'src/utils/hooks/usePostDatabaseCurrent';
 import { DatabaseMenuSelectorProps } from './DatabaseMenuSelector.interfaces';
 
 export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSelectorProps) => {
-	const [databases, setDatabases] = useState<Array<DatabaseInfo>>([]);
+	const [databases, setDatabases] = useState<Array<Database>>([]);
 	const [selectedDatabase, setSelectedDatabase] = useState('');
 	const previouslySelectedDatabaseRef = useRef('');
 	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const { t } = useTranslation();
 	const rootElementClassName = clsx('database-menu__selector', className);
 	const selectedDatabaseValue = [selectedDatabase];
+	const selectedDatabaseRef = useRef(selectedDatabase);
 
 	const { reFetch: reFetchDatabases, isLoading: isGetDatabasesLoading } = useGetDatabases({
 		onSuccess: (response) => {
@@ -31,6 +33,10 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 	useGetDatabaseCurrent({
 		onSuccess: (response) => {
 			setSelectedDatabase(response.data.name);
+			useLoginStore.getState().setDatabase(response.data.name);
+		},
+		onFinally() {
+			useLoginStore.getState().setIsDatabaseLoading(false);
 		},
 		executeImmediately: true
 	});
@@ -39,6 +45,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		name: '',
 		onSuccess: () => {
 			resetApplicationStates();
+			useLoginStore.getState().setDatabase(selectedDatabaseRef.current);
 
 			addNotification({
 				title: t('notifications_success_user_database_change'),
@@ -47,18 +54,28 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		},
 		onError: () => {
 			setSelectedDatabase(previouslySelectedDatabaseRef.current);
+			useLoginStore.getState().setDatabase(previouslySelectedDatabaseRef.current);
 
 			addNotification({
 				title: t('notifications_failure_user_database_change'),
 				type: 'critical'
 			});
+		},
+		onFinally() {
+			useLoginStore.getState().setIsDatabaseLoading(false);
 		}
 	});
 
+	useEffect(() => {
+		useLoginStore.getState().setIsDatabaseLoading(true);
+	}, []);
+
 	const onDatabaseChange = (values: Array<string>) => {
 		const newlySelectedDatabase = values[0];
+		useLoginStore.getState().setIsDatabaseLoading(true);
 
 		previouslySelectedDatabaseRef.current = selectedDatabase;
+		selectedDatabaseRef.current = newlySelectedDatabase;
 
 		reFetch({
 			name: newlySelectedDatabase
@@ -80,7 +97,7 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		return {
 			value: database.name,
 			label: `${database.name} ${databaseStatusIndicator}`,
-			disabled: database.status !== 'online'
+			disabled: database.status !== 'online' || database.type === 'composite'
 		};
 	});
 

@@ -7,6 +7,14 @@
 			table-layout: fixed;
 			border-top: var(--db-border-width-2xs) solid
 				var(--db-adaptive-on-bg-basic-emphasis-60-default);
+
+			.table-body {
+				&:not(:last-of-type) {
+					.table-row:last-child .table-cell {
+						border-bottom: 1px solid var(--db-adaptive-on-bg-basic-emphasis-60-default) !important;
+					}
+				}
+			}
 		}
 
 		&__cell {

@@ -15,10 +15,10 @@ export const NetworkGraphNodeClick = () => {
 
 	useEffect(() => {
 		// open node details on node click
-		StateManager.getInstance().on('NODE_CLICK', enableNodeDetailsOnClick);
+		StateManager.getInstance().subscribe('nodeClick', enableNodeDetailsOnClick);
 
 		return () => {
-			StateManager.getInstance().off('NODE_CLICK', enableNodeDetailsOnClick);
+			StateManager.getInstance().unsubscribe('nodeClick', enableNodeDetailsOnClick);
 		};
 	}, []);
 

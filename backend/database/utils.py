@@ -3,6 +3,7 @@ Yes, I know, utils.py is an evil name. TODO
 """
 
 import re
+from typing import Callable
 from flask import abort, current_app, jsonify, make_response
 from database.settings import config
 from database.base_types import BaseElement
@@ -87,3 +88,99 @@ def dict_to_array(d):
 def map_dict_keys(dictionary, func):
     """Return a copy of `dictionary` with `func` applied to its keys."""
     return {func(k): v for k, v in dictionary.items()}
+
+
+# All instance attributes relevant.
+# pylint: disable=too-many-instance-attributes
+class CypherSplitter():
+    "Small state machine to cleanly split multi-statement cypher queries."
+    def __init__(self, query):
+        self._query = query
+        self._pos = 0
+        self._max = len(query)
+        self._cur_state = self._step_read
+        self._statements = []
+        self._cur_statement = ""
+        self._prev = None
+        self._quote_symbol = None
+
+    # We model states as functions that consume a character
+    # and possibly change the current state of the state machine.
+    # The purpose of this function is mainly to help debugging
+    # (see commented-out line).
+    def _change_state(self, new_state: Callable[[str], None]):
+        # pylint: disable=line-too-long
+        # current_app.logger.debug(f"TRANSITION: {self._cur_state.__name__} -> {new_state.__name__}")
+        self._cur_state = new_state
+
+    def _add_statement(self):
+        statement = self._cur_statement.strip()
+        if statement:
+            self._statements.append(statement)
+
+    ## Transition functions
+    def _step_read(self, c):
+        if c == '/' and self._prev == '/':
+            self._change_state(self._step_line_comment)
+            self._cur_statement += c
+        elif c == '*' and self._prev == '/':
+            self._change_state(self._step_block_comment)
+            self._cur_statement += c
+        elif c in ['"', "'", "`"]:
+            self._quote_symbol = c
+            self._change_state(self._step_quote)
+            self._cur_statement += c
+        elif c == '\\':
+            self._change_state(self._step_escape)
+            self._cur_statement += c
+        elif c == ';':
+            self._add_statement()
+            self._cur_statement = ""
+        else:
+            self._cur_statement += c
+
+    def _step_escape(self, c):
+        # don't handle anything following a escape character as special
+        self._change_state(self._step_read)
+        self._cur_statement += c
+
+    def _step_escape_in_quotes(self, c):
+        self._change_state(self._step_quote)
+        self._cur_statement += c
+
+    def _step_line_comment(self, c):
+        if c == '\n':
+            self._change_state(self._step_read)
+        self._cur_statement += c
+
+    def _step_block_comment(self, c):
+        if c == '/' and self._prev == "*":
+            self._change_state(self._step_read)
+        self._cur_statement += c
+
+    def _step_quote(self, c):
+        if c == self._quote_symbol:
+            self._change_state(self._step_read)
+            self._quote_symbol = None
+        elif c == '\\':
+            self._change_state(self._step_escape_in_quotes)
+        self._cur_statement += c
+
+    def read(self):
+        "Split the given query into multiple statements."
+        while self._pos < self._max:
+            c = self._query[self._pos]
+            # _cur_state may change self._cur_state itself for the next iteration
+            self._cur_state(c)
+            self._prev = c
+            self._pos += 1
+
+        if self._cur_statement:
+            self._add_statement()
+        return self._statements
+
+
+def split_statements(query:str) -> list[str]:
+    "Given a cypher query string, split it at ';' respecting the syntax."
+    parser = CypherSplitter(query)
+    return parser.read()

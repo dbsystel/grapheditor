@@ -1,23 +1,21 @@
 import './ItemsDrawer.scss';
-import { DBButton, DBDrawer, DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { PropsWithChildren, useEffect } from 'react';
-import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { BreadcrumbEntry } from 'src/components/breadcrumb/Breadcrumb.interfaces';
 import { Breadcrumbs } from 'src/components/breadcrumbs/Breadcrumbs';
-import { Breadcrumb } from 'src/components/breadcrumbs/Breadcrumbs.interfaces';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemsDrawerProvider } from 'src/components/items-drawer/context/ItemsDrawerContext';
+import { Sidebar } from 'src/components/sidebar/Sidebar';
 import { SingleNode } from 'src/components/single-node/SingleNode';
 import { SingleRelation } from 'src/components/single-relation/SingleRelation';
-import { Item } from 'src/models/item';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { DrawerStoreEntry, useDrawerStore } from 'src/stores/drawer';
-import { useItemsStore } from 'src/stores/items';
+import { eventBus, EventBusEvents } from 'src/utils/event-bus';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
-import { DrawerHeadProps, ItemsDrawerProps } from './ItemsDrawer.interfaces';
+import { ItemsDrawerProps } from './ItemsDrawer.interfaces';
 
 /**
  * Component to render stored items. Only the last item will be rendered.
@@ -33,38 +31,39 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 		removeEntryByItemId,
 		updateEntriesByItems
 	} = useDrawerStore((store) => store);
-	const addEventListener = useItemsStore((store) => store.addEventListener);
-	const removeEventListener = useItemsStore((store) => store.removeEventListener);
-	const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 	// consider memo
 	const activeDrawerEntry = getActiveEntry();
 	let activeItem = null;
-	const rootElementClassName = clsx('items-drawer', className, {
-		'items-drawer--collapsed': isCollapsed
-	});
+	const rootElementClassName = clsx('items-drawer', className);
 	const contentElementClassName = clsx('items-drawer__content');
 
 	useEffect(() => {
-		const onItemsRemove = (items: Array<Item>) => {
+		const onItemsRemove = (
+			data: EventBusEvents['nodesRemove'] | EventBusEvents['relationsRemove']
+		) => {
+			const items = 'nodes' in data ? data.nodes : data.relations;
+
 			items.forEach((item) => {
 				removeEntryByItemId(item.id);
 			});
 		};
 
-		const onItemsUpdate = (items: Array<Item>) => {
-			updateEntriesByItems(items);
+		const onItemsUpdate = (
+			data: EventBusEvents['nodesUpdate'] | EventBusEvents['relationsUpdate']
+		) => {
+			updateEntriesByItems('nodes' in data ? data.nodes : data.relations);
 		};
 
-		addEventListener('onNodesUpdate', onItemsUpdate);
-		addEventListener('onRelationsUpdate', onItemsUpdate);
-		addEventListener('onNodesRemove', onItemsRemove);
-		addEventListener('onRelationsRemove', onItemsRemove);
+		eventBus.subscribe('nodesUpdate', onItemsUpdate);
+		eventBus.subscribe('relationsUpdate', onItemsUpdate);
+		eventBus.subscribe('nodesRemove', onItemsRemove);
+		eventBus.subscribe('relationsRemove', onItemsRemove);
 
 		return () => {
-			removeEventListener('onNodesRemove', onItemsRemove);
-			removeEventListener('onRelationsRemove', onItemsRemove);
-			removeEventListener('onNodesUpdate', onItemsUpdate);
-			removeEventListener('onRelationsUpdate', onItemsUpdate);
+			eventBus.unsubscribe('nodesUpdate', onItemsUpdate);
+			eventBus.unsubscribe('relationsUpdate', onItemsUpdate);
+			eventBus.unsubscribe('nodesRemove', onItemsRemove);
+			eventBus.unsubscribe('relationsRemove', onItemsRemove);
 		};
 	}, []);
 
@@ -76,19 +75,14 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 		reset();
 	};
 
-	const toggleDrawer = () => {
-		setIsCollapsed((prev) => !prev);
-	};
-
 	if (activeDrawerEntry) {
 		activeItem = activeDrawerEntry.item;
 	}
 
 	// prepare breadcrumbs
-	const breadcrumbItems: Array<Breadcrumb> = entries.map((storeItem, index) => {
+	const breadcrumbItems = entries.map<BreadcrumbEntry>((storeItem, index) => {
 		return {
-			text: storeItem.item.title,
-			title: storeItem.item.id,
+			item: storeItem.item,
 			onClick: () => {
 				setActiveEntryIndex(index);
 			}
@@ -100,32 +94,28 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 		activeItem &&
 		createPortal(
 			<ItemsDrawerProvider isInsideItemsDrawer={true}>
-				<DBDrawer
-					closeButtonText=""
+				<Sidebar
 					id={id}
 					className={rootElementClassName}
+					defaultIsCollapsed={false}
 					data-testid={testId}
-					backdrop="none"
-					open={true}
-					onClose={onClose}
-					direction="right"
-					drawerHeader={
-						<DrawerHead
-							breadcrumbs={breadcrumbItems}
-							activeBreadcrumbIndex={activeEntryIndex}
-							onClose={onClose}
-							isCollapsed={isCollapsed}
-							toggleDrawer={toggleDrawer}
-						/>
+					direction="left"
+					onCloseButtonClick={onClose}
+					headerContent={
+						<div className="items-drawer__header-content">
+							<Breadcrumbs
+								breadcrumbs={breadcrumbItems}
+								activeBreadcrumbIndex={activeEntryIndex}
+							/>
+						</div>
 					}
-					spacing="none"
 				>
 					<div className={contentElementClassName}>
 						<ErrorBoundary>
 							<RenderComponent drawerEntry={activeDrawerEntry} item={activeItem} />
 						</ErrorBoundary>
 					</div>
-				</DBDrawer>
+				</Sidebar>
 			</ItemsDrawerProvider>,
 			document.getElementsByClassName('right-widget')[0]
 		)
@@ -170,34 +160,4 @@ const ComponentWrapper = ({ children, entry }: PropsWithChildren<{ entry: Drawer
 	}, [entry]);
 
 	return children;
-};
-
-const DrawerHead = ({
-	breadcrumbs,
-	isCollapsed,
-	toggleDrawer,
-	activeBreadcrumbIndex
-}: DrawerHeadProps & {
-	isCollapsed: boolean;
-	toggleDrawer: () => void;
-	activeBreadcrumbIndex: number;
-}) => {
-	const headerContentClassName = clsx('items-drawer__header-content');
-
-	return (
-		<DBSection spacing="none" className="items-drawer__header">
-			<DBButton
-				icon={isCollapsed ? 'chevron_left' : 'chevron_right'}
-				onClick={toggleDrawer}
-				variant="ghost"
-				noText
-			/>
-			<div className={headerContentClassName}>
-				<Breadcrumbs
-					breadcrumbs={breadcrumbs}
-					activeBreadcrumbIndex={activeBreadcrumbIndex}
-				/>
-			</div>
-		</DBSection>
-	);
 };

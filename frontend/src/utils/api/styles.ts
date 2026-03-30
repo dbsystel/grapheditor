@@ -6,10 +6,12 @@ import { postStyleUpload } from 'src/utils/fetch/postStyleUpload';
 import { deleteStyle } from '../fetch/deleteStyle';
 
 export const stylesApi = {
-	getStyleCurrent: getStyleCurrent,
-	getStyleReset: getStyleReset,
-	getStyles: getStyles,
-	postStyleCurrent: postStyleCurrent,
-	postStyleUpload: postStyleUpload,
-	deleteStyle: deleteStyle
+	fetch: {
+		getStyleCurrent: getStyleCurrent,
+		getStyleReset: getStyleReset,
+		getStyles: getStyles,
+		postStyleCurrent: postStyleCurrent,
+		postStyleUpload: postStyleUpload,
+		deleteStyle: deleteStyle
+	}
 };

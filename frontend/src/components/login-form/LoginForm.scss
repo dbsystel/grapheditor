@@ -1,9 +1,16 @@
 .login-form {
-	display: flex;
 	min-height: 100dvh;
+	display: flex;
 	justify-content: center;
 	align-items: center;
 	flex-direction: column;
+
+	&__content {
+		display: flex;
+		align-items: center;
+		flex-direction: column;
+		height: 500px;
+	}
 
 	&__form {
 		min-width: 400px;

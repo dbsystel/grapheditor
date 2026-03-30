@@ -1,5 +1,7 @@
 .perspective-finder {
 	width: 50%;
+	display: flex;
+	column-gap: var(--db-spacing-fixed-md);
 
 	.db-custom-select {
 		// check if still relevant after https://github.com/db-ux-design-system/core-web/issues/4320 is done

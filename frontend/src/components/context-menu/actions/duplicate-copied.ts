@@ -2,7 +2,7 @@ import {
 	calculateBoundingBoxCenterByCoordinates,
 	getCoordinatesPointRelativeToTargetPoint
 } from 'src/components/network-graph/helpers';
-import { Point } from 'src/models/graph';
+import { Cartesian2D } from 'src/models/graph';
 import { NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useClipboardStore } from 'src/stores/clipboard';
@@ -10,8 +10,7 @@ import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { PostRelationsParameters } from 'src/utils/fetch/postRelations';
 import { parseError } from 'src/utils/helpers/general';
 
@@ -23,7 +22,7 @@ export const duplicateCopiedAction = async () => {
 
 	try {
 		// duplicate nodes
-		const newNodesResponse = await nodesApi.postNodes(
+		const newNodesResponse = await api.nodes.fetch.postNodes(
 			clipboardNodes.map((clipboardNode) => {
 				return {
 					labels: clipboardNode.attributes.data.labels,
@@ -65,12 +64,13 @@ export const duplicateCopiedAction = async () => {
 				}
 			});
 
-			const newRelationsResponse = await relationsApi.postRelations(relationsToDuplicate);
+			const newRelationsResponse =
+				await api.relations.fetch.postRelations(relationsToDuplicate);
 			newRelations = Object.values(newRelationsResponse.data.relations);
 		}
 
 		const event = useContextMenuStore.getState().event;
-		const coordinates: Record<NodeId, Point> = {};
+		const coordinates: Record<NodeId, Cartesian2D> = {};
 
 		clipboardNodes.forEach((graphNode) => {
 			coordinates[graphNode.node] = {

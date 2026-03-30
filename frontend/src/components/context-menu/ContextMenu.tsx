@@ -8,6 +8,7 @@ import { Loading } from 'src/components/loading/Loading';
 import { Modal } from 'src/components/modal/Modal';
 import { StateManager } from 'src/components/network-graph/state-manager';
 import { useContextMenuStore } from 'src/stores/context-menu';
+import { compareTwoStringsForSorting } from 'src/utils/helpers/general';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
 import { usePostContextMenuActions } from 'src/utils/hooks/usePostContextMenuActions';
 import { ContextMenuOption, ContextMenuProps, ContextMenuState } from './ContextMenu.interfaces';
@@ -122,7 +123,9 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 		}
 	};
 
-	const filteredOptions: Array<ContextMenuOption> = filterContextMenuOptions(contextMenuOptions);
+	const filteredOptions = filterContextMenuOptions(contextMenuOptions).sort((a, b) =>
+		compareTwoStringsForSorting(a.label, b.label)
+	);
 
 	if (!isOpen) {
 		return null;
@@ -138,40 +141,43 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 			data-testid={testId}
 		>
 			<div className="context-menu__content" ref={setContextMenuRef} style={floatingStyles}>
-				<Loading
-					key={1}
-					isLoading={isLoading || isActionLoading}
-					renderChildrenWhileLoading={true}
-					// contextMenuCustomContent content is a function, therefore no className can be added to it
-					wrapChildren={isActionLoading}
-				>
-					{!!contextMenuCustomContent && contextMenuCustomContent}
-					{!contextMenuCustomContent && (
-						<ul className="context-menu__list">
-							{filteredOptions.length === 0 && (
-								<p>{t('context_menu_no_options_to_render')}</p>
-							)}
-
-							{filteredOptions.map((option, index) => {
-								return (
-									<li key={index}>
-										<DBButton
-											className="context-menu__button"
-											variant="ghost"
-											size="small"
-											onClick={() => {
-												onOptionClick(option);
-											}}
-										>
-											{option.label}
-										</DBButton>
-										{renderOptions(option.options)}
-									</li>
-								);
-							})}
-						</ul>
-					)}
-				</Loading>
+				{isLoading && <Loading isLoading={true} />}
+				{!isLoading && filteredOptions.length === 0 && (
+					<p>{t('context_menu_no_options_to_render')}</p>
+				)}
+				{!!filteredOptions.length && (
+					<Loading
+						isLoading={isActionLoading}
+						renderChildrenWhileLoading={true}
+						// contextMenuCustomContent content is a function, therefore no className can be added to it
+						wrapChildren={isActionLoading}
+					>
+						{!!contextMenuCustomContent && contextMenuCustomContent}
+						{!contextMenuCustomContent && (
+							<div>
+								<ul className="context-menu__list">
+									{filteredOptions.map((option, index) => {
+										return (
+											<li key={index}>
+												<DBButton
+													className="context-menu__button"
+													variant="ghost"
+													size="small"
+													onClick={() => {
+														onOptionClick(option);
+													}}
+												>
+													{option.label}
+												</DBButton>
+												{renderOptions(option.options)}
+											</li>
+										);
+									})}
+								</ul>
+							</div>
+						)}
+					</Loading>
+				)}
 			</div>
 		</Modal>
 	);

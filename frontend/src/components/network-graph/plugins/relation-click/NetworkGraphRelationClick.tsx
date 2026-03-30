@@ -15,10 +15,10 @@ export const NetworkGraphRelationClick = () => {
 
 	useEffect(() => {
 		// open relation details on relation click
-		StateManager.getInstance().on('RELATION_CLICK', enableRelationDetailsOnClick);
+		StateManager.getInstance().subscribe('relationClick', enableRelationDetailsOnClick);
 
 		return () => {
-			StateManager.getInstance().off('RELATION_CLICK', enableRelationDetailsOnClick);
+			StateManager.getInstance().unsubscribe('relationClick', enableRelationDetailsOnClick);
 		};
 	}, []);
 

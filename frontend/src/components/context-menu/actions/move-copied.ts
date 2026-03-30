@@ -2,15 +2,14 @@ import {
 	calculateBoundingBoxCenterByCoordinates,
 	getCoordinatesPointRelativeToTargetPoint
 } from 'src/components/network-graph/helpers';
-import { Point } from 'src/models/graph';
+import { Cartesian2D } from 'src/models/graph';
 import { NodeId } from 'src/models/node';
 import { useClipboardStore } from 'src/stores/clipboard';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { nodesApi } from 'src/utils/api/nodes';
-import { relationsApi } from 'src/utils/api/relations';
+import { api } from 'src/utils/api/api';
 import { parseError } from 'src/utils/helpers/general';
 
 // take coordinates from clipboard
@@ -32,7 +31,7 @@ export const moveCopiedAction = async () => {
 			const sigma = useGraphStore.getState().sigma;
 			const graph = useGraphStore.getState().sigma.getGraph();
 			const eventCoordinates = useGraphStore.getState().sigma.viewportToGraph(event.event);
-			const coordinates: Record<NodeId, Point> = {};
+			const coordinates: Record<NodeId, Cartesian2D> = {};
 			const missingNodeIds = clipboardNodeIds.filter((clipboardNodeId) => {
 				return !graph.hasNode(clipboardNodeId);
 			});
@@ -43,7 +42,10 @@ export const moveCopiedAction = async () => {
 
 			// fetch missing nodes
 			if (missingNodeIds.length) {
-				const missingNodes = await nodesApi.postNodesBulkFetch({ nodeIds: missingNodeIds });
+				const response = await api.nodes.fetch.postNodesBulkFetch({
+					nodeIds: missingNodeIds
+				});
+				const missingNodes = Object.values(response.data.nodes);
 
 				useItemsStore.getState().setNodes(missingNodes, true);
 				useGraphStore.getState().addNodes(missingNodes);
@@ -53,7 +55,7 @@ export const moveCopiedAction = async () => {
 
 			// fetch missing relations
 			if (missingRelationIds.length) {
-				const missingRelationsResponse = await relationsApi.postRelationsBulkFetch({
+				const missingRelationsResponse = await api.relations.fetch.postRelationsBulkFetch({
 					relationIds: missingRelationIds
 				});
 				const missingRelations = Object.values(missingRelationsResponse.data.relations);
@@ -110,14 +112,10 @@ export const moveCopiedAction = async () => {
 						y: newPoint.y
 					});
 
-					useItemsStore.getState().setNodePosition(
-						nodeId,
-						{
-							x: newPoint.x,
-							y: newPoint.y
-						},
-						true
-					);
+					useItemsStore.getState().setNodePosition(nodeId, {
+						x: newPoint.x,
+						y: newPoint.y
+					});
 				}
 			});
 
