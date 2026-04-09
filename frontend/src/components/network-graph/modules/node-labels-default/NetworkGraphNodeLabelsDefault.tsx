@@ -32,7 +32,7 @@ export const NetworkGraphNodeLabelsDefault = () => {
 
 	const defaultNodeLabelsLabel = t('graph_default_node_labels_label');
 	const defaultNodeLabelsPlaceholder = t('graph_default_node_labels_placeholder');
-	const defaultSelectedOptions = defaultNodeLabels || undefined;
+	const defaultValue = defaultNodeLabels || undefined;
 
 	if (isLoading && !initialDefaultLabelsFetched.current) {
 		return;
@@ -40,7 +40,7 @@ export const NetworkGraphNodeLabelsDefault = () => {
 
 	return (
 		<NodeLabelsItemFinder
-			value={defaultSelectedOptions}
+			value={defaultValue}
 			label={defaultNodeLabelsLabel}
 			placeholder={defaultNodeLabelsPlaceholder}
 			mode="default"

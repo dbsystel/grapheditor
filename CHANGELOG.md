@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.4.1
+
+- Variable width sidebars
 
 ## 2026.3.1
 

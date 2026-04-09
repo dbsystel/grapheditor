@@ -12,11 +12,11 @@ export type NodeLabelsItemFinderProps = GlobalComponentProps & {
 	showTooltipOnHover?: boolean;
 	// needed to create labels "on-the-fly"
 	namespace?: string;
-	onChange?: ItemFinderProps<Node>['onChange'];
+	onChange?: ItemFinderProps['onChange'];
 	label?: string;
 	variant?: LabelVariantType;
 	placeholder?: string;
-	defaultSelectedOptions?: ItemFinderProps<Node>['defaultSelectedOptions'];
+	defaultValue?: Array<Node>;
 	onTagsSelected?: (updatedTagLabelObjects: Array<Node>) => void;
 	markTagIdsAsWarning?: Array<NodeId>;
 	isEditMode?: boolean;

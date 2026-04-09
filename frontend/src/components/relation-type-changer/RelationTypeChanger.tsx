@@ -12,7 +12,6 @@ import { RelationTypeChangerProps } from './RelationTypeChanger.interfaces';
 
 export const RelationTypeChanger = ({
 	relation,
-	showTooltipOnHover = true,
 	id,
 	className,
 	testId,
@@ -31,13 +30,16 @@ export const RelationTypeChanger = ({
 		}
 	});
 
-	const onRefChange = useCallback((element: HTMLDivElement | null) => {
-		if (element && showTooltipOnHover) {
-			useItemOverviewPopoverStore
-				.getState()
-				.registerTriggerElement({ triggerElement: element, item: relation });
-		}
-	}, []);
+	const onRefChange = useCallback(
+		(element: HTMLDivElement | null) => {
+			if (element && selectedType) {
+				useItemOverviewPopoverStore
+					.getState()
+					.registerTriggerElement({ triggerElement: element, item: selectedType });
+			}
+		},
+		[selectedType]
+	);
 
 	const onTypeChange = (option: Node) => {
 		setSelectedType(option);
@@ -80,12 +82,12 @@ export const RelationTypeChanger = ({
 			{!isEditMode ? (
 				<DBTag ref={onRefChange}>{selectedType.title}</DBTag>
 			) : (
-				<div className="relation-type-changer__relation-change" ref={onRefChange}>
+				<div className="relation-type-changer__relation-change">
 					<div className="relation-type-changer__relation-finder">
 						<RelationTypeItemFinder
 							label=""
 							inputValue={selectedType.title}
-							value={[selectedType]}
+							value={selectedType}
 							onChange={onTypeChange}
 							onEnterKey={onEnterKey}
 						/>

@@ -3,7 +3,6 @@
 @layer single-item {
 	.single-item {
 		display: grid;
-		inline-size: 420px;
 		block-size: 100%;
 		grid-template-rows: auto 1fr;
 		padding-inline: 0;

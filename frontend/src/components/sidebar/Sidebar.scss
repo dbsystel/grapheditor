@@ -7,12 +7,15 @@
 	inline-size: 300px;
 	box-shadow: var(--db-elevation-md);
 	transition: none;
+	position: relative;
+	border-radius: var(--db-border-radius-xs);
 
 	&--collapsed {
-		inline-size: 2rem;
+		inline-size: 2rem !important;
 
 		#{$this}__header-close-button,
 		#{$this}__header-content,
+		#{$this}__horizontal-resize,
 		#{$this}__content {
 			display: none;
 		}
@@ -22,10 +25,27 @@
 		#{$this}__header-collapse-button {
 			transform: rotateY(180deg);
 			order: -1;
+			border-bottom-right-radius: 0;
+			border-bottom-left-radius: 0;
 		}
 
 		#{$this}__header-close-button {
 			order: 1;
+		}
+
+		#{$this}__horizontal-resize {
+			left: 0;
+		}
+	}
+
+	&[data-direction='right'] {
+		#{$this}__horizontal-resize {
+			right: 0;
+		}
+
+		#{$this}__header-collapse-button {
+			border-bottom-right-radius: 0;
+			border-bottom-left-radius: 0;
 		}
 	}
 
@@ -44,5 +64,14 @@
 		overflow-y: auto;
 		overflow-block: auto;
 		flex-grow: 1;
+	}
+
+	&__horizontal-resize {
+		width: 3px;
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		z-index: 2;
+		cursor: col-resize;
 	}
 }

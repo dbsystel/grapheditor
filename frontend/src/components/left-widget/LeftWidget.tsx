@@ -20,7 +20,11 @@ export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<Sidebar shouldHideCloseButton={true}>
+			<Sidebar
+				shouldHideCloseButton={true}
+				isHorizontalResizeable={true}
+				sidebarId="left-widget-sidebar"
+			>
 				<DBAccordion behavior="multiple" initOpenIndex={[0]} variant="card">
 					<DBAccordionItem headline={presentationLabel}>
 						<LeftWidgetPresentation />

@@ -337,5 +337,6 @@
 	"item_property_widget_time_label": "Uhrzeit",
 	"item_property_widget_string_label": "Freitext",
 	"item_property_widget_boolean_tooltip": "true / false",
-	"item_property_type_drodown_label": "Typ"
+	"item_property_type_drodown_label": "Typ",
+	"item_finder_confirm_input_tooltip": "Eingabe durch \"Enter\" übernehmen"
 }

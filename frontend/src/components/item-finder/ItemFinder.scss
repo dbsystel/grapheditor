@@ -5,6 +5,24 @@
 		position: relative;
 	}
 
+	&__input {
+		&[data-variant="floating"] {
+			#{$this}__input-confirmation-tooltip {
+				inset-block-end: calc(100% + 5px)!important;
+			}
+		}
+
+		input {
+			&[data-show-confirmation-tooltip="true"] {
+				&:focus {
+					~ #{$this}__input-confirmation-tooltip {
+						display: block;
+					}
+				}
+			}
+		}
+	}
+
 	&__list {
 		position: absolute;
 		z-index: 30;
@@ -113,5 +131,14 @@
 
 	&__info-text {
 		margin-top: 5px;
+	}
+
+	&__input-confirmation-tooltip {
+		display: none;
+		inline-size: 100%;
+		inset-block-end: 100% !important;
+		visibility: visible;
+		opacity: 1;
+		transition: none;
 	}
 }

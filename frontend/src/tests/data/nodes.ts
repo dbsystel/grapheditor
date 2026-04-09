@@ -12,6 +12,7 @@ let labels: Array<string> = [];
 
 export const generateTestNode = (
 	id: string,
+	title: string,
 	labels: Array<string>,
 	propertyIds: Array<string>,
 	semanticId?: string
@@ -21,7 +22,7 @@ export const generateTestNode = (
 		id: id,
 		dbId: id,
 		semanticId: semanticId || null,
-		title: 'Title',
+		title: title,
 		description: 'Description',
 		longDescription: 'Long description',
 		labels: labels,
@@ -45,12 +46,25 @@ export const generateTestNode = (
 export const testNodes: Array<Node> = [
 	generateTestNode(
 		'node-0',
+		'Node 0',
 		[labelIds[0], labelIds[1]],
 		['property-1', 'property-2', 'property-3'],
 		'MetaLabel::node-0'
 	),
-	generateTestNode('node-1', [labelIds[1], labelIds[2]], ['property-2'], 'MetaLabel::node-1'),
-	generateTestNode('node-2', [labelIds[1], labelIds[3]], ['property-3'], 'MetaLabel::node-2')
+	generateTestNode(
+		'node-1',
+		'Node 1',
+		[labelIds[1], labelIds[2]],
+		['property-2'],
+		'MetaLabel::node-1'
+	),
+	generateTestNode(
+		'node-2',
+		'Node 2',
+		[labelIds[1], labelIds[3]],
+		['property-3'],
+		'MetaLabel::node-2'
+	)
 ];
 
 testNodes.forEach((node, index) => {

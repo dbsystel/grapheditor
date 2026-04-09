@@ -40,22 +40,23 @@ export const NetworkGraphRelationTypeDefault = () => {
 
 	const defaultRelationTypeLabel = t('graph_default_relation_type_label');
 	const defaultRelationTypePlaceholder = t('graph_default_relation_type_placeholder');
-	const defaultSelectedOptions = defaultRelationType ? [defaultRelationType] : undefined;
+	const value = defaultRelationType ? defaultRelationType : undefined;
 	const defaultInputValue = defaultRelationType ? defaultRelationType.title : undefined;
 
-	if (isLoading && !initialDefaultTypeFetched.current) {
+	if ((isLoading && !initialDefaultTypeFetched.current) || !defaultRelationType) {
 		return;
 	}
 
 	return (
 		<RelationTypeItemFinder
 			defaultInputValue={defaultInputValue}
-			value={defaultSelectedOptions}
+			value={value}
 			label={defaultRelationTypeLabel}
 			placeholder={defaultRelationTypePlaceholder}
 			variant="above"
 			onChange={onDefaultRelationTypeChange}
 			onEnterKey={onEnterKey}
+			additionalOptions={[defaultRelationType]}
 		/>
 	);
 };

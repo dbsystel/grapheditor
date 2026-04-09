@@ -16,7 +16,7 @@ describe('Components - CopyToClipboard', () => {
 	});
 
 	test('Copy functionality', async () => {
-		const testNode = generateTestNode('test-n', [], []);
+		const testNode = generateTestNode('test-n', 'Test N', [], []);
 		const testRelation = generateTestRelation('test-r', 'test', [], 'test', 'test');
 
 		/**
@@ -26,7 +26,7 @@ describe('Components - CopyToClipboard', () => {
 			<CopyToClipboard nodes={[testNode]} relations={[testRelation]} />
 		);
 
-		const copyButton = screen.getByRole('button'); /* .element(); */
+		const copyButton = screen.getByRole('button');
 
 		await userEvent.click(copyButton);
 

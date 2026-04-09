@@ -337,5 +337,6 @@
 	"item_property_widget_time_label": "Time",
 	"item_property_widget_string_label": "Text",
 	"item_property_widget_boolean_tooltip": "true / false",
-	"item_property_type_drodown_label": "Type"
+	"item_property_type_drodown_label": "Type",
+	"item_finder_confirm_input": "Press \"Enter\" to confirm"
 }

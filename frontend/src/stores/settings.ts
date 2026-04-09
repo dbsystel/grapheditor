@@ -11,23 +11,36 @@ type SettingsStore = {
 	setTheme: (theme: AppTheme) => void;
 	language: AppLanguage;
 	setLanguage: (language: AppLanguage) => void;
+	sidebarWidth: SettingsSidebarWidth;
+	getSidebarWidth: (
+		sidebar: string
+	) => SettingsSidebarWidth[keyof SettingsSidebarWidth] | undefined;
+	setSidebarWidth: (sidebar: string, width: string) => void;
 	resetButExclude: (excludeKeys: Array<keyof InitialState>) => void;
 	reset: () => void;
 };
 
 export type AppTheme = 'light' | 'dark';
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
+type SettingsSidebarWidth = Record<string, string>;
 
 type InitialState = Omit<
 	SettingsStore,
-	'setIsAutoconnectEnabled' | 'setTheme' | 'setLanguage' | 'resetButExclude' | 'reset'
+	| 'setIsAutoconnectEnabled'
+	| 'setTheme'
+	| 'setLanguage'
+	| 'getSidebarWidth'
+	| 'setSidebarWidth'
+	| 'resetButExclude'
+	| 'reset'
 >;
 
 const getInitialState: () => InitialState = () => {
 	return {
 		isAutoconnectEnabled: true,
 		theme: 'light',
-		language: 'de'
+		language: 'de',
+		sidebarWidth: {}
 	};
 };
 
@@ -36,7 +49,7 @@ const getInitialState: () => InitialState = () => {
  */
 export const useSettingsStore = create<SettingsStore>()(
 	persist(
-		(set) => {
+		(set, get) => {
 			return {
 				...getInitialState(),
 				setIsAutoconnectEnabled: (isEnabled) => {
@@ -47,6 +60,18 @@ export const useSettingsStore = create<SettingsStore>()(
 				},
 				setLanguage: (language) => {
 					set({ language: language });
+				},
+				getSidebarWidth: (sidebar) => {
+					return get().sidebarWidth[sidebar];
+				},
+				setSidebarWidth: (sidebar, width) => {
+					const sidebarWidthMap = get().sidebarWidth;
+
+					sidebarWidthMap[sidebar] = width;
+
+					set({
+						sidebarWidth: { ...sidebarWidthMap }
+					});
 				},
 				reset: () => {
 					set(getInitialState());

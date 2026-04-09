@@ -1,7 +1,7 @@
 import { PropsWithChildren, ReactNode } from 'react';
 import { GlobalComponentProps } from 'src/types/components';
 
-export type SidebarProps = GlobalComponentProps &
+type SidebarCommon = GlobalComponentProps &
 	PropsWithChildren & {
 		headerContent?: ReactNode;
 		shouldHideCloseButton?: boolean;
@@ -11,3 +11,15 @@ export type SidebarProps = GlobalComponentProps &
 		onExpand?: () => void;
 		onCloseButtonClick?: () => void;
 	};
+
+type SidebarBase = SidebarCommon & {
+	isHorizontalResizeable?: false;
+	sidebarId?: string;
+};
+
+type SidebarWithHorizontalResize = SidebarCommon & {
+	isHorizontalResizeable: true;
+	sidebarId: string;
+};
+
+export type SidebarProps = SidebarBase | SidebarWithHorizontalResize;

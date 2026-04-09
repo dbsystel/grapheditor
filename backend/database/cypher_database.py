@@ -1213,13 +1213,13 @@ class CypherDatabase(GraphDatabase):
         MATCH (p:Perspective__tech_)
         WHERE elementid(p)=$raw_db_id
         WITH p
-        UNWIND p.nodes__tech_+ [null]  AS node_uuid
-        OPTIONAL MATCH (b)
-        WHERE b._uuid__tech_ = node_uuid
-        WITH p, collect(b) AS nodes 
-        UNWIND p.relations__tech_ + [null] AS rel_uuid 
-        OPTIONAL MATCH ()-[r]->()
-        WHERE r._uuid__tech_ = rel_uuid
+        OPTIONAL MATCH (b:___tech_)
+        WHERE b._uuid__tech_ IN p.nodes__tech_ 
+        WITH p, collect(b) AS nodes
+        OPTIONAL MATCH (a)-[r]->(b)
+        WHERE r._uuid__tech_ IN p.relations__tech_ 
+        AND a IN nodes
+        AND b IN nodes
         RETURN p, nodes, collect(r) AS relations
         """
 

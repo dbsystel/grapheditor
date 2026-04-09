@@ -277,7 +277,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 					variant={props.variant}
 					options={labelOptions}
 					value={value}
-					defaultSelectedOptions={props.defaultSelectedOptions}
+					defaultValue={props.defaultValue}
 					inputValue={labelInputValue}
 					onInput={onLabelSearch}
 					onEnterKey={onLabelEnterKey}
@@ -288,6 +288,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 					invalidMessage=""
 					validMessage=""
 					hideBadges={true}
+					noInputMatchTooltip={t('item_finder_confirm_input_tooltip')}
 				/>
 			)}
 		</div>

@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { Node } from 'src/models/node';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
@@ -16,15 +17,17 @@ export const RelationTypeItemFinder = ({
 	onInput,
 	label,
 	placeholder,
-	defaultSelectedOptions,
+	defaultValue,
 	defaultInputValue,
 	inputValue,
 	value,
 	onEnterKey,
 	id,
 	className,
-	testId
+	testId,
+	additionalOptions
 }: RelationTypeItemFinderProps) => {
+	const { t } = useTranslation();
 	const [localInputValue, setLocalInputValue] = useState<string | undefined>(inputValue);
 	const [relationTypes, setRelationTypes] = useState<Array<Node>>([]);
 	const [filteredRelationTypes, setFilteredRelationTypes] = useState<Array<Node>>([]);
@@ -33,9 +36,11 @@ export const RelationTypeItemFinder = ({
 	const { isLoading: isRelationsTypesLoading } = useGetRelationsTypesNodes({
 		onSuccess: (response) => {
 			const nodes = Object.values(response.data.nodes);
+			const extraOptions = additionalOptions ? additionalOptions : [];
+			const options = [...extraOptions, ...nodes];
 
-			setRelationTypes(nodes);
-			setFilteredRelationTypes(nodes);
+			setRelationTypes(options);
+			setFilteredRelationTypes(options);
 		}
 	});
 
@@ -97,7 +102,7 @@ export const RelationTypeItemFinder = ({
 			inputValue={localInputValue}
 			label={label}
 			defaultInputValue={defaultInputValue}
-			defaultSelectedOptions={defaultSelectedOptions}
+			defaultValue={defaultValue}
 			options={filteredRelationTypes}
 			placeholder={placeholder}
 			onChange={onChange}
@@ -108,6 +113,7 @@ export const RelationTypeItemFinder = ({
 			variant={variant}
 			onInput={localOnInput}
 			onEnterKey={localOnEnterKey}
+			noInputMatchTooltip={t('item_finder_confirm_input_tooltip')}
 		/>
 	);
 };

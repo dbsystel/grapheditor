@@ -101,6 +101,8 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 					data-testid={testId}
 					direction="left"
 					onCloseButtonClick={onClose}
+					isHorizontalResizeable={true}
+					sidebarId="item-details-sidebar"
 					headerContent={
 						<div className="items-drawer__header-content">
 							<Breadcrumbs

@@ -5,7 +5,6 @@ import { GlobalComponentProps } from 'src/types/components';
 export type RelationTypeChangerProps = GlobalComponentProps & {
 	onRelationTypeChange?: (relation: Relation) => void;
 	relation: Relation;
-	showTooltipOnHover?: boolean;
 	isEditMode?: boolean;
 	handleRef?: RefObject<RelationTypeChangerHandle>;
 };

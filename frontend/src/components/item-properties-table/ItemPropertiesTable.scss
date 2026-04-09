@@ -2,10 +2,11 @@
 	.item-properties-table {
 		$this: &;
 
-		border-top: var(--db-border-width-2xs) solid var(--db-adaptive-on-bg-basic-emphasis-60-default);
+		border-top: var(--db-border-width-2xs) solid
+			var(--db-adaptive-on-bg-basic-emphasis-60-default);
 
 		&__cell {
-			padding: var(--db-spacing-fixed-sm, 8px);
+			padding: var(--db-spacing-fixed-sm);
 			word-break: break-all;
 			vertical-align: top;
 
@@ -23,6 +24,22 @@
 
 			.db-checkbox {
 				word-wrap: normal;
+			}
+		}
+
+		.table-row > #{$this}__cell:first-child {
+			inline-size: clamp(16ch, 38%, 520px);
+			min-inline-size: 16ch;
+			max-inline-size: 520px;
+
+			word-break: normal;
+			overflow-wrap: anywhere;
+
+			.item-info {
+				.db-button {
+					word-break: normal;
+					overflow-wrap: anywhere;
+				}
 			}
 		}
 
@@ -64,7 +81,7 @@
 		}
 
 		&__menu {
-			padding: var(--db-spacing-fixed-3xs) 2px 0 0;
+			padding: var(--db-spacing-fixed-sm);
 			width: 34px;
 
 			.db-popover-content {

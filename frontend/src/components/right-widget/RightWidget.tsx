@@ -17,7 +17,12 @@ export const RightWidget = ({
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
 			{shouldRenderNextSteps && (
-				<Sidebar shouldHideCloseButton={true} direction="left">
+				<Sidebar
+					shouldHideCloseButton={true}
+					direction="left"
+					isHorizontalResizeable={true}
+					sidebarId="right-widget-sidebar"
+				>
 					<ErrorBoundary>
 						<ParallaxNextSteps />
 					</ErrorBoundary>

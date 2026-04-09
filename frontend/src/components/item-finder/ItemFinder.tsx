@@ -1,13 +1,11 @@
 import 'src/components/item-finder/ItemFinder.scss';
-import { DBBadge, DBInfotext, DBInput } from '@db-ux/react-core-components';
+import { DBBadge, DBInfotext, DBInput, DBTooltip } from '@db-ux/react-core-components';
 import { ChangeEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
-import { KeyboardEvent, MouseEvent, useEffect, useRef, useState } from 'react';
-import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
+import { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Node } from 'src/models/node';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
-import { ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
-import { isObject, isString } from 'src/utils/helpers/general';
+import { isArray, isObject, isString } from 'src/utils/helpers/general';
 import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
 import { idFormatter } from 'src/utils/id-formatter';
@@ -20,11 +18,10 @@ import { ItemFinderProps } from './ItemFinder.interfaces';
  * (top: 100% will push the list down once the message is rendered).
  * Note: this component was done without any design. Additional UI/functional changes are to be expected.
  *
- * TODO check if T option could be string. If not, refactor code.
  * TODO refactor the whole component once all requirements are known.
  */
 
-export const ItemFinder = <T extends Node>({
+export const ItemFinder = ({
 	defaultInputValue,
 	onInput,
 	inputValue,
@@ -33,7 +30,7 @@ export const ItemFinder = <T extends Node>({
 	isMultiselect,
 	isDisabled,
 	options,
-	defaultSelectedOptions,
+	defaultValue,
 	searchTimeoutMilliseconds = 300,
 	label,
 	variant,
@@ -45,13 +42,17 @@ export const ItemFinder = <T extends Node>({
 	className,
 	testId,
 	placeholder,
-	hideBadges = false
-}: ItemFinderProps<T>) => {
+	hideBadges = false,
+	noInputMatchTooltip
+}: ItemFinderProps) => {
 	const [internalInputValue, setInternalInputValue] = useState<string>(defaultInputValue || '');
 	const [showList, setShowList] = useState(false);
 	// check internalSelectedOptions for up-to-date list of selected options
-	const [selectedOptions, setSelectedOptions] = useState<Array<T>>(
-		intersectOptions(defaultSelectedOptions || [], options)
+	const [selectedOptions, setSelectedOptions] = useState<Array<Node>>(
+		intersectOptions(
+			defaultValue ? (isArray(defaultValue) ? defaultValue : [defaultValue]) : [],
+			options
+		)
 	);
 	const delayedCallback = useDebounce(searchTimeoutMilliseconds);
 	const inputFocusEventTriggered = useRef(false);
@@ -90,7 +91,7 @@ export const ItemFinder = <T extends Node>({
 	}, [inputValue]);
 
 	useEffect(() => {
-		if (value == null) {
+		if (value === null) {
 			setInternalInputValue('');
 		}
 	}, [value]);
@@ -114,16 +115,17 @@ export const ItemFinder = <T extends Node>({
 			if (onInput) {
 				onInput(event.target.value);
 			}
+			setShowList(true);
 		});
 	};
 
 	/**
 	 * 	Allow default selected options to be selected only if they exist as options.
-	 * 	This fixes bug where "defaultSelectedOptions" had different options than
+	 * 	This fixes bug where "defaultValue" had different options than
 	 * 	"options" prop, and they would still be selected internally, which would
 	 * 	return wrong selected options in the "onChange" handler.
 	 */
-	function intersectOptions(source: Array<T>, target: Array<T>) {
+	function intersectOptions(source: Array<Node>, target: Array<Node>) {
 		return source.filter((sourceElement) => {
 			if (isObject(sourceElement) && isObject(target[0])) {
 				return target.some((targetElement) => targetElement.id === sourceElement.id);
@@ -136,7 +138,7 @@ export const ItemFinder = <T extends Node>({
 	/**
 	 * Simple function the check if an option is selected.
 	 */
-	const isOptionSelected = (option: T) => {
+	const isOptionSelected = (option: Node) => {
 		return internalSelectedOptions.find((selectedOption) => selectedOption.id === option.id);
 	};
 
@@ -144,8 +146,8 @@ export const ItemFinder = <T extends Node>({
 	 * Function executed when an option is selected or deselected.
 	 * Options can also be deselected via clicking on the associated chips.
 	 */
-	const onChangeHandler = (option: T) => {
-		let freshSelectedOptions: Array<T> = [];
+	const onChangeHandler = (option: Node) => {
+		let freshSelectedOptions: Array<Node> = [];
 		let isSelected = false;
 
 		if (isMultiselect) {
@@ -191,16 +193,6 @@ export const ItemFinder = <T extends Node>({
 		inputFocusEventTriggered.current = false;
 	};
 
-	const inputClickHandler = (event: MouseEvent<HTMLInputElement>) => {
-		// toggle list only after 2nd click (important since the "click" event is
-		// triggered after "focus" event) on the focused input
-		if (document.activeElement === event.target && !inputFocusEventTriggered.current) {
-			shouldShowList(!showList);
-		}
-
-		inputFocusEventTriggered.current = false;
-	};
-
 	const listClassName = clsx(
 		'item-finder__list',
 		'border-width-xs',
@@ -209,17 +201,19 @@ export const ItemFinder = <T extends Node>({
 	);
 	const inputVariant = variant || 'floating';
 	const message = validMessage || invalidMessage;
+	const showConfirmInputTooltip =
+		noInputMatchTooltip && options.length === 0 && !!internalInputValue;
 
 	return (
 		<div ref={ref} id={id} className={rootElementClassName} data-testid={testId}>
 			<div className="item-finder__input-wrapper">
 				<DBInput
+					className="item-finder__input"
 					value={internalInputValue}
 					label={label}
 					placeholder={placeholder}
 					onChange={inputChangeHandler}
 					onKeyUp={enterKeyHandler}
-					onClick={inputClickHandler}
 					onFocus={inputFocusHandler}
 					onBlur={inputBlurHandler}
 					variant={inputVariant}
@@ -227,7 +221,15 @@ export const ItemFinder = <T extends Node>({
 					validMessage=""
 					disabled={isDisabled}
 					role="combobox"
-				/>
+					data-show-confirmation-tooltip={showConfirmInputTooltip}
+				>
+					<DBTooltip
+						animation={false}
+						className="item-finder__input-confirmation-tooltip db-tooltip-fix db-tooltip-fix--top"
+					>
+						{noInputMatchTooltip}
+					</DBTooltip>
+				</DBInput>
 				{showList && options.length > 0 && (
 					<ul className={listClassName}>
 						{options.map((option, index) => {
