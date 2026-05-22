@@ -51,9 +51,7 @@ export const graphNodeOptions = (): Partial<Record<ContextMenuAction, ContextMen
 		},
 		delete: {
 			label: i18n.t('context_menu_delete'),
-			onClick: () => {
-				deleteNodesAction([nodeId]);
-			}
+			onClick: () => deleteNodesAction([nodeId])
 		},
 		hide: {
 			label: i18n.t('context_menu_hide'),

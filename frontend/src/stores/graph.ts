@@ -19,6 +19,7 @@ import {
 import { Node, NodeId } from 'src/models/node';
 import { Relation, RelationId } from 'src/models/relation';
 import {
+	APP_STORAGE_KEY_PREFIX,
 	GRAPH_DEFAULT_EDGE_LABEL_SIZE,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX,
@@ -33,6 +34,7 @@ import { isNumber } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 type GraphStore = {
 	isLoading: boolean;
@@ -209,364 +211,390 @@ const getInitialState: () => InitialState = () => {
  * TODO add other sigma/graphology methods here, check modules/plugins
  *  and move from direct sigma/graphology usage to this store
  */
-export const useGraphStore = create<GraphStore>((set, get) => {
-	return {
-		...getInitialState(),
-		setIsSigmaReady: (isSigmaReady) => {
-			set({ isSigmaReady: isSigmaReady });
-		},
-		setIsGraphRendered: (isGraphRendered) => {
-			set({ isGraphRendered: isGraphRendered });
-		},
-		setIsLoading: (isLoading: boolean) => set({ isLoading: isLoading }),
-		setDefaultNodeLabels: (nodeLabels: Array<Node> | null) =>
-			set({ defaultNodeLabels: nodeLabels }),
-		setDefaultRelationType: (relationType: Node | null) =>
-			set({ defaultRelationType: relationType }),
-		setSigma: (sigma) => set({ sigma: sigma }),
-		unHighlightNode: (nodeId) => {
-			const sigma = get().sigma;
-			const graphNodeExists = sigma.getGraph().hasNode(nodeId);
+export const useGraphStore = create<GraphStore>()(
+	persist(
+		(set, get) => {
+			return {
+				...getInitialState(),
+				setIsSigmaReady: (isSigmaReady) => {
+					set({ isSigmaReady: isSigmaReady });
+				},
+				setIsGraphRendered: (isGraphRendered) => {
+					set({ isGraphRendered: isGraphRendered });
+				},
+				setIsLoading: (isLoading: boolean) => set({ isLoading: isLoading }),
+				setDefaultNodeLabels: (nodeLabels: Array<Node> | null) =>
+					set({ defaultNodeLabels: nodeLabels }),
+				setDefaultRelationType: (relationType: Node | null) =>
+					set({ defaultRelationType: relationType }),
+				setSigma: (sigma) => set({ sigma: sigma }),
+				unHighlightNode: (nodeId) => {
+					const sigma = get().sigma;
+					const graphNodeExists = sigma.getGraph().hasNode(nodeId);
 
-			if (!graphNodeExists) {
-				return;
-			}
+					if (!graphNodeExists) {
+						return;
+					}
 
-			const highlightedNodeIds = get().highlightedNodeIds;
+					const highlightedNodeIds = get().highlightedNodeIds;
 
-			highlightedNodeIds.delete(nodeId);
+					highlightedNodeIds.delete(nodeId);
 
-			set({
-				highlightedNodeIds: new Map(highlightedNodeIds)
-			});
-
-			sigma.getGraph().setNodeAttribute(nodeId, 'highlighted', false);
-		},
-		unHighlightNodes: () => {
-			const highlightedNodes = get().highlightedNodeIds;
-
-			highlightedNodes.forEach((nodeId) => {
-				get().unHighlightNode(nodeId);
-			});
-		},
-		highlightNode: (nodeId) => {
-			const sigma = get().sigma;
-			const graphNodeExists = sigma.getGraph().hasNode(nodeId);
-			const nodeAlreadyHighlighted = get().highlightedNodeIds.has(nodeId);
-
-			if (!graphNodeExists || nodeAlreadyHighlighted) {
-				return;
-			}
-
-			sigma.getGraph().setNodeAttribute(nodeId, 'highlighted', true);
-			set({ highlightedNodeIds: new Map(get().highlightedNodeIds.set(nodeId, nodeId)) });
-		},
-		highlightRelation: (relationId) => {
-			const sigma = get().sigma;
-			const graphRelationExists = sigma.getGraph().hasEdge(relationId);
-			const relationAlreadyHighlighted = get().highlightedRelationIds.has(relationId);
-
-			if (!graphRelationExists || relationAlreadyHighlighted) {
-				return;
-			}
-
-			sigma.getGraph().setEdgeAttribute(relationId, 'highlighted', true);
-			sigma.getGraph().setEdgeAttribute(relationId, 'color', GRAPH_SELECTED_EDGE_COLOR);
-			set({
-				highlightedRelationIds: new Map(
-					get().highlightedRelationIds.set(relationId, relationId)
-				)
-			});
-		},
-		unHighlightRelation: (relationId) => {
-			const sigma = get().sigma;
-			const graphRelationExists = sigma.getGraph().hasEdge(relationId);
-
-			if (!graphRelationExists) {
-				return;
-			}
-
-			const relation = sigma.getGraph().getEdgeAttribute(relationId, 'data');
-			const highlightedRelationIds = get().highlightedRelationIds;
-
-			highlightedRelationIds.delete(relationId);
-
-			set({
-				highlightedRelationIds: new Map(highlightedRelationIds)
-			});
-
-			sigma.getGraph().setEdgeAttribute(relationId, 'highlighted', false);
-			sigma.getGraph().setEdgeAttribute(relationId, 'color', getRelationColor(relation));
-		},
-		unHighlightRelations: () => {
-			const highlightedRelationIds = get().highlightedRelationIds;
-
-			highlightedRelationIds.forEach((relationId) => {
-				get().unHighlightRelation(relationId);
-			});
-		},
-		isNodeHighlighted: (nodeId) => {
-			return !!get().highlightedNodeIds.get(nodeId);
-		},
-		isRelationHighlighted: (relationId) => {
-			return !!get().highlightedRelationIds.get(relationId);
-		},
-		adaptRelationsTypeAndCurvature: () => {
-			get()
-				.sigma.getGraph()
-				.forEachEdge((edge, attributes) => {
-					get().adaptRelationTypeAndCurvature(edge, attributes);
-				});
-		},
-		adaptRelationTypeAndCurvature: (relationId, attributes) => {
-			const graph = get().sigma.getGraph();
-			const { parallelIndex, parallelMinIndex, parallelMaxIndex } =
-				attributes || graph.getEdgeAttributes(relationId);
-
-			if (
-				isRelation(attributes?.data) &&
-				attributes.data.source_id === attributes.data.target_id
-			) {
-				graph.mergeEdgeAttributes(relationId, {
-					type: 'selfLoop',
-					curvature: getSelfLoopCurvature(parallelIndex, parallelMinIndex),
-					forceLabel: true
-				});
-			} else if (isNumber(parallelMinIndex)) {
-				// Guard against stale parallelMinIndex: if parallelIndex or
-				// parallelMaxIndex are not numbers, fall through to straight.
-				if (!isNumber(parallelIndex) || !isNumber(parallelMaxIndex)) {
-					graph.setEdgeAttribute(relationId, 'type', 'straight');
-				} else {
-					graph.mergeEdgeAttributes(relationId, {
-						type: parallelIndex ? 'curved' : 'straight',
-						curvature: getCurvature(parallelIndex, parallelMaxIndex)
+					set({
+						highlightedNodeIds: new Map(highlightedNodeIds)
 					});
+
+					sigma.getGraph().setNodeAttribute(nodeId, 'highlighted', false);
+				},
+				unHighlightNodes: () => {
+					const highlightedNodes = get().highlightedNodeIds;
+
+					highlightedNodes.forEach((nodeId) => {
+						get().unHighlightNode(nodeId);
+					});
+				},
+				highlightNode: (nodeId) => {
+					const sigma = get().sigma;
+					const graphNodeExists = sigma.getGraph().hasNode(nodeId);
+					const nodeAlreadyHighlighted = get().highlightedNodeIds.has(nodeId);
+
+					if (!graphNodeExists || nodeAlreadyHighlighted) {
+						return;
+					}
+
+					sigma.getGraph().setNodeAttribute(nodeId, 'highlighted', true);
+					set({
+						highlightedNodeIds: new Map(get().highlightedNodeIds.set(nodeId, nodeId))
+					});
+				},
+				highlightRelation: (relationId) => {
+					const sigma = get().sigma;
+					const graphRelationExists = sigma.getGraph().hasEdge(relationId);
+					const relationAlreadyHighlighted = get().highlightedRelationIds.has(relationId);
+
+					if (!graphRelationExists || relationAlreadyHighlighted) {
+						return;
+					}
+
+					sigma.getGraph().setEdgeAttribute(relationId, 'highlighted', true);
+					sigma
+						.getGraph()
+						.setEdgeAttribute(relationId, 'color', GRAPH_SELECTED_EDGE_COLOR);
+					set({
+						highlightedRelationIds: new Map(
+							get().highlightedRelationIds.set(relationId, relationId)
+						)
+					});
+				},
+				unHighlightRelation: (relationId) => {
+					const sigma = get().sigma;
+					const graphRelationExists = sigma.getGraph().hasEdge(relationId);
+
+					if (!graphRelationExists) {
+						return;
+					}
+
+					const relation = sigma.getGraph().getEdgeAttribute(relationId, 'data');
+					const highlightedRelationIds = get().highlightedRelationIds;
+
+					highlightedRelationIds.delete(relationId);
+
+					set({
+						highlightedRelationIds: new Map(highlightedRelationIds)
+					});
+
+					sigma.getGraph().setEdgeAttribute(relationId, 'highlighted', false);
+					sigma
+						.getGraph()
+						.setEdgeAttribute(relationId, 'color', getRelationColor(relation));
+				},
+				unHighlightRelations: () => {
+					const highlightedRelationIds = get().highlightedRelationIds;
+
+					highlightedRelationIds.forEach((relationId) => {
+						get().unHighlightRelation(relationId);
+					});
+				},
+				isNodeHighlighted: (nodeId) => {
+					return !!get().highlightedNodeIds.get(nodeId);
+				},
+				isRelationHighlighted: (relationId) => {
+					return !!get().highlightedRelationIds.get(relationId);
+				},
+				adaptRelationsTypeAndCurvature: () => {
+					get()
+						.sigma.getGraph()
+						.forEachEdge((edge, attributes) => {
+							get().adaptRelationTypeAndCurvature(edge, attributes);
+						});
+				},
+				adaptRelationTypeAndCurvature: (relationId, attributes) => {
+					const graph = get().sigma.getGraph();
+					const { parallelIndex, parallelMinIndex, parallelMaxIndex } =
+						attributes || graph.getEdgeAttributes(relationId);
+
+					if (
+						isRelation(attributes?.data) &&
+						attributes.data.source_id === attributes.data.target_id
+					) {
+						graph.mergeEdgeAttributes(relationId, {
+							type: 'selfLoop',
+							curvature: getSelfLoopCurvature(parallelIndex, parallelMinIndex),
+							forceLabel: true
+						});
+					} else if (isNumber(parallelMinIndex)) {
+						// Guard against stale parallelMinIndex: if parallelIndex or
+						// parallelMaxIndex are not numbers, fall through to straight.
+						if (!isNumber(parallelIndex) || !isNumber(parallelMaxIndex)) {
+							graph.setEdgeAttribute(relationId, 'type', 'straight');
+						} else {
+							graph.mergeEdgeAttributes(relationId, {
+								type: parallelIndex ? 'curved' : 'straight',
+								curvature: getCurvature(parallelIndex, parallelMaxIndex)
+							});
+						}
+					} else if (isNumber(parallelIndex)) {
+						graph.mergeEdgeAttributes(relationId, {
+							type: 'curved',
+							curvature: getCurvature(parallelIndex, parallelMaxIndex)
+						});
+					} else {
+						graph.setEdgeAttribute(relationId, 'type', 'straight');
+					}
+				},
+				indexParallelRelations: () => {
+					const graph = get().sigma.getGraph();
+
+					indexParallelEdgesIndex(graph, {
+						edgeIndexAttribute: 'parallelIndex',
+						edgeMinIndexAttribute: 'parallelMinIndex',
+						edgeMaxIndexAttribute: 'parallelMaxIndex'
+					});
+
+					// @sigma/edge-curve does not clear parallelMinIndex when an edge
+					// becomes the sole edge between two nodes (directedCount === 1 &&
+					// undirectedCount === 1, or directedCount === 1 with opposite edges).
+					// This leaves a stale numeric parallelMinIndex while parallelIndex
+					// and parallelMaxIndex are set to null, which causes "Invalid maxIndex"
+					// errors downstream. Clean it up here:
+					graph.forEachEdge((edge) => {
+						if (graph.getEdgeAttribute(edge, 'parallelIndex') === null) {
+							graph.setEdgeAttribute(edge, 'parallelMinIndex', null);
+						}
+					});
+				},
+				addNode: (node) => {
+					const sigma = get().sigma;
+					const graphNodeExists = sigma.getGraph().hasNode(node.id);
+
+					if (graphNodeExists) {
+						return;
+					}
+
+					if (isNode(node)) {
+						const nodeAttributes = getNodeGraphData(node);
+
+						sigma.getGraph().addNode(node.id, {
+							...nodeAttributes,
+							// store node data in Sigma's graph object
+							data: node
+						});
+					} else {
+						sigma.getGraph().addNode(node.id, node.attributes);
+					}
+				},
+				// much bulk, very wow
+				addNodes: (nodes) => {
+					nodes.forEach((node) => {
+						get().addNode(node);
+					});
+				},
+				removeNode: (nodeId) => {
+					get().unHighlightNode(nodeId);
+
+					if (get().sigma.getGraph().hasNode(nodeId)) {
+						get().sigma.getGraph().dropNode(nodeId);
+					}
+				},
+				setNodePosition: (nodeId, coordinates) => {
+					const graph = get().sigma.getGraph();
+					const localCoordinates: Record<string, number> = {
+						x: coordinates.x,
+						y: coordinates.y
+					};
+
+					if (coordinates.z !== undefined) {
+						localCoordinates.z = coordinates.z;
+					}
+
+					graph.mergeNodeAttributes(nodeId, coordinates);
+				},
+				addRelation: (relation) => {
+					const sigma = get().sigma;
+					const graphRelationExists = sigma.getGraph().hasEdge(relation.id);
+					const sourceNodeExists = sigma.getGraph().hasNode(relation.source_id);
+					const targetNodeExists = sigma.getGraph().hasNode(relation.target_id);
+
+					if (graphRelationExists) {
+						return;
+					}
+
+					if (!sourceNodeExists || !targetNodeExists) {
+						return;
+					}
+
+					if (isRelation(relation)) {
+						const relationAttributes = getRelationGraphData(relation);
+
+						sigma
+							.getGraph()
+							.addDirectedEdgeWithKey(
+								relation.id,
+								relation.source_id,
+								relation.target_id,
+								{
+									...relationAttributes,
+									type: 'straight',
+									// store relation data in Sigma's graph object
+									data: relation
+								}
+							);
+					} else {
+						sigma
+							.getGraph()
+							.addDirectedEdgeWithKey(
+								relation.id,
+								relation.source_id,
+								relation.target_id,
+								relation.attributes
+							);
+					}
+				},
+				// TODO refactor to more bulky
+				// much bulk, very wow
+				addRelations: (relations) => {
+					relations.forEach((relation) => {
+						get().addRelation(relation);
+					});
+				},
+				removeRelation: (relationId) => {
+					if (get().sigma.getGraph().hasEdge(relationId)) {
+						get().sigma.getGraph().dropEdge(relationId);
+					}
+				},
+				setZoomFactor: (newZoomFactor) => {
+					set({ zoomFactor: newZoomFactor });
+
+					get().sigma.updateSetting('zoomingRatio', () => newZoomFactor);
+				},
+				reset: () => {
+					set(getInitialState());
+				},
+				resetButExclude: (excludeKeys) => {
+					const state: Partial<InitialState> = getInitialState();
+
+					excludeKeys.forEach((key) => {
+						delete state[key];
+					});
+
+					set(state);
+				},
+				getNodeSizeFactor: () => {
+					return get().nodeSizeFactor;
+				},
+				setNodeSizeFactor: (newNodeSizeFactor) => {
+					let fixedSizeFactor = parseFloat(newNodeSizeFactor.toFixed(2));
+
+					if (fixedSizeFactor <= 0.1) {
+						fixedSizeFactor = 0.1;
+					}
+
+					set({ nodeSizeFactor: fixedSizeFactor });
+				},
+				setIsRenderingCapabilitiesWarningShown: (isRenderingCapabilitiesWarningShown) => {
+					set({
+						isRenderingCapabilitiesWarningShown: isRenderingCapabilitiesWarningShown
+					});
+				},
+				toggleLabelsVisibility: () => {
+					const sigma = get().sigma;
+					// TODO check if fixable somehow else
+					// getNodesInViewport hardcoded Sigma as type
+					const nodesInViewport = getNodesInViewport(sigma as unknown as Sigma);
+					const nodeLabelsInViewport = sigma.getNodeDisplayedLabels();
+					const relationLabelsInViewport = sigma.getEdgeDisplayedLabels();
+
+					if (
+						nodeLabelsInViewport.size + relationLabelsInViewport.size >
+							GRAPH_HIDE_ALL_LABELS_THRESHOLD ||
+						nodesInViewport.length > GRAPH_HIDE_ALL_LABELS_THRESHOLD
+					) {
+						if (get().labelsRendered) {
+							get().labelsRendered = false;
+							sigma.setSetting('labelRenderedSizeThreshold', 10000000);
+						}
+					} else {
+						if (!get().labelsRendered) {
+							get().labelsRendered = true;
+							sigma.setSetting(
+								'labelRenderedSizeThreshold',
+								GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD
+							);
+						}
+					}
+				},
+				setLabelFontSizeFactor: (factor: number) => {
+					set({ labelFontSizeFactor: factor });
+					get().resizeLabels();
+				},
+				increaseLabelFontSizeFactor: () => {
+					if (get().labelFontSizeFactor < GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX) {
+						set({
+							labelFontSizeFactor:
+								get().labelFontSizeFactor + GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP
+						});
+					}
+					get().resizeLabels();
+				},
+				decreaseLabelFontSizeFactor: () => {
+					if (get().labelFontSizeFactor > GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN) {
+						set({
+							labelFontSizeFactor:
+								get().labelFontSizeFactor - GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP
+						});
+					}
+					get().resizeLabels();
+				},
+				resetLabelFontSizeFactor() {
+					set({
+						labelFontSizeFactor: GRAPH_DEFAULT_FONT_SIZE_FACTOR
+					});
+					get().resizeLabels();
+				},
+				resizeLabels: () => {
+					const camera = get().sigma.getCamera();
+					get().sigma.setSetting(
+						'labelSize',
+						(GRAPH_DEFAULT_NODE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
+					);
+					get().sigma.setSetting(
+						'edgeLabelSize',
+						(GRAPH_DEFAULT_EDGE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
+					);
+					get().toggleLabelsVisibility();
 				}
-			} else if (isNumber(parallelIndex)) {
-				graph.mergeEdgeAttributes(relationId, {
-					type: 'curved',
-					curvature: getCurvature(parallelIndex, parallelMaxIndex)
-				});
-			} else {
-				graph.setEdgeAttribute(relationId, 'type', 'straight');
-			}
-		},
-		indexParallelRelations: () => {
-			const graph = get().sigma.getGraph();
-
-			indexParallelEdgesIndex(graph, {
-				edgeIndexAttribute: 'parallelIndex',
-				edgeMinIndexAttribute: 'parallelMinIndex',
-				edgeMaxIndexAttribute: 'parallelMaxIndex'
-			});
-
-			// @sigma/edge-curve does not clear parallelMinIndex when an edge
-			// becomes the sole edge between two nodes (directedCount === 1 &&
-			// undirectedCount === 1, or directedCount === 1 with opposite edges).
-			// This leaves a stale numeric parallelMinIndex while parallelIndex
-			// and parallelMaxIndex are set to null, which causes "Invalid maxIndex"
-			// errors downstream. Clean it up here:
-			graph.forEachEdge((edge) => {
-				if (graph.getEdgeAttribute(edge, 'parallelIndex') === null) {
-					graph.setEdgeAttribute(edge, 'parallelMinIndex', null);
-				}
-			});
-		},
-		addNode: (node) => {
-			const sigma = get().sigma;
-			const graphNodeExists = sigma.getGraph().hasNode(node.id);
-
-			if (graphNodeExists) {
-				return;
-			}
-
-			if (isNode(node)) {
-				const nodeAttributes = getNodeGraphData(node);
-
-				sigma.getGraph().addNode(node.id, {
-					...nodeAttributes,
-					// store node data in Sigma's graph object
-					data: node
-				});
-			} else {
-				sigma.getGraph().addNode(node.id, node.attributes);
-			}
-		},
-		// much bulk, very wow
-		addNodes: (nodes) => {
-			nodes.forEach((node) => {
-				get().addNode(node);
-			});
-		},
-		removeNode: (nodeId) => {
-			get().unHighlightNode(nodeId);
-
-			if (get().sigma.getGraph().hasNode(nodeId)) {
-				get().sigma.getGraph().dropNode(nodeId);
-			}
-		},
-		setNodePosition: (nodeId, coordinates) => {
-			const graph = get().sigma.getGraph();
-			const localCoordinates: Record<string, number> = {
-				x: coordinates.x,
-				y: coordinates.y
 			};
-
-			if (coordinates.z !== undefined) {
-				localCoordinates.z = coordinates.z;
+		},
+		{
+			name: APP_STORAGE_KEY_PREFIX + 'graph', // name of the item in the storage (must be unique)
+			storage: createJSONStorage(() => window.localStorage), // (optional) by default, 'localStorage' is used
+			partialize: (store) => {
+				return {
+					zoomFactor: store.zoomFactor
+				};
 			}
-
-			graph.mergeNodeAttributes(nodeId, coordinates);
-		},
-		addRelation: (relation) => {
-			const sigma = get().sigma;
-			const graphRelationExists = sigma.getGraph().hasEdge(relation.id);
-			const sourceNodeExists = sigma.getGraph().hasNode(relation.source_id);
-			const targetNodeExists = sigma.getGraph().hasNode(relation.target_id);
-
-			if (graphRelationExists) {
-				return;
-			}
-
-			if (!sourceNodeExists || !targetNodeExists) {
-				return;
-			}
-
-			if (isRelation(relation)) {
-				const relationAttributes = getRelationGraphData(relation);
-
-				sigma
-					.getGraph()
-					.addDirectedEdgeWithKey(relation.id, relation.source_id, relation.target_id, {
-						...relationAttributes,
-						type: 'straight',
-						// store relation data in Sigma's graph object
-						data: relation
-					});
-			} else {
-				sigma
-					.getGraph()
-					.addDirectedEdgeWithKey(
-						relation.id,
-						relation.source_id,
-						relation.target_id,
-						relation.attributes
-					);
-			}
-		},
-		// TODO refactor to more bulky
-		// much bulk, very wow
-		addRelations: (relations) => {
-			relations.forEach((relation) => {
-				get().addRelation(relation);
-			});
-		},
-		removeRelation: (relationId) => {
-			if (get().sigma.getGraph().hasEdge(relationId)) {
-				get().sigma.getGraph().dropEdge(relationId);
-			}
-		},
-		setZoomFactor: (newZoomFactor) => {
-			set({ zoomFactor: newZoomFactor });
-
-			get().sigma.updateSetting('zoomingRatio', () => newZoomFactor);
-		},
-		reset: () => {
-			set(getInitialState());
-		},
-		resetButExclude: (excludeKeys) => {
-			const state: Partial<InitialState> = getInitialState();
-
-			excludeKeys.forEach((key) => {
-				delete state[key];
-			});
-
-			set(state);
-		},
-		getNodeSizeFactor: () => {
-			return get().nodeSizeFactor;
-		},
-		setNodeSizeFactor: (newNodeSizeFactor) => {
-			let fixedSizeFactor = parseFloat(newNodeSizeFactor.toFixed(2));
-
-			if (fixedSizeFactor <= 0.1) {
-				fixedSizeFactor = 0.1;
-			}
-
-			set({ nodeSizeFactor: fixedSizeFactor });
-		},
-		setIsRenderingCapabilitiesWarningShown: (isRenderingCapabilitiesWarningShown) => {
-			set({ isRenderingCapabilitiesWarningShown: isRenderingCapabilitiesWarningShown });
-		},
-		toggleLabelsVisibility: () => {
-			const sigma = get().sigma;
-			// TODO check if fixable somehow else
-			// getNodesInViewport hardcoded Sigma as type
-			const nodesInViewport = getNodesInViewport(sigma as unknown as Sigma);
-			const nodeLabelsInViewport = sigma.getNodeDisplayedLabels();
-			const relationLabelsInViewport = sigma.getEdgeDisplayedLabels();
-
-			if (
-				nodeLabelsInViewport.size + relationLabelsInViewport.size >
-					GRAPH_HIDE_ALL_LABELS_THRESHOLD ||
-				nodesInViewport.length > GRAPH_HIDE_ALL_LABELS_THRESHOLD
-			) {
-				if (get().labelsRendered) {
-					get().labelsRendered = false;
-					sigma.setSetting('labelRenderedSizeThreshold', 10000000);
-				}
-			} else {
-				if (!get().labelsRendered) {
-					get().labelsRendered = true;
-					sigma.setSetting(
-						'labelRenderedSizeThreshold',
-						GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD
-					);
-				}
-			}
-		},
-		setLabelFontSizeFactor: (factor: number) => {
-			set({ labelFontSizeFactor: factor });
-			get().resizeLabels();
-		},
-		increaseLabelFontSizeFactor: () => {
-			if (get().labelFontSizeFactor < GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX) {
-				set({
-					labelFontSizeFactor:
-						get().labelFontSizeFactor + GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP
-				});
-			}
-			get().resizeLabels();
-		},
-		decreaseLabelFontSizeFactor: () => {
-			if (get().labelFontSizeFactor > GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN) {
-				set({
-					labelFontSizeFactor:
-						get().labelFontSizeFactor - GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP
-				});
-			}
-			get().resizeLabels();
-		},
-		resetLabelFontSizeFactor() {
-			set({
-				labelFontSizeFactor: GRAPH_DEFAULT_FONT_SIZE_FACTOR
-			});
-			get().resizeLabels();
-		},
-		resizeLabels: () => {
-			const camera = get().sigma.getCamera();
-			get().sigma.setSetting(
-				'labelSize',
-				(GRAPH_DEFAULT_NODE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
-			);
-			get().sigma.setSetting(
-				'edgeLabelSize',
-				(GRAPH_DEFAULT_EDGE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
-			);
-			get().toggleLabelsVisibility();
 		}
-	};
-});
+	)
+);
 
 (window as any).useGraphStore = useGraphStore;

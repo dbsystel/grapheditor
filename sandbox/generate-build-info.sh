@@ -40,6 +40,6 @@ dirty_flag=`git diff --quiet || echo '-dirty'`
 cat <<EOF > $OUTPUT
 {
     "commit": "`git rev-parse HEAD`$dirty_flag",
-    "timestamp": "`date "+%Y-%m-%d %H:%M:%S %:::z"`"
+    "timestamp": "`date "+%Y-%m-%d %H:%M:%S %z"`"
 }
 EOF

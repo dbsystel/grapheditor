@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ToggleGroup } from 'src/components/toggle-group/ToggleGroup';
 import { ToggleGroupOption } from 'src/components/toggle-group/ToggleGroup.interfaces';
+import { useDatabaseStore } from 'src/stores/database';
 import { SearchStoreType, useSearchStore } from 'src/stores/search';
 import {
 	GLOBAL_SEARCH_QUERY_KEY,
@@ -10,12 +11,17 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
+import { databaseSupportsPerspectives } from 'src/utils/helpers/database';
 import { SearchOptionsProps } from './SearchOptions.interfaces';
 
 export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => {
 	const { t } = useTranslation();
 	const { type, setType, setSearchValue, getUrlSearchParameter, getDefaultSearchValue } =
 		useSearchStore((store) => store);
+	const currentDatabase = useDatabaseStore((store) => store.currentDatabase);
+	const isPerspectivesSupported = currentDatabase
+		? databaseSupportsPerspectives(currentDatabase)
+		: false;
 
 	const onTypeChange = (newType: SearchStoreType) => {
 		setType(newType);
@@ -51,8 +57,13 @@ export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => 
 		},
 		{
 			value: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
-			label: t('global_search_perspective'),
-			icon: 'scan_eye'
+			label: t(
+				isPerspectivesSupported
+					? 'global_search_perspective'
+					: 'global_search_perspective_not_supported_by_database'
+			),
+			icon: 'scan_eye',
+			isDisabled: !isPerspectivesSupported
 		},
 		{
 			value: GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,

@@ -272,7 +272,7 @@ https://react.dev/learn/react-compiler
 
 10.03.2025
 Not working as intended, try another time.
-Tested with the MainVisual.tsx component and a simple component which would do console.log('test') and return <div>1</div>.
+Tested with the MainVisual.tsx component and a simple component which would do console.log('test') and return `<div>1</div>`.
 Although the new child component had no props, it was re-rendered each time the MainVisual component was re-rendered.
 The cause for this was located in the MainVisual's "executeSearch" function, specifically the "postCypherQuerySearch" function call.
 
@@ -337,6 +337,22 @@ When testing keyboard events, please see [Testing library keyboard documentation
 
 To run unit tests, please run `npm run test`. If you want to check unit test coverage, please run `npm run test:coverage`.
 
+### E2E Tests
+
+We use Playwright for end-to-end testing. The E2E tests run against a real browser (Microsoft Edge, Chromium, Firefox) and require a running backend with a Neo4j database.
+
+E2E tests require a local .env file in the frontend directory with the following variables: NEO4J_HOST, NEO4J_DATABASE, NEO4J_USER, NEO4J_PASSWORD
+
+These variables are used by the setup project (src/tests/e2e/setup.test.ts) to authenticate against the Neo4j instance before any test suite runs. The authenticated session state is stored in user.json and reused by all test projects.
+
+Playwright is configured in playwright.config.ts. In local development, it reuses an already running dev server (npm run dev). In CI, it starts the dev server automatically.
+
+Make sure the backend and Neo4j are running, then:
+- `npm run test:e2e` - Run all E2E tests headless
+- `npm run test:e2e:headed` - Run with pre-configured browser
+- `npm run test:e2e:ui` - Open Playwright UI mode
+- `npm run test:e2e:report` - View last test report
+
 ## Notes
 
 ### CSS files order
@@ -377,6 +393,6 @@ Team GraphEditor. Responsible frontend developers:
 10. Refactor URL parameters workflow (define how we deal with URL parameters and their changes, create a helper function to create clean URLs and similar)
 11. Add loading states to components when fetching data from backend
 12. Add e2e tests with Playwright
-13. Replace itemsStore events/callbacks system with a more generic solution
-14. Centralize helpers like with API objects
-15. Isolate regexes into a separate file (check the `src/utils/regex.ts` file)
+13. Centralize helpers like with API objects
+14. Isolate regexes into a separate file (check the `src/utils/regex.ts` file)
+15. Improve file naming (singular vs plural, camelCase vs kebab-case)

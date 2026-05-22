@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { Node, NodeId } from 'src/models/node';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 import { PostNodeParameters } from 'src/utils/fetch/postNode';
 

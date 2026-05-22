@@ -116,7 +116,7 @@ export const Sidebar = ({
 	const icon = isCollapsed ? 'chevron_right' : 'chevron_left';
 
 	return (
-		<div
+		<aside
 			className={rootElementClassName}
 			id={id}
 			data-testid={testId}
@@ -149,6 +149,6 @@ export const Sidebar = ({
 				/>
 			</header>
 			<div className="sidebar__content">{children}</div>
-		</div>
+		</aside>
 	);
 };

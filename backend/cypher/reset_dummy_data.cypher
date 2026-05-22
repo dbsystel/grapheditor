@@ -1,171 +1,279 @@
-match (n) detach delete n;
+        match (n) detach delete n;
 
-create
-  (alice:Person__dummy_ {name__dummy_:"Alice"}),
-  (bob:Person__dummy_ {name__dummy_:"Bob"}),
+        create
+          (alice:Person__dummy_ {name__dummy_:"Alice", _uuid__tech_:"alice"}),
+          (bob:Person__dummy_ {name__dummy_:"Bob", _uuid__tech_:"bob"}),
 
-  (alice)-[:likes__dummy_ {since__dummy_:1998}]->(bob),
-
-
-  (person:MetaLabel__tech_ {name__tech_:"Person__dummy_",description__tech_:"A living human"}),
-  (personname:MetaProperty__tech_ {name__tech_:"name__dummy_",description__tech_:"the name of something or someone", type__tech_:"string"}),
-  (personname)-[:prop__tech_]->(person),
-  (likes:MetaRelation__tech_ {name__tech_:"likes__dummy_",description__tech_:"Someone takes a liking in something or someone"}),
-  (since:MetaProperty__tech_ {name__tech_:"since__dummy_",description__tech_:"since when some relation holds",type__tech_:"integer"}),
-
-  (person_likes_person:Restriction__tech_ {description__tech_:"Person likes Person"}),
-  (person)-[:source__tech_]->(person_likes_person),
-  (person)-[:target__tech_]->(person_likes_person),
-  (person_likes_person)-[:restricts__tech_]->(likes),
-  (since)-[:prop__tech_]->(likes),
+          (alice)-[:likes__dummy_ {since__dummy_:1998, _uuid__tech_:"alice-likes-bob"}]->(bob),
 
 
-  (metaname:MetaProperty__tech_ {name__tech_:"name__tech_",description__tech_:"the name of some MetaInfo", type__tech_:"string"}),
-  (type:MetaProperty__tech_ {name__tech_:"type__tech_",description__tech_:"The type of the value of a property", type__tech_:"string"}),
-  (description:MetaProperty__tech_ {name__tech_:"description__tech_",description__tech_:"The description of some Metainfo", type__tech_:"string"}),
-  (metalabel:MetaLabel__tech_ {name__tech_:"MetaLabel__tech_", description__tech_:"MetaLabel describes a label for nodes"}),
-  (metaproperty:MetaLabel__tech_ {name__tech_:"MetaProperty__tech_", description__tech_:"MetaProperty describes a property"}),
-  (metarelation:MetaLabel__tech_ {name__tech_:"MetaRelation__tech_", description__tech_:"MetaRelation describes a relation type"}),
-  (restriction:MetaLabel__tech_ {name__tech_:"Restriction__tech_", description__tech_:"Restriction specifies the use of a MetaRelation between two MetaLabels"}),
+          (person:MetaLabel__tech_ {name__tech_:"Person__dummy_",description__tech_:"A living human", _uuid__tech_:"person"}),
+          (personname:MetaProperty__tech_ {name__tech_:"name__dummy_",description__tech_:"the name of something or someone", type__tech_:"string", _uuid__tech_:"personname"}),
+          (personname)-[:prop__tech_ {_uuid__tech_:"personname-prop-person"}]->(person),
+          (likes:MetaRelation__tech_ {name__tech_:"likes__dummy_",description__tech_:"Someone takes a liking in something or someone", _uuid__tech_:"likes"}),
+          (since:MetaProperty__tech_ {name__tech_:"since__dummy_",description__tech_:"since when some relation holds",type__tech_:"integer", _uuid__tech_:"since"}),
 
-  (metaname)-[:prop__tech_]->(metalabel),
-  (metaname)-[:prop__tech_]->(metaproperty),
-  (metaname)-[:prop__tech_]->(metarelation),
-  (description)-[:prop__tech_]->(metalabel),
-  (description)-[:prop__tech_]->(metaproperty),
-  (description)-[:prop__tech_]->(metarelation),
-  (description)-[:prop__tech_]->(restriction),
-  (type)-[:prop__tech_]->(metaproperty),
+          (person_likes_person:Restriction__tech_ {description__tech_:"Person likes Person", _uuid__tech_:"person_likes_person"}),
+          (person)-[:source__tech_ {_uuid__tech_:"person-source-person_likes_person"}]->(person_likes_person),
+          (person)-[:target__tech_ {_uuid__tech_:"person-target_person_likes_person"}]->(person_likes_person),
+          (person_likes_person)-[:restricts__tech_ {_uuid__tech_:"person_likes_person-restricts-likes"}]->(likes),
+          (since)-[:prop__tech_ {_uuid__tech_:"since-prop-likes"}]->(likes),
 
 
-  (source:MetaRelation__tech_ {name__tech_:"source__tech_",description__tech_:"What is the source of a relation"}),
-  (target:MetaRelation__tech_ {name__tech_:"target__tech_",description__tech_:"What is the target of a relation"}),
-  (restricts:MetaRelation__tech_ {name__tech_:"restricts__tech_",description__tech_:"What MetaRelation does the restriction restrict?"}),
+          (metaname:MetaProperty__tech_ {name__tech_:"name__tech_",description__tech_:"the name of some MetaInfo", type__tech_:"string", _uuid__tech_:"metaname"}),
+          (type:MetaProperty__tech_ {name__tech_:"type__tech_",description__tech_:"The type of the value of a property", type__tech_:"string", _uuid__tech_:"type"}),
+          (description:MetaProperty__tech_ {name__tech_:"description__tech_",description__tech_:"The description of some Metainfo", type__tech_:"string", _uuid__tech_:"description"}),
+          (metalabel:MetaLabel__tech_ {name__tech_:"MetaLabel__tech_", description__tech_:"MetaLabel describes a label for nodes", _uuid__tech_:"metalabel"}),
+          (metaproperty:MetaLabel__tech_ {name__tech_:"MetaProperty__tech_", description__tech_:"MetaProperty describes a property", _uuid__tech_:"metaproperty"}),
+          (metarelation:MetaLabel__tech_ {name__tech_:"MetaRelation__tech_", description__tech_:"MetaRelation describes a relation type", _uuid__tech_:"metarelation"}),
+          (restriction:MetaLabel__tech_ {name__tech_:"Restriction__tech_", description__tech_:"Restriction specifies the use of a MetaRelation between two MetaLabels", _uuid__tech_:"restriction"}),
 
-  (metalabel_source_restriction:Restriction__tech_ {description__tech_:"MetaLabel source Restriction"}),
-  (metalabel_target_restriction:Restriction__tech_ {description__tech_:"MetaLabel target Restriction"}),
-
-  (metalabel_source_restriction)-[:restricts__tech_]->(source),
-  (metalabel_target_restriction)-[:restricts__tech_]->(target),
-
-  (metalabel)-[:source__tech_]->(metalabel_source_restriction),
-  (restriction)-[:target__tech_]->(metalabel_source_restriction),
-
-  (metalabel)-[:source__tech_]->(metalabel_target_restriction),
-  (restriction)-[:target__tech_]->(metalabel_target_restriction),
-
-
-
-  (restriction_restricts_metarelation:Restriction__tech_ {description__tech_:"Restriction restricts MetaRelation"}),
-
-  (restriction)-[:source__tech_]->(restriction_restricts_metarelation),
-  (metarelation)-[:target__tech_]->(restriction_restricts_metarelation),
-
-  (restriction_restricts_metarelation)-[:restricts__tech_]->(restricts),
-
-  (prop:MetaRelation__tech_ {name__tech_:"prop__tech_",description__tech_:"where is the property used?"}),
-  (metaproperty_prop_object:Restriction__tech_ {description__tech_:"MetaProperty prop MetaObject "}),
-  (metaproperty_prop_object)-[:restricts__tech_]->(prop),
-  (metaproperty)-[:source__tech_]->(metaproperty_prop_object),
-  (metalabel)-[:target__tech_]->(metaproperty_prop_object),
-  (metarelation)-[:target__tech_]->(metaproperty_prop_object),
-  (restriction)-[:target__tech_]->(metaproperty_prop_object),
-
-  (tech:Namespace__tech_ {name__tech_:"tech",description__tech_:"Namespace for all cross-namespace things (and namespaces)"}),
-  (dummy:Namespace__tech_ {name__tech_:"dummy",description__tech_:"Example objects"}),
-
-  (namespacelabel:MetaLabel__tech_ {name__tech_:"Namespace__tech_" , description__tech_:"Definition of a namespace"}),
-  (metaname)-[:prop__tech_]->(namespacelabel),
-  (description)-[:prop__tech_]->(namespacelabel),
-
-  (paraquery:Paraquery__tech_ {
-      name__tech_: "Query by label", description__tech_: "Return all nodes of a certain type",
-      user_text__tech_: "I want all nodes of type $label.", cypher__tech_: "match (a:$($label)) return a"
-  }),
-  (paramLabel:Parameter__tech_ {
-      help_text__tech_: "Selection of available node types.",
-      type__tech_: "string", selection__tech_: "call db.labels() yield label return label",
-      name__tech_: "parameter_label"
-  }),
-  (paramLabel)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_"}]->(paraquery),
+          (metaname)-[:prop__tech_ {_uuid__tech_:"metaname_prop_metalabel"}]->(metalabel),
+          (metaname)-[:prop__tech_ {_uuid__tech_:"metaname_prop_metaproperty"}]->(metaproperty),
+          (metaname)-[:prop__tech_ {_uuid__tech_:"metaname_prop_metarelation"}]->(metarelation),
+          (description)-[:prop__tech_ {_uuid__tech_:"description_prop_metalabel"}]->(metalabel),
+          (description)-[:prop__tech_ {_uuid__tech_:"description_prop_metaproperty"}]->(metaproperty),
+          (description)-[:prop__tech_ {_uuid__tech_:"description_prop_metarelation"}]->(metarelation),
+          (description)-[:prop__tech_ {_uuid__tech_:"description_prop_restriction"}]->(restriction),
+          (type)-[:prop__tech_ {_uuid__tech_:"type_prop_metaproperty"}]->(metaproperty),
 
 
-  (paraquery2:Paraquery__tech_ {
-      name__tech_: "Query by label and property", description__tech_: "Return all nodes that have a specific property and a certain value on a property.",
-      user_text__tech_: "I want all nodes with $label and $propertyName=$propertyValue.",
-      cypher__tech_: "match (a:$($label)) where a[$propertyName] = $propertyValue return a"
-  }),
-  (paramPropName:Parameter__tech_ {
-      help_text__tech_: "Selection of available node properties.",
-      type__tech_: "string", selection__tech_: "match (a) unwind keys(a) as prop return distinct prop",
-      name__tech_: "parameter_property_name"
-  }),
-  (paramPropValue:Parameter__tech_ {
-      help_text__tech_: "A node property value.",
-      type__tech_: "string",
-      name__tech_: "parameter_property_value"
-  }),
-  (paramLabel)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_"}]->(paraquery2),
-  (paramPropName)-[:parameter__tech_ {parameter_name__tech_: "propertyName", default_value__tech_: "name__dummy_"}]->(paraquery2),
-  (paramPropValue)-[:parameter__tech_ {parameter_name__tech_: "propertyValue"}]->(paraquery2),
+          (source:MetaRelation__tech_ {name__tech_:"source__tech_",description__tech_:"What is the source of a relation", _uuid__tech_:"source"}),
+          (target:MetaRelation__tech_ {name__tech_:"target__tech_",description__tech_:"What is the target of a relation", _uuid__tech_:"target"}),
+          (restricts:MetaRelation__tech_ {name__tech_:"restricts__tech_",description__tech_:"What MetaRelation does the restriction restrict?", _uuid__tech_:"restricts"}),
 
-  (paraquery3:Paraquery__tech_ {
-      name__tech_: "Query persons", description__tech_: "Return all persons in the database. This paraquery has no parameters.",
-      user_text__tech_: "I want all nodes with $label = Person__dummy_.",
-      cypher__tech_: "match (a:Person__dummy_) return a"
-  });
+          (metalabel_source_restriction:Restriction__tech_ {description__tech_:"MetaLabel source Restriction", _uuid__tech_:"metalabel_source_restriction"}),
+          (metalabel_target_restriction:Restriction__tech_ {description__tech_:"MetaLabel target Restriction", _uuid__tech_:"metalabel_target_restriction"}),
 
-with date("2025-11-05") as a_date,
-     datetime("2019-06-01T18:40:32") as a_datetime,
-     time("12:34:56") as a_time,
-     time("12:34") as a_time_no_seconds,
-     time("12:34:56.2") as a_time_partial_ms,
-     time("12:34:56.000000789") as a_time_with_ns,
-     datetime("2019-06-01T18:40:32.1") as a_datetime_with_ms,
-     datetime("2019-06-01T18:40:32.000000001") as a_datetime_with_ns,
-     datetime("2019-06-01T18:40:32.1-01:00") as a_datetime_with_tz,
-     localtime("12:34:56.789") as a_localtime,
-     localdatetime("2025-02-18T12:34:56") as a_localdatetime,
-     duration('P14DT16H12M') as a_duration, point({x: 3, y: 0}) as cartesian2d,
-     point({x: 0, y: 4, z: 1}) as cartesian3d, point({latitude: 12, longitude: 56}) as geo2d,
-     point({latitude: 12, longitude: 56, height: 1000}) as geo3d
-create
-  (complex:ComplexObject {
-      boolean: True,
-      integer: 1,
-      float: 1.1,
-      string: "abc",
-      date: a_date,
-      time: a_time,
-      time_partial_ms: a_time_partial_ms,
-      time_no_seconds: a_time_no_seconds,
-      time_ns: a_time_with_ns,
-      datetime: a_datetime,
-      datetime_ms: a_datetime_with_ms,
-      datetime_ns: a_datetime_with_ns,
-      datetime_tz: a_datetime_with_tz,
-      localtime: a_localtime,
-      localdatetime: a_localdatetime,
-      duration: a_duration,
-      cartesian2d: cartesian2d,
-      cartesian3d: cartesian3d,
-      geo2d: geo2d,
-      geo3d: geo3d,
-      list_boolean: [True, False],
-      list_integer: [1, -2],
-      list_float: [1.1, 2.0, 1e3],
-      list_string: ["abc", "def"],
-      list_date: [a_date, a_date],
-      list_datetime: [a_datetime, a_datetime],
-      list_locatime: [a_localtime, a_localtime],
-      list_localdatetime: [a_localdatetime, a_localdatetime],
-      list_duration: [a_duration, a_duration],
-      list_cartesian2d: [cartesian2d, cartesian2d],
-      list_cartesian3d: [cartesian3d, cartesian3d],
-      list_geo2d: [geo2d, geo2d],
-      list_geo3d: [geo3d, geo3d],
-      empty_list: []
-  });
+          (metalabel_source_restriction)-[:restricts__tech_ {_uuid__tech_:"metalabel_source_restriction-restricts-source"}]->(source),
+          (metalabel_target_restriction)-[:restricts__tech_ {_uuid__tech_:"metalabel_target_restriction-restricts-target"}]->(target),
+          (metalabel)-[:source__tech_ {_uuid__tech_:"metalabel-source-metalabel_source_restriction"}]->(metalabel_source_restriction),
+          (restriction)-[:target__tech_ {_uuid__tech_:"restriction-target-metalabel_source_restriction"}]->(metalabel_source_restriction),
+          (metalabel)-[:source__tech_ {_uuid__tech_:"metalabel-source-metalabel_target_restriction"}]->(metalabel_target_restriction),
+          (restriction)-[:target__tech_ {_uuid__tech_:"restriction-target-metalabel_target_restriction"}]->(metalabel_target_restriction),
 
-match (a)-[r]->(b)
-      return *;
+          (restriction_restricts_metarelation:Restriction__tech_ {description__tech_:"Restriction restricts MetaRelation", _uuid__tech_:"restriction_restricts_metarelation"}),
+          (restriction)-[:source__tech_ {_uuid__tech_: "restriction-source-restriction_restricts_metarelation"}]->(restriction_restricts_metarelation),
+          (metarelation)-[:target__tech_ {_uuid__tech_: "metarelation-target-restriction_restricts_metarelation"}]->(restriction_restricts_metarelation),
+          (restriction_restricts_metarelation)-[:restricts__tech_ {_uuid__tech_: "restriction_restricts_metarelation-restricts-restricts"}]->(restricts),
+
+          (prop:MetaRelation__tech_ {name__tech_:"prop__tech_",description__tech_:"where is the property used?", _uuid__tech_:"prop"}),
+          (metaproperty_prop_object:Restriction__tech_ {description__tech_:"MetaProperty prop MetaObject ", _uuid__tech_:"metaproperty_prop_object"}),
+          (metaproperty_prop_object)-[:restricts__tech_ {_uuid__tech_:"metaproperty_prop_object-restricts-prop"}]->(prop),
+          (metaproperty)-[:source__tech_ {_uuid__tech_:"metaproperty-source-metaproperty_prop_object"}]->(metaproperty_prop_object),
+          (metalabel)-[:target__tech_ {_uuid__tech_:"metalabel-target-metaproperty_prop_object"}]->(metaproperty_prop_object),
+          (metarelation)-[:target__tech_ {_uuid__tech_:"metarelation-target-metaproperty_prop_object"}]->(metaproperty_prop_object),
+          (restriction)-[:target__tech_ {_uuid__tech_:"restriction-target-metaproperty_prop_object"}]->(metaproperty_prop_object),
+
+          (tech:Namespace__tech_ {name__tech_:"tech",description__tech_:"Namespace for all cross-namespace things (and namespaces)", _uuid__tech_:"tech"}),
+          (dummy:Namespace__tech_ {name__tech_:"dummy",description__tech_:"Example objects", _uuid__tech_:"dummy"}),
+          (namespacelabel:MetaLabel__tech_ {name__tech_:"Namespace__tech_" , description__tech_:"Definition of a namespace", _uuid__tech_:"namespacelabel"}),
+          (metaname)-[:prop__tech_ {_uuid__tech_:"metaname-prop-namespacelabel"}]->(namespacelabel),
+          (description)-[:prop__tech_ {_uuid__tech_:"description-prop-namespacelabel"}]->(namespacelabel),
+
+          (paraquery:Paraquery__tech_ {
+              name__tech_: "Query by label", description__tech_: "Return all nodes of a certain type",
+              user_text__tech_: "I want all nodes of type $label.", cypher__tech_: "match (a:$($label)) return a",
+              _uuid__tech_: "paraquery"
+          }),
+          (paramLabel:Parameter__tech_ {
+              help_text__tech_: "Selection of available node types.",
+              type__tech_: "string", selection__tech_: "call db.labels() yield label return label",
+              name__tech_: "parameter_label",
+              _uuid__tech_: "paramLabel"
+          }),
+
+          (paramLabel)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_", _uuid__tech_:"paramLabel-parameter-paraquery"}]->(paraquery),
+
+          (paraquery2:Paraquery__tech_ {
+              name__tech_: "Query by label and property", description__tech_: "Return all nodes that have a specific property and a certain value on a property.",
+              user_text__tech_: "I want all nodes with $label and $propertyName=$propertyValue.",
+              cypher__tech_: "match (a:$($label)) where a[$propertyName] = $propertyValue return a",
+              _uuid__tech_: "paraquery2"
+          }),
+
+          (paramPropName:Parameter__tech_ {
+              help_text__tech_: "Selection of available node properties.",
+              type__tech_: "string", selection__tech_: "match (a) unwind keys(a) as prop return distinct prop",
+              name__tech_: "parameter_property_name",
+              _uuid__tech_: "paramPropName"
+
+          }),
+
+          (paramPropValue:Parameter__tech_ {
+              help_text__tech_: "A node property value.",
+              type__tech_: "string",
+              name__tech_: "parameter_property_value",
+              _uuid__tech_: "paramPropValue"
+          }),
+
+          (paramLabel)-[:parameter__tech_ {parameter_name__tech_: "label", default_value__tech_: "Person__dummy_", _uuid__tech_:"paramLabel-parameter-paraquery2"}]->(paraquery2),
+          (paramPropName)-[:parameter__tech_ {parameter_name__tech_: "propertyName", default_value__tech_: "name__dummy_", _uuid__tech_:"paramPropName-parameter-paraquery2"}]->(paraquery2),
+          (paramPropValue)-[:parameter__tech_ {parameter_name__tech_: "propertyValue", _uuid__tech_:"paramPropValue-parameter-paraquery2"}]->(paraquery2),
+
+          (paraquery3:Paraquery__tech_ {
+              name__tech_: "Query persons", description__tech_: "Return all persons in the database. This paraquery has no parameters.",
+              user_text__tech_: "I want all nodes with $label = Person__dummy_.",
+              cypher__tech_: "match (a:Person__dummy_) return a",
+              _uuid__tech_: "paraquery3"
+          });
+
+        with date("2025-11-05") as a_date,
+             datetime("2019-06-01T18:40:32") as a_datetime,
+             time("12:34:56") as a_time,
+             time("12:34") as a_time_no_seconds,
+             time("12:34:56.2") as a_time_partial_ms,
+             time("12:34:56.000000789") as a_time_with_ns,
+             datetime("2019-06-01T18:40:32.1") as a_datetime_with_ms,
+             datetime("2019-06-01T18:40:32.000000001") as a_datetime_with_ns,
+             datetime("2019-06-01T18:40:32.1-01:00") as a_datetime_with_tz,
+             localtime("12:34:56.789") as a_localtime,
+             localdatetime("2025-02-18T12:34:56") as a_localdatetime,
+             duration('P14DT16H12M') as a_duration, point({x: 3, y: 0}) as cartesian2d,
+             point({x: 0, y: 4, z: 1}) as cartesian3d, point({latitude: 12, longitude: 56}) as geo2d,
+             point({latitude: 12, longitude: 56, height: 1000}) as geo3d
+        create
+          (complex:ComplexObject {
+              boolean: True,
+              integer: 1,
+              float: 1.1,
+              string: "abc",
+              date: a_date,
+              time: a_time,
+              time_partial_ms: a_time_partial_ms,
+              time_no_seconds: a_time_no_seconds,
+              time_ns: a_time_with_ns,
+              datetime: a_datetime,
+              datetime_ms: a_datetime_with_ms,
+              datetime_ns: a_datetime_with_ns,
+              datetime_tz: a_datetime_with_tz,
+              localtime: a_localtime,
+              localdatetime: a_localdatetime,
+              duration: a_duration,
+              cartesian2d: cartesian2d,
+              cartesian3d: cartesian3d,
+              geo2d: geo2d,
+              geo3d: geo3d,
+              list_boolean: [True, False],
+              list_integer: [1, -2],
+              list_float: [1.1, 2.0, 1e3],
+              list_string: ["abc",
+        "def"],
+              list_date: [a_date, a_date],
+              list_datetime: [a_datetime, a_datetime],
+              list_locatime: [a_localtime, a_localtime],
+              list_localdatetime: [a_localdatetime, a_localdatetime],
+              list_duration: [a_duration, a_duration],
+              list_cartesian2d: [cartesian2d, cartesian2d],
+              list_cartesian3d: [cartesian3d, cartesian3d],
+              list_geo2d: [geo2d, geo2d],
+              list_geo3d: [geo3d, geo3d],
+              empty_list: [],
+              _uuid__tech_: "complex"
+          });
+
+        CREATE (:Perspective__tech_ {_uuid__tech_:"perspective",
+                                     description__tech_:"Overview over dummy data",
+                                     name__tech_:"Overview",
+                                     nodes__tech_:["alice",
+                                                   "bob",
+                                                   "complex",
+                                                   "description",
+                                                   "dummy",
+                                                   "likes",
+                                                   "metalabel",
+                                                   "metalabel_source_restriction",
+                                                   "metalabel_target_restriction",
+                                                   "metaname",
+                                                   "metaproperty",
+                                                   "metaproperty_prop_object",
+                                                   "metarelation",
+                                                   "namespacelabel",
+                                                   "paramLabel",
+                                                   "paramPropName",
+                                                   "paramPropValue",
+                                                   "paraquery",
+                                                   "paraquery2",
+                                                   "paraquery3",
+                                                   "person",
+                                                   "person_likes_person",
+                                                   "personname",
+                                                   "prop",
+                                                   "restriction",
+                                                   "restriction_restricts_metarelation",
+                                                   "restricts",
+                                                   "since",
+                                                   "source",
+                                                   "target",
+                                                   "tech",
+                                                   "type"],
+                                     positions__tech_:["{\"_uuid\":\"alice\",\"x\":-91.26188821183604,\"y\":-972.8095437707333,\"z\":0.0}",
+                                                       "{\"_uuid\":\"bob\",\"x\":74.77402807124301,\"y\":-972.6616487000197,\"z\":0.0}",
+                                                       "{\"_uuid\":\"complex\",\"x\":844.2284561865357,\"y\":-832.2135917263543,\"z\":0.0}",
+                                                       "{\"_uuid\":\"description\",\"x\":-239.74360185699624,\"y\":-472.00605562213593,\"z\":0.0}",
+                                                       "{\"_uuid\":\"dummy\",\"x\":-456.9996438988527,\"y\":-817.0160930224255,\"z\":0.0}",
+                                                       "{\"_uuid\":\"likes\",\"x\":251.06160594263753,\"y\":-824.3360949853534,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metalabel\",\"x\":-81.56910221958964,\"y\":-374.89389153304927,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metalabel_source_restriction\",\"x\":87.49913953244618,\"y\":-380.6397311750017,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metalabel_target_restriction\",\"x\":84.34693132405684,\"y\":-472.1615834048513,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metaname\",\"x\":-238.36036147695526,\"y\":-376.22095310938204,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metaproperty\",\"x\":-80.10627819209029,\"y\":-566.3303593439672,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metaproperty_prop_object\",\"x\":89.88517999487058,\"y\":-564.663947446524,\"z\":0.0}",
+                                                       "{\"_uuid\":\"metarelation\",\"x\":-81.19037636855381,\"y\":-475.21715730535027,\"z\":0.0}",
+                                                       "{\"_uuid\":\"namespacelabel\",\"x\":-79.61238280327436,\"y\":-287.8830165450246,\"z\":0.0}",
+                                                       "{\"_uuid\":\"paramLabel\",\"x\":943.3698117519203,\"y\":-474.6967439716536,\"z\":0.0}",
+                                                       "{\"_uuid\":\"paramPropName\",\"x\":944.0471884284332,\"y\":-589.8499195618242,\"z\":0.0}",
+                                                       "{\"_uuid\":\"paramPropValue\",\"x\":944.9282894497327,\"y\":-699.0743217623369,\"z\":0.0}",
+                                                       "{\"_uuid\":\"paraquery2\",\"x\":749.2647258276523,\"y\":-586.5172011939826,\"z\":0.0}",
+                                                       "{\"_uuid\":\"paraquery3\",\"x\":750.7649593424537,\"y\":-706.4307487666425,\"z\":0.0}",
+                                                       "{\"_uuid\":\"paraquery\",\"x\":749.4304900467395,\"y\":-470.33443115290413,\"z\":0.0}",
+                                                       "{\"_uuid\":\"person\",\"x\":-89.89012063910164,\"y\":-818.4219011837636,\"z\":0.0}",
+                                                       "{\"_uuid\":\"person_likes_person\",\"x\":83.51017261588031,\"y\":-824.17410953923,\"z\":0.0}",
+                                                       "{\"_uuid\":\"personname\",\"x\":-239.81007365104972,\"y\":-818.893645613291,\"z\":0.0}",
+                                                       "{\"_uuid\":\"prop\",\"x\":245.60112318396557,\"y\":-565.6946376749752,\"z\":0.0}",
+                                                       "{\"_uuid\":\"restriction\",\"x\":-80.37608980419847,\"y\":-646.0905891481754,\"z\":0.0}",
+                                                       "{\"_uuid\":\"restriction_restricts_metarelation\",\"x\":87.46988186888069,\"y\":-647.0263024663626,\"z\":0.0}",
+                                                       "{\"_uuid\":\"restricts\",\"x\":244.05943202000577,\"y\":-645.4059982818922,\"z\":0.0}",
+                                                       "{\"_uuid\":\"since\",\"x\":394.5558534795817,\"y\":-826.8411534998371,\"z\":0.0}",
+                                                       "{\"_uuid\":\"source\",\"x\":241.51862552276106,\"y\":-379.8235479998565,\"z\":0.0}",
+                                                       "{\"_uuid\":\"target\",\"x\":242.74711458320178,\"y\":-477.06521007934623,\"z\":0.0}",
+                                                       "{\"_uuid\":\"tech\",\"x\":-468.22188797657964,\"y\":-289.22766681858235,\"z\":0.0}",
+                                                       "{\"_uuid\":\"type\",\"x\":-239.426863430311,\"y\":-565.3144908725652,\"z\":0.0}"],
+                                     relations__tech_:["alice-likes-bob",
+                                                       "description-prop-namespacelabel",
+                                                       "description_prop_metalabel",
+                                                       "description_prop_metaproperty",
+                                                       "description_prop_metarelation",
+                                                       "description_prop_restriction",
+                                                       "metalabel-source-metalabel_source_restriction",
+                                                       "metalabel-source-metalabel_target_restriction",
+                                                       "metalabel-target-metaproperty_prop_object",
+                                                       "metalabel_source_restriction-restricts-source",
+                                                       "metalabel_target_restriction-restricts-target",
+                                                       "metaname-prop-namespacelabel",
+                                                       "metaname_prop_metalabel",
+                                                       "metaname_prop_metaproperty",
+                                                       "metaname_prop_metarelation",
+                                                       "metaproperty-source-metaproperty_prop_object",
+                                                       "metaproperty_prop_object-restricts-prop",
+                                                       "metarelation-target-metaproperty_prop_object",
+                                                       "metarelation-target-restriction_restricts_metarelation",
+                                                       "paramLabel-parameter-paraquery",
+                                                       "paramLabel-parameter-paraquery2",
+                                                       "paramPropName-parameter-paraquery2",
+                                                       "paramPropValue-parameter-paraquery2",
+                                                       "person-source-person_likes_person",
+                                                       "person-target_person_likes_person",
+                                                       "person_likes_person-restricts-likes",
+                                                       "personname-prop-person",
+                                                       "restriction-source-restriction_restricts_metarelation",
+                                                       "restriction-target-metalabel_source_restriction",
+                                                       "restriction-target-metalabel_target_restriction",
+                                                       "restriction-target-metaproperty_prop_object",
+                                                       "restriction_restricts_metarelation-restricts-restricts",
+                                                       "since-prop-likes",
+                                                       "type_prop_metaproperty"]
+                                     });
+
+        match (a)-[r]->(b)
+              return *;

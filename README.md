@@ -41,6 +41,8 @@ Exiting main features are:
 - Custom start page with query shortcuts
 - Multi tenancy support
 
+Please also check the [changelog](CHANGELOG.md)
+
 ## Screenshot & video
 
 ![GraphEditor.png](GraphEditor.png)
@@ -51,24 +53,20 @@ There is also a video from the nodes2025 conference, showing release 2025.11.1:
 
 ## Architecture
 
-```plantuml
-@startuml
-skinparam defaultTextAlignment center
-
-rectangle "Frontend\n\ntypescript / react" as frontend
-rectangle "Backend\n\npython / flask" as backend
-database "LPG\n\nGraph Database" as lpg
-
-frontend <--> backend
-backend <--> lpg
-@enduml
+```mermaid
+flowchart TD
+    frontend[Frontend\n\ntypescript / react]
+    backend[Backend\n\npython / flask]
+    lpg[Graph Database\n\nneo4j]
+    frontend<-->backend
+    backend<-->lpg
 ```
 
 The editor consists of two parts:
 
 - The frontend, written in react/typescript, that the user interacts with.
 - The backend, written in python, that provdes an API that is used by the frontend, and in turn
-  talks to the LPG database, mostly neo4j.
+  talks to the graph database, neo4j at the moment.
 
 # Authors
 

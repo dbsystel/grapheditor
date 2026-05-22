@@ -5,16 +5,18 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { NodeId } from 'src/models/node';
+import { Node, NodeId } from 'src/models/node';
+import { Perspective } from 'src/models/perspective';
+import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
 import {
 	GLOBAL_SEARCH_NODE_ID_KEY,
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
-import { eventBus, EventBusEvents } from 'src/utils/event-bus';
 import { goToApplicationView, isHomepageView, isObject } from 'src/utils/helpers/general';
-import { processPerspective } from 'src/utils/helpers/nodes';
+import { isNode } from 'src/utils/helpers/nodes';
+import { processPerspective } from 'src/utils/helpers/perspectives';
 import { useGetNodesPerspectivesNodes } from 'src/utils/hooks/useGetNodesPerspectivesNodes';
 import { useGetPerspective } from 'src/utils/hooks/useGetPerspective';
 import { PerspectiveFinderProps } from './PerspectiveFinder.interfaces';
@@ -24,6 +26,7 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 	const rootElementClassName = clsx('perspective-finder', className);
 	const [perspectiveOptions, setPerspectiveOptions] = useState<Array<CustomSelectOptionType>>([]);
 	const [perspectiveId, setPerspectiveId] = useState('');
+	const perspective = usePerspectiveStore((store) => store.perspective);
 	const [searchParams] = useSearchParams();
 	const values = [perspectiveId || ''];
 
@@ -31,20 +34,7 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 		useGetNodesPerspectivesNodes({
 			executeImmediately: false,
 			onSuccess: (data) => {
-				setPerspectiveOptions(
-					data.map((node) => {
-						let label = node.title;
-
-						if (node.description) {
-							label += ' (' + node.description + ')';
-						}
-
-						return {
-							label: label,
-							value: node.id
-						};
-					})
-				);
+				setPerspectiveOptions(data.map((node) => formatOption(node)));
 			}
 		});
 
@@ -60,33 +50,18 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 	);
 
 	useEffect(() => {
-		const onNodesUpdate = (data: EventBusEvents['nodesUpdate']) => {
-			const updatedPerspectiveNode = data.nodes.find(
-				(updatedNode) => updatedNode.id === perspectiveId
-			);
+		if (perspective) {
+			setPerspectiveOptions((prevOptions) => {
+				return prevOptions.map((option) => {
+					if (option.value === perspective.id) {
+						return formatOption(perspective);
+					}
 
-			if (updatedPerspectiveNode) {
-				setPerspectiveOptions((prevOptions) => {
-					return prevOptions.map((option) => {
-						if (option.value === updatedPerspectiveNode.id) {
-							return {
-								label: updatedPerspectiveNode.title,
-								value: option.value
-							};
-						}
-
-						return option;
-					});
+					return option;
 				});
-			}
-		};
-
-		eventBus.subscribe('nodesUpdate', onNodesUpdate);
-
-		return () => {
-			eventBus.unsubscribe('nodesUpdate', onNodesUpdate);
-		};
-	}, [perspectiveId, perspectiveOptions]);
+			});
+		}
+	}, [perspective]);
 
 	useEffect(() => {
 		const type = useSearchStore.getState().getUrlSearchParameter(GLOBAL_SEARCH_TYPE_KEY);
@@ -98,6 +73,19 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 			fetchPerspectiveNodes();
 		}
 	}, [searchParams]);
+
+	const formatOption = (nodeOrPerspective: Node | Perspective) => {
+		let label = isNode(nodeOrPerspective) ? nodeOrPerspective.title : nodeOrPerspective.name;
+
+		if (nodeOrPerspective.description) {
+			label += ' (' + nodeOrPerspective.description + ')';
+		}
+
+		return {
+			label: label,
+			value: nodeOrPerspective.id
+		};
+	};
 
 	const onPerspectiveChange = (selectedPerspectives: Array<NodeId>) => {
 		const perspectiveId = selectedPerspectives[0];

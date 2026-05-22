@@ -1,12 +1,13 @@
 import { AxiosResponse } from 'axios';
-import { backendApi } from 'src/utils/backend-api';
+import { Database } from 'src/models/database';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PostDatabaseCurrentParameters = {
 	name: string;
 };
 
-export type PostDatabaseCurrentResponse = string;
+export type PostDatabaseCurrentResponse = Database;
 
 export const postDatabaseCurrent = ({ name }: PostDatabaseCurrentParameters) => {
 	return backendApi.post<

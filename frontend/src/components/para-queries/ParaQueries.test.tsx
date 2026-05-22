@@ -18,7 +18,7 @@ describe('Components - ParaQueries', () => {
 
 		const summary = screen.getByRole('group').element().getElementsByTagName('summary')[0];
 
-		await userEvent.click(summary);
+		summary.click();
 
 		const options = await vi.waitUntil(() => {
 			const optionElements = screen.getByRole('listitem').elements();

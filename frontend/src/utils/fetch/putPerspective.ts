@@ -1,16 +1,18 @@
 import { AxiosResponse } from 'axios';
 import { NodePositions, Perspective } from 'src/models/perspective';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PutPerspectiveParameters = {
 	perspectiveId: string;
 	perspectiveName: string;
+	perspectiveDescription: string;
 	nodePositions: NodePositions;
 	relationIds: Array<string>;
 };
 type PutPerspectiveServerParameters = {
 	name: PutPerspectiveParameters['perspectiveName'];
+	description: PutPerspectiveParameters['perspectiveDescription'];
 	node_positions: PutPerspectiveParameters['nodePositions'];
 	relation_ids: PutPerspectiveParameters['relationIds'];
 };
@@ -20,6 +22,7 @@ export const putPerspective = ({
 	perspectiveId,
 	nodePositions,
 	perspectiveName,
+	perspectiveDescription,
 	relationIds
 }: PutPerspectiveParameters) => {
 	return backendApi.put<
@@ -28,6 +31,7 @@ export const putPerspective = ({
 		PutPerspectiveServerParameters
 	>(endpoints.getPerspectivePath({ perspectiveId: perspectiveId }), {
 		name: perspectiveName,
+		description: perspectiveDescription,
 		node_positions: nodePositions,
 		relation_ids: relationIds
 	});

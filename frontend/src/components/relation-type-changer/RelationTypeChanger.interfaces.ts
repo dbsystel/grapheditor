@@ -1,6 +1,6 @@
 import { RefObject } from 'react';
-import { Relation, RelationType } from 'src/models/relation';
-import { GlobalComponentProps } from 'src/types/components';
+import { Relation } from 'src/models/relation';
+import { GlobalComponentProps, UnsavedChangesHandle } from 'src/types/components';
 
 export type RelationTypeChangerProps = GlobalComponentProps & {
 	onRelationTypeChange?: (relation: Relation) => void;
@@ -9,8 +9,4 @@ export type RelationTypeChangerProps = GlobalComponentProps & {
 	handleRef?: RefObject<RelationTypeChangerHandle>;
 };
 
-export type RelationTypeChangerHandle = {
-	handleSave: () => Promise<void>;
-	handleUndo: () => void;
-	type: RelationType;
-} | null;
+export type RelationTypeChangerHandle = UnsavedChangesHandle;

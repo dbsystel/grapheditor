@@ -33,6 +33,7 @@ import { MetaForMeta, Node, NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useDrawerStore } from 'src/stores/drawer';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
+import { UnsavedChangesHandle } from 'src/types/components';
 import {
 	ITEM_PROPERTY_DYNAMIC_TYPES,
 	ITEM_PROPERTY_TYPES,
@@ -642,7 +643,7 @@ export const openInItemsDrawer = (item: Item, isInsideItemsDrawer: boolean) => {
  *
  * This was an attempt to be able to use only one patch function for both nodes and relations bulk patch.
  * In order to be able to distinguish between patch nodes and patch relations, we must use the
- * 	"_grapheditor_type" key. This key has to first manually be added and the later removed from
+ * 	"_grapheditor_type" key. This key has to first manually be added and then later removed from
  * 	objects before we send them to server, otherwise server will fail at patching (it accepts only
  * 	specific object keys, and "_grapheditor_type" is not one of them).
  * 	Since it looks like we won't save many lines of code, we opted out for using the respected bulk
@@ -694,3 +695,14 @@ export const openInItemsDrawer = (item: Item, isInsideItemsDrawer: boolean) => {
 // 		);
 // 	}
 // };
+
+export const getDefaultUnsavedChangesHandle = (
+	name: string,
+	sectionNameTranslationKey: string
+): UnsavedChangesHandle => ({
+	name: name,
+	sectionNameTranslationKey: sectionNameTranslationKey,
+	handleSave: async () => {},
+	handleUndo: () => {},
+	checkIfHasUnsavedChanges: () => true
+});

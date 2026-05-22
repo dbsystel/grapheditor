@@ -20,16 +20,18 @@ export const ToggleGroup = <T extends string>({
 		<DBSection spacing="none" className={rootElementClassName} id={id} data-testid={testId}>
 			<div className="toggle-group__select-type">
 				{options.map((option) => (
-					<DBButton
-						key={option.value}
-						size={size}
-						type="button"
-						noText
-						variant={value === option.value ? 'filled' : 'ghost'}
-						onClick={() => onChange(option.value)}
-						className={value === option.value ? 'toggle-group--selected' : ''}
-					>
-						<DBIcon icon={option.icon} />
+					<span key={option.value}>
+						<DBButton
+							size={size}
+							type="button"
+							noText
+							variant={value === option.value ? 'filled' : 'ghost'}
+							onClick={() => onChange(option.value)}
+							className={value === option.value ? 'toggle-group--selected' : ''}
+							disabled={option.isDisabled}
+						>
+							<DBIcon icon={option.icon} />
+						</DBButton>
 						<DBTooltip
 							placement="bottom-start"
 							showArrow={false}
@@ -37,7 +39,7 @@ export const ToggleGroup = <T extends string>({
 						>
 							{option.label}
 						</DBTooltip>
-					</DBButton>
+					</span>
 				))}
 			</div>
 

@@ -218,6 +218,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 					className="global-search__input"
 					label=""
 					resize="none"
+					aria-label="Globalsearch"
 				/>
 				<DBButton
 					type="button"

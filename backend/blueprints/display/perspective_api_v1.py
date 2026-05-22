@@ -14,13 +14,27 @@ blp = Blueprint(
 )
 
 
+def _get_perspective_with_semantic_ids(pid):
+    "Convert IDs inside perspective to semantic IDs."
+    persp_data = current_app.graph_db.get_perspective_by_id(pid)
+    ge_nodes = {}
+    for nid, node in persp_data['nodes'].items():
+        ge_nodes[f"id::{nid}"] = GraphEditorNode.from_base_node(node)
+    persp_data['nodes'] = ge_nodes
+    ge_rels = {}
+    for rid, rel in persp_data['relations'].items():
+        ge_rels[f"id::{rid}"] = GraphEditorRelation.from_base_relation(rel)
+    persp_data['relations'] = ge_rels
+    return persp_data
+
+
 @blp.route("")
 class Perspectives(MethodView):
     @blp.arguments(
         perspective_model.PerspectivePostSchema,
         example=perspective_model.perspective_post_example,
     )
-    @blp.response(200, perspective_model.PerspectivePostResponseSchema)
+    @blp.response(200, perspective_model.PerspectiveSchema)
     @require_tab_id()
     def post(self, perspective_data):
         """
@@ -38,7 +52,8 @@ class Perspectives(MethodView):
         pid = current_app.graph_db.create_perspective(perspective_data)
         if not pid:
             abort(400)
-        return {"id": pid}
+        new_persp = _get_perspective_with_semantic_ids(pid)
+        return new_persp
 
 
 @blp.route("/<pid>")
@@ -56,22 +71,14 @@ class Perspective(MethodView):
         Returns an object containing nodes and their positions, as well
         relations.
         """
-        persp_data = current_app.graph_db.get_perspective_by_id(pid)
-        ge_nodes = {}
-        for nid, node in persp_data['nodes'].items():
-            ge_nodes[f"id::{nid}"] = GraphEditorNode.from_base_node(node)
-        persp_data['nodes'] = ge_nodes
-        ge_rels = {}
-        for rid, rel in persp_data['relations'].items():
-            ge_rels[f"id::{rid}"] = GraphEditorRelation.from_base_relation(rel)
-        persp_data['relations'] = ge_rels
+        persp_data = _get_perspective_with_semantic_ids(pid)
         return persp_data
 
     @blp.arguments(
         perspective_model.PerspectivePutSchema,
         example=perspective_model.perspective_post_example,
     )
-    @blp.response(200, perspective_model.PerspectivePostResponseSchema)
+    @blp.response(200, perspective_model.PerspectiveSchema)
     @require_tab_id()
     def put(self, json_node, pid: str):
         """
@@ -79,12 +86,6 @@ class Perspective(MethodView):
 
         Returns the ID of the perspective.
         """
-        current_app.graph_db.get_perspective_by_id(pid)
-        json_node['node_positions'] = {
-            get_base_id(k): v
-            for k, v in json_node['node_positions'].items()
-        }
-
         json_node['node_positions'] = {
             get_base_id(k): v
             for k, v in json_node['node_positions'].items()
@@ -96,4 +97,5 @@ class Perspective(MethodView):
 
         pid = current_app.graph_db.replace_perspective_by_id(
             pid, json_node)
-        return {"id": pid}
+        new_persp = _get_perspective_with_semantic_ids(pid)
+        return new_persp

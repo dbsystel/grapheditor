@@ -2,7 +2,7 @@ import { DBButton } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { processPerspective } from 'src/utils/helpers/nodes';
+import { processPerspective } from 'src/utils/helpers/perspectives';
 import { useGetPerspective } from 'src/utils/hooks/useGetPerspective';
 import { LoadPerspectiveProps } from './LoadPerspective.interfaces';
 

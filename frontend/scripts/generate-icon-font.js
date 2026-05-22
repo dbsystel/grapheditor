@@ -25,9 +25,9 @@ import fs from 'fs';
 	if (!fs.existsSync(relativeIconsTargetPath)) {
 		fs.mkdirSync(relativeIconsTargetPath);
 	} else {
-		await fs
-			.readdirSync(relativeIconsTargetPath)
-			.forEach((file) => fs.rmSync(`${relativeIconsTargetPath}/${file}`, { recursive: true }));
+		fs.readdirSync(relativeIconsTargetPath).forEach((file) =>
+			fs.rmSync(`${relativeIconsTargetPath}/${file}`, { recursive: true })
+		);
 	}
 
 	fs.copyFileSync(`${relativeCleanIconsPath}/fonts/default/index.css`, `${relativeIconsTargetPath}/index.css`);

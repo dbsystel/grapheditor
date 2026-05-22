@@ -1,5 +1,5 @@
 import './ItemInfo.scss';
-import { DBButton } from '@db-ux/react-core-components';
+import { DBButton, DBCheckbox, DBTag } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { MouseEvent, useCallback, useState } from 'react';
 import { useItemsDrawerContext } from 'src/components/items-drawer/context/ItemsDrawerContext';
@@ -20,10 +20,12 @@ import { ItemInfoProps } from './ItemInfo.interfaces';
 
 export const ItemInfo = ({
 	item,
+	showTooltipOnHover = true,
+	asTag,
+	children,
 	id,
 	className,
-	testId,
-	showTooltipOnHover = true
+	testId
 }: ItemInfoProps) => {
 	const [ref, setRef] = useState<HTMLButtonElement | null>(null);
 	const { isInsideItemsDrawer } = useItemsDrawerContext();
@@ -81,20 +83,46 @@ export const ItemInfo = ({
 		}
 	};
 
+	const handlers = {
+		ref: onRefChange,
+		onClick: onClick,
+		onContextMenu: onContextMenu
+	};
+	const title = idFormatter.parseIdToName(item.title);
+	const content = asTag ? <DBCheckbox>{title}</DBCheckbox> : title;
+	const contentToRender = children ? children : content;
+
+	const renderChild = () => {
+		if (asTag) {
+			return (
+				<DBTag
+					className="item-info__tag"
+					showCheckState={false}
+					data-density="functional"
+					{...handlers}
+				>
+					{contentToRender}
+				</DBTag>
+			);
+		} else {
+			return (
+				<DBButton
+					type="button"
+					className="item-info__button"
+					aria-describedby={item.id}
+					variant="ghost"
+					size="small"
+					{...handlers}
+				>
+					{contentToRender}
+				</DBButton>
+			);
+		}
+	};
+
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<DBButton
-				type="button"
-				className="item-info__button"
-				aria-describedby={item.id}
-				variant="ghost"
-				size="small"
-				onClick={onClick}
-				ref={onRefChange}
-				onContextMenu={onContextMenu}
-			>
-				{idFormatter.parseIdToName(item.title)}
-			</DBButton>
+			{renderChild()}
 		</div>
 	);
 };

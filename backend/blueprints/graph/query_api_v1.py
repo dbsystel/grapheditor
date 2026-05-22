@@ -37,11 +37,10 @@ def execute_query(query_text:str, parameters:dict|None=None):
             result.append(api_record.items())
         return {"result": list(result)}
     except neo4j.exceptions.ClientError as e:
-        message = f"{repr(e)}\n{repr(e.__cause__)}"
         # we also log the stacktrace (and should consider doing this on other
         # places too)
-        current_app.logger.error(f"{message}\n{traceback.format_exc()}")
-        abort_with_json(400, message)
+        current_app.logger.error(f"{e.message}\n{traceback.format_exc()}")
+        abort_with_json(400, e.message)
 
 
 @blp.route("cypher")

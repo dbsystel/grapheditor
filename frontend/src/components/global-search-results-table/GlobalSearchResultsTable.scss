@@ -1,6 +1,7 @@
 .global-search-results-table {
 	position: absolute;
 	padding-inline: var(--db-spacing-fixed-md);
+	height: 100%;
 
 	.table-head {
 		position: sticky;

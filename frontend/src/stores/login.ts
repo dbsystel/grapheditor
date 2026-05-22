@@ -1,4 +1,4 @@
-import { setBackendApiHeaderTabId } from 'src/utils/backend-api';
+import { setApiHeaderTabId } from 'src/utils/api';
 import { create } from 'zustand';
 
 type LoginStore = {
@@ -14,11 +14,6 @@ type LoginStore = {
 	host: string;
 	connect: (host: string, username: string) => void;
 	disconnect: () => void;
-	// TODO: Move to AuthStore?
-	database: string;
-	setDatabase: (database: string) => void;
-	isDatabaseLoading: boolean;
-	setIsDatabaseLoading: (isLoading: boolean) => void;
 };
 
 /**
@@ -38,7 +33,7 @@ export const useLoginStore = create<LoginStore>((set, get) => ({
 		set({ isConnected: false, isConnecting: false, host: '', username: '' });
 	},
 	connect: (host, username) => {
-		setBackendApiHeaderTabId(get().tabId);
+		setApiHeaderTabId(get().tabId);
 
 		set({
 			isConnected: true,
@@ -51,13 +46,5 @@ export const useLoginStore = create<LoginStore>((set, get) => ({
 		set({
 			isConnecting: isConnecting
 		});
-	},
-	database: '',
-	setDatabase: (database) => {
-		set({ database: database });
-	},
-	isDatabaseLoading: false,
-	setIsDatabaseLoading: (isLoading) => {
-		set({ isDatabaseLoading: isLoading });
 	}
 }));

@@ -9,8 +9,8 @@ import {
 } from 'src/observers';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
+import { setApiHeaderTabId } from 'src/utils/api';
 import { api } from 'src/utils/api/api';
-import { setBackendApiHeaderTabId } from 'src/utils/backend-api';
 import { SSO_HOST_STORAGE_KEY } from 'src/utils/constants';
 import { parseError, resetApplicationStates } from 'src/utils/helpers/general';
 import { AuthProps } from './Auth.interfaces';
@@ -47,7 +47,7 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 	// TODO --quick-fix end
 
 	useEffect(() => {
-		setBackendApiHeaderTabId(tabId);
+		setApiHeaderTabId(tabId);
 		setIsConnecting(true);
 
 		const checkLogin = async () => {

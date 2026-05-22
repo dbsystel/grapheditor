@@ -1,5 +1,6 @@
 CALL apoc.periodic.iterate(
   'MATCH (n)
+   WHERE n._uuid__tech_ IS NULL
    RETURN id(n) as nid',
   'WITH nid
    MATCH (n)
@@ -30,6 +31,7 @@ CALL apoc.periodic.iterate(
 
 CALL apoc.periodic.iterate(
   'MATCH ()-[r]->()
+   WHERE r._uuid__tech_ IS NULL
    RETURN id(r) as rid',
   'WITH rid
    MATCH ()-[r]->()

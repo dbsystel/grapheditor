@@ -7,6 +7,7 @@ COPY frontend .
 
 RUN apt update
 RUN apt install -y xdg-utils
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN npm run setup
 
 EXPOSE 8080

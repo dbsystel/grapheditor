@@ -44,7 +44,7 @@ def fetch_sample_relation(client, text="likes"):
     return response.json[0]
 
 
-def fetch_sample_relation_id(client, text="likes"):
+def fetch_sample_relation_id(client, text="likes__dummy_"):
     return fetch_sample_relation(client, text=text)["id"]
 
 
@@ -68,7 +68,7 @@ def create_perspective(client):
     """
     bob = fetch_sample_node_id(client, text="Bob")
     alice = fetch_sample_node_id(client, text="Alice")
-    likes = fetch_sample_relation_id(client, text="likes")
+    likes = fetch_sample_relation_id(client, text="likes__dummy_")
     description = "Displaying Bob and Alice"
 
     json = {
@@ -83,6 +83,7 @@ def create_perspective(client):
     )
     assert response.status_code == 200
     assert "id" in response.json
+    assert response.json["name"] == "Sample_Perspective"
 
     pid = response.json["id"]
 

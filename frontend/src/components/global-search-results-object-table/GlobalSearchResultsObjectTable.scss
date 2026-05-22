@@ -1,6 +1,7 @@
 .global-search-results-object-table {
 	padding-inline: var(--db-spacing-fixed-md);
 	overflow: auto;
+	height: 100%;
 
 	&__content {
 		position: absolute;

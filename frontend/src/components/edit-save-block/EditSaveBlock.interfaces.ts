@@ -9,4 +9,5 @@ export type EditSaveBlockProps = PropsWithChildren &
 		onEditClick?: () => void;
 		onSaveClick?: () => void;
 		onUndoClick?: () => void;
+		onToggle?: (isOpen: boolean) => void;
 	};

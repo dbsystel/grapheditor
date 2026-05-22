@@ -1,5 +1,4 @@
-import { DBCustomSelect } from '@db-ux/react-core-components';
-import { CustomSelectOptionType } from '@db-ux/react-core-components/dist/components/custom-select/model';
+import { CustomSelectOptionType, DBCustomSelect } from '@db-ux/react-core-components';
 import { GeneralEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
@@ -8,7 +7,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Loading } from 'src/components/loading/Loading';
 import { ParaQueryEditor } from 'src/components/para-query-editor/ParaQueryEditor';
 import { NodeId } from 'src/models/node';
-import { ParaQuery } from 'src/models/paraquery';
+import { ParaQuery, ParaQueryParameterType, ParaQueryParameterValues } from 'src/models/paraquery';
+import { useDatabaseStore } from 'src/stores/database';
 import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
 import { api } from 'src/utils/api/api';
@@ -25,14 +25,15 @@ import { ParaQueriesProps } from './ParaQueries.interfaces';
 
 export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQueriesProps) => {
 	const { t } = useTranslation();
+	const [searchParams] = useSearchParams();
+	const currentDatabase = useDatabaseStore((store) => store.currentDatabase);
 	const [options, setOptions] = useState<Array<CustomSelectOptionType>>([]);
 	const [values, setValues] = useState<Array<NodeId>>([]);
 	const [selectedParaQuery, setSelectedParaQuery] = useState<ParaQuery | null>(null);
-	const [defaultParameterValues, setDefaultParameterValues] = useState<Record<string, string>>(
+	const [defaultParameterValues, setDefaultParameterValues] = useState<ParaQueryParameterValues>(
 		{}
 	);
-	const [searchParams] = useSearchParams();
-	const parametersRef = useRef<Record<string, string>>({});
+	const parametersRef = useRef<ParaQueryParameterValues>({});
 	const shouldPreselectByIdRef = useRef('');
 	const rootElementClassName = clsx('para-queries', className);
 
@@ -96,6 +97,16 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 
 				searchFunctionRef.current.triggerSearch();
 			}
+		},
+		onError: () => {
+			setValues([]);
+			setSelectedParaQuery(null);
+			setDefaultParameterValues({});
+
+			// remove timeout after https://github.com/db-ux-design-system/core-web/issues/6488 is resolved
+			window.setTimeout(() => {
+				setOptions([]);
+			}, 50);
 		}
 	});
 
@@ -110,6 +121,14 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 		}
 	}, [searchParams]);
 
+	useEffect(() => {
+		const selectedValue = values.at(0);
+
+		if (selectedValue) {
+			reFetchParaQuery({ paraQueryId: selectedValue });
+		}
+	}, [currentDatabase]);
+
 	const onDropdownToggle = (event: GeneralEvent<HTMLDetailsElement>) => {
 		if ('newState' in event && event.newState === 'open') {
 			reFetch();
@@ -117,16 +136,18 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 	};
 
 	const onOptionSelected = (values: Array<NodeId>) => {
-		const selectedValue = values.at(0);
+		const newlySelectedValue = values.at(0);
 
-		if (selectedValue) {
-			setValues([selectedValue]);
-			reFetchParaQuery({ paraQueryId: selectedValue });
+		if (newlySelectedValue) {
+			setValues([newlySelectedValue]);
+			reFetchParaQuery({ paraQueryId: newlySelectedValue });
 		}
 	};
 
-	const onParameterChange = (key: string, value: string) => {
-		parametersRef.current[key] = value;
+	const onParameterChange = (key: string, value: string, type: ParaQueryParameterType) => {
+		const valueToStore = type === 'integer' ? parseInt(value) : value;
+
+		parametersRef.current[key] = valueToStore;
 	};
 
 	searchFunctionRef.current.searchFunction = () => {

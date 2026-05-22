@@ -61,37 +61,30 @@ export async function deleteRelationsAndUpdateApplication(relationIds: Array<Rel
 	const addNotification = notificationsStore.addNotification;
 
 	const isOnlyOneRelationToDelete = relationIds.length === 1;
-	const confirmMessage = isOnlyOneRelationToDelete
-		? 'confirm_delete_relation'
-		: 'confirm_delete_relations';
 	const successTitle = isOnlyOneRelationToDelete
 		? 'notifications_success_relation_delete'
 		: 'notifications_success_relations_delete';
 
-	if (window.confirm(i18n.t(confirmMessage, { id: relationIds.at(0) }))) {
-		const relationsDeletionResponse = await deleteRelations({ relationIds: relationIds });
-		const isDeletionSuccessful = relationsDeletionResponse.data.num_deleted > 0;
+	const relationsDeletionResponse = await deleteRelations({ relationIds: relationIds });
+	const isDeletionSuccessful = relationsDeletionResponse.data.num_deleted > 0;
 
-		itemsStore.removeRelations(relationIds);
+	itemsStore.removeRelations(relationIds);
 
-		if (isDeletionSuccessful) {
-			addNotification({
-				title: i18n.t(successTitle),
-				type: 'successful',
-				isClosable: true
-			});
-		} else {
-			addNotification({
-				title: i18n.t('notifications_warning_relations_delete_title'),
-				type: 'warning',
-				description: i18n.t('notifications_warning_relations_delete_description')
-			});
-		}
-
-		return relationsDeletionResponse.data;
+	if (isDeletionSuccessful) {
+		addNotification({
+			title: i18n.t(successTitle),
+			type: 'successful',
+			isClosable: true
+		});
 	} else {
-		throw new Error('User confirmation failed.');
+		addNotification({
+			title: i18n.t('notifications_warning_relations_delete_title'),
+			type: 'warning',
+			description: i18n.t('notifications_warning_relations_delete_description')
+		});
 	}
+
+	return relationsDeletionResponse.data;
 }
 
 export async function patchRelationsAndUpdateApplication(relations: Array<PatchRelation>) {

@@ -122,10 +122,6 @@ export const AddRelationForm = ({
 						return;
 					}
 
-					if (onSave) {
-						onSave(sourceNode, targetNode, relation);
-					}
-
 					addGraphNode(sourceNode);
 					addGraphNode(targetNode);
 					setRelation(relation);
@@ -145,6 +141,10 @@ export const AddRelationForm = ({
 						title: t('notifications_success_relation_create'),
 						type: 'successful'
 					});
+
+					if (onSave) {
+						onSave(sourceNode, targetNode, relation);
+					}
 
 					useContextMenuStore.getState().close();
 				});

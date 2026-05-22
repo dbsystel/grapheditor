@@ -1,4 +1,5 @@
 import i18n from 'src/i18n';
+import { ParaQueryParameterValues } from 'src/models/paraquery';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
 import {
 	APP_STORAGE_KEY_PREFIX,
@@ -54,7 +55,7 @@ export type SearchStoreResult = {
 type SearchStore = {
 	type: SearchStoreType;
 	query: string;
-	cypherQueryParameters: Record<string, string>;
+	cypherQueryParameters: ParaQueryParameterValues;
 	key: string;
 	presentation: string;
 	algorithm: AlgorithmType;
@@ -68,7 +69,7 @@ type SearchStore = {
 	getUrlSearchParameters: () => URLSearchParams;
 	setType: (type: SearchStoreType) => void;
 	setQuery: (query: string) => void;
-	setCypherQueryParameters: (parameters: Record<string, string>) => void;
+	setCypherQueryParameters: (parameters: ParaQueryParameterValues) => void;
 	setResult: (result: SearchStoreResult) => void;
 	setIsResultProcessed: (processed: boolean) => void;
 	setNewlyUploadedStyle: (style: string) => void;

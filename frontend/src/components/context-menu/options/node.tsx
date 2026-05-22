@@ -32,9 +32,7 @@ export const nodeOptions = (): Partial<Record<ContextMenuAction, ContextMenuOpti
 		},
 		delete: {
 			label: i18n.t('context_menu_delete'),
-			onClick: () => {
-				deleteNodesAction([nodeId]);
-			}
+			onClick: () => deleteNodesAction([nodeId])
 		}
 	};
 };

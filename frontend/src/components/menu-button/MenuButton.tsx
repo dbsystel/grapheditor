@@ -23,10 +23,17 @@ export const MenuButton = ({
 	id,
 	className,
 	options,
+	shouldIgnorePositionFix,
 	icon,
 	testId
 }: MenuButtonProps) => {
-	const rootElementClassName = clsx('menu-button', className);
+	const rootElementClassName = clsx(
+		'menu-button',
+		{
+			'menu-button--ignore-position-fix': shouldIgnorePositionFix
+		},
+		className
+	);
 
 	const [isMenuOpenState, setIsMenuOpenState] = useState(false);
 	const rootElementRef = useOutsideClick<HTMLDivElement>(

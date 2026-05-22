@@ -7,8 +7,10 @@ import { assignNoverlapLayout } from 'src/components/network-graph/layouts/nover
 import { assignRandomLayout } from 'src/components/network-graph/layouts/random';
 import { GraphEditorSigma } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { Cartesian2D } from 'src/models/graph';
+import { Item } from 'src/models/item';
 import { Node, NodeId } from 'src/models/node';
 import { Relation } from 'src/models/relation';
+import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useSearchStore } from 'src/stores/search';
@@ -33,7 +35,8 @@ import {
 	GRAPH_LAYOUT_RANDOM
 } from 'src/utils/constants';
 import { EventBusEvents } from 'src/utils/event-bus';
-import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
+import { objectHasOwnProperty } from 'src/utils/helpers/general';
+import { getNodeSemanticIdOrId, isNode } from 'src/utils/helpers/nodes';
 
 // disabling and enabling camera didn't work ¯\_(ツ)_/¯
 export const preventSigmaCameraMovement = (event: MouseCoords) => {
@@ -130,6 +133,22 @@ export const fitGraphToViewport = (sigma: GraphEditorSigma, nodeIds: Array<strin
 	return {
 		cameraStateChanged: cameraStateChanged
 	};
+};
+
+export const centerAndHighlightItemInGraph = (item: Item) => {
+	const isItemNode = isNode(item);
+	const nodeIds = isItemNode ? [item.id] : [item.source_id, item.target_id];
+
+	fitGraphToViewport(useGraphStore.getState().sigma, nodeIds);
+
+	useGraphStore.getState().unHighlightNodes();
+	useGraphStore.getState().unHighlightRelations();
+
+	if (isItemNode) {
+		useGraphStore.getState().highlightNode(item.id);
+	} else {
+		useGraphStore.getState().highlightRelation(item.id);
+	}
 };
 
 /**
@@ -393,6 +412,19 @@ export const onRelationsRemove = (data: EventBusEvents['relationsRemove']) => {
 	});
 };
 
+export const highlightGraphItemAndOpenInItemsDrawer = (item: Item) => {
+	useGraphStore.getState().unHighlightNodes();
+	useGraphStore.getState().unHighlightRelations();
+
+	if (isNode(item)) {
+		useGraphStore.getState().highlightNode(item.id);
+	} else {
+		useGraphStore.getState().highlightRelation(item.id);
+	}
+
+	useDrawerStore.getState().setEntry({ item: item });
+};
+
 export const addNewGraphNode = (event: SigmaEventPayload, onSuccess?: () => void) => {
 	const { defaultNodeLabels, sigma } = useGraphStore.getState();
 
@@ -418,7 +450,10 @@ export const addNewGraphNode = (event: SigmaEventPayload, onSuccess?: () => void
 			};
 
 			useItemsStore.getState().setNode(updatedNode);
+
 			useGraphStore.getState().addNode(updatedNode);
+
+			highlightGraphItemAndOpenInItemsDrawer(updatedNode);
 
 			if (onSuccess) {
 				onSuccess();
@@ -553,4 +588,167 @@ export const enableSigmaMouseCaptor = () => {
 
 export const disableSigmaMouseCaptor = () => {
 	useGraphStore.getState().sigma.getMouseCaptor().enabled = false;
+};
+
+/**
+ * Finds the topmost displayed edge label at the given viewport pixel coordinates.
+ * Supports straight, curved, and self-loop edges by computing the label position
+ * the same way each edge type's label drawing function does.
+ * Returns the edge key of the topmost (last rendered) matching label, or null.
+ */
+export const getEdgeLabelAtPoint = (x: number, y: number): string | null => {
+	const sigma = useGraphStore.getState().sigma;
+
+	const graph = sigma.getGraph();
+	const displayedLabels = sigma.getEdgeDisplayedLabels();
+
+	const canvases = sigma.getCanvases();
+	const edgeLabelsCanvas = objectHasOwnProperty(canvases, 'edgeLabels')
+		? canvases['edgeLabels']
+		: null;
+
+	if (!edgeLabelsCanvas) {
+		return null;
+	}
+
+	const context = edgeLabelsCanvas.getContext('2d')!;
+
+	let topMostEdge: string | null = null;
+
+	for (const edgeKey of displayedLabels) {
+		const edgeData = graph.getEdgeAttributes(edgeKey);
+		const label = edgeData.label;
+		if (!label) continue;
+
+		const sourceKey = graph.source(edgeKey);
+		const targetKey = graph.target(edgeKey);
+
+		const sourceDisplayData = sigma.getNodeDisplayData(sourceKey);
+		const targetDisplayData = sigma.getNodeDisplayData(targetKey);
+		if (!sourceDisplayData || !targetDisplayData) continue;
+
+		const sourceViewport = sigma.framedGraphToViewport({
+			x: sourceDisplayData.x,
+			y: sourceDisplayData.y
+		});
+		const targetViewport = sigma.framedGraphToViewport({
+			x: targetDisplayData.x,
+			y: targetDisplayData.y
+		});
+
+		const edgeType = edgeData.type || 'straight';
+
+		// Compute label center and rotation angle based on edge type
+		let labelCenterX: number;
+		let labelCenterY: number;
+		let angle: number;
+
+		if (edgeType === 'selfLoop') {
+			// Self-loop: label is positioned above the node at the top of the loop arc.
+			// The drawing function receives sourceData with x/y/size already in viewport
+			// (canvas pixel) coordinates. We replicate the same calculation here.
+			const curvature = edgeData.curvature ?? 0.25;
+			const curvatureScale = 1.0 + Math.abs(curvature) * 4.0;
+			const scaledRadius = sigma.scaleSize(30) * curvatureScale;
+			// sourceData.size in the drawing function is already viewport-scaled,
+			// so we must also scale the framed graph size to viewport pixels
+			const nodeSize = sigma.scaleSize(sourceDisplayData.size);
+			const loopApexHeight = nodeSize + scaledRadius;
+
+			labelCenterX = sourceViewport.x;
+			labelCenterY = sourceViewport.y - loopApexHeight;
+			angle = 0; // self-loop labels are horizontal
+		} else if (edgeType === 'curved') {
+			// Curved edge: label is at t=0.5 on the quadratic Bézier curve
+			const curvature = edgeData.curvature ?? 0;
+
+			// Determine left-to-right ordering (same as drawCurvedEdgeLabel)
+			const ltr = sourceDisplayData.x < targetDisplayData.x;
+			const sourceX = ltr ? sourceViewport.x : targetViewport.x;
+			const sourceY = ltr ? sourceViewport.y : targetViewport.y;
+			const targetX = ltr ? targetViewport.x : sourceViewport.x;
+			const targetY = ltr ? targetViewport.y : sourceViewport.y;
+
+			const centerX = (sourceX + targetX) / 2;
+			const centerY = (sourceY + targetY) / 2;
+			const diffX = targetX - sourceX;
+			const diffY = targetY - sourceY;
+
+			// Anchor point (control point of quadratic Bézier)
+			const orientation = ltr ? 1 : -1;
+			const anchorX = centerX + diffY * curvature * orientation;
+			const anchorY = centerY - diffX * curvature * orientation;
+
+			// Point at t=0.5 on the Bézier curve: (1-t)²·S + 2(1-t)t·A + t²·T
+			labelCenterX = 0.25 * sourceX + 0.5 * anchorX + 0.25 * targetX;
+			labelCenterY = 0.25 * sourceY + 0.5 * anchorY + 0.25 * targetY;
+
+			// Angle is computed from original source/target (not swapped)
+			const deltaX =
+				targetDisplayData.x > sourceDisplayData.x
+					? targetViewport.x - sourceViewport.x
+					: sourceViewport.x - targetViewport.x;
+			const deltaY =
+				targetDisplayData.x > sourceDisplayData.x
+					? targetViewport.y - sourceViewport.y
+					: sourceViewport.y - targetViewport.y;
+			const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+			if (distance === 0) continue;
+
+			if (deltaX > 0) {
+				angle = deltaY > 0 ? Math.acos(deltaX / distance) : Math.asin(deltaY / distance);
+			} else {
+				angle =
+					deltaY > 0
+						? Math.acos(deltaX / distance) + Math.PI
+						: Math.asin(deltaX / distance) + Math.PI / 2;
+			}
+		} else {
+			// Straight edge: label at midpoint
+			labelCenterX = (sourceViewport.x + targetViewport.x) / 2;
+			labelCenterY = (sourceViewport.y + targetViewport.y) / 2;
+
+			const deltaX = targetViewport.x - sourceViewport.x;
+			const deltaY = targetViewport.y - sourceViewport.y;
+			const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+			if (distance === 0) continue;
+
+			if (deltaX > 0) {
+				angle = deltaY > 0 ? Math.acos(deltaX / distance) : Math.asin(deltaY / distance);
+			} else {
+				angle =
+					deltaY > 0
+						? Math.acos(deltaX / distance) + Math.PI
+						: Math.asin(deltaX / distance) + Math.PI / 2;
+			}
+		}
+
+		// Measure label dimensions
+		const textMetrics = context.measureText(label);
+		const labelWidth = textMetrics.actualBoundingBoxLeft + textMetrics.actualBoundingBoxRight;
+		const labelHeight =
+			textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
+
+		const labelPadding = edgeData.labelPadding ? sigma.scaleSize(edgeData.labelPadding) : 0;
+		const halfWidth = labelWidth / 2 + labelPadding;
+		const halfHeight = labelHeight / 2 + labelPadding;
+
+		// Transform click point into label-local coordinate system
+		const cosine = Math.cos(-angle);
+		const sine = Math.sin(-angle);
+
+		const relativeX = x - labelCenterX;
+		const relativeY = y - labelCenterY;
+
+		const localX = relativeX * cosine - relativeY * sine;
+		const localY = relativeX * sine + relativeY * cosine;
+
+		if (Math.abs(localX) <= halfWidth && Math.abs(localY) <= halfHeight) {
+			topMostEdge = edgeKey;
+		}
+	}
+
+	return topMostEdge;
 };

@@ -4,6 +4,7 @@ import { Settings } from 'sigma/settings';
 import { EdgeDisplayData, NodeDisplayData, PartialButFor } from 'sigma/types';
 import { Cartesian2D } from 'src/models/graph';
 import { useGraphStore } from 'src/stores/graph';
+import { GRAPH_DEFAULT_HIGHLIGHTED_EDGE_LABEL_BORDER_SIZE } from 'src/utils/constants';
 
 type EdgeLabelDrawingFunction<
 	N extends Attributes = Attributes,
@@ -16,8 +17,15 @@ type EdgeLabelDrawingFunction<
 			labelColor?: string;
 			labelPadding?: number;
 			labelBackgroundColor?: string;
+			highlighted?: boolean;
 		},
-		'label' | 'labelColor' | 'labelBackgroundColor' | 'color' | 'size' | 'labelPadding'
+		| 'label'
+		| 'labelColor'
+		| 'labelBackgroundColor'
+		| 'color'
+		| 'size'
+		| 'labelPadding'
+		| 'highlighted'
 	>,
 	sourceData: PartialButFor<NodeDisplayData, 'x' | 'y' | 'size'>,
 	targetData: PartialButFor<NodeDisplayData, 'x' | 'y' | 'size'>,
@@ -164,14 +172,21 @@ export function createDrawCurvedEdgeLabel<
 
 		if (labelBackgroundColor !== undefined) {
 			const previousFillStyle = context.fillStyle;
+			const x = -labelWidth / 2 - labelPadding;
+			const y = -labelHeight / 2 - labelPadding;
+			const width = labelWidth + labelPadding * 2;
+			const height = labelHeight + labelPadding * 2;
 
 			context.fillStyle = labelBackgroundColor;
-			context.fillRect(
-				-labelWidth / 2 - labelPadding,
-				-labelHeight / 2 - labelPadding,
-				labelWidth + labelPadding * 2,
-				labelHeight + labelPadding * 2
-			);
+			context.fillRect(x, y, width, height);
+
+			// add border around label background
+			if (edgeData.highlighted) {
+				context.strokeStyle = edgeData.color;
+				context.lineWidth = GRAPH_DEFAULT_HIGHLIGHTED_EDGE_LABEL_BORDER_SIZE;
+				context.strokeRect(x, y, width, height);
+			}
+
 			context.fillStyle = previousFillStyle;
 		}
 

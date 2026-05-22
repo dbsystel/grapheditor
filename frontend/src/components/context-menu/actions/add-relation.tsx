@@ -1,14 +1,18 @@
 import { AddRelationForm } from 'src/components/add-relation-form/AddRelationForm';
 import { ContextMenuSubMenu } from 'src/components/context-menu/sub-menu/ContextMenuSubMenu';
 import { ContextMenuTopBlock } from 'src/components/context-menu/sub-menu/top-block/ContextMenuTopBlock';
+import { highlightGraphItemAndOpenInItemsDrawer } from 'src/components/network-graph/helpers';
 import i18n from 'src/i18n';
-import { NodeId } from 'src/models/node';
+import { Node, NodeId } from 'src/models/node';
+import { Relation } from 'src/models/relation';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 
 export const AddRelationAction = ({ nodeId, goBack }: { nodeId: NodeId; goBack: () => void }) => {
-	const onSave = () => {
+	const onSave = (sourceNode: Node, targetNode: Node, relation: Relation) => {
+		highlightGraphItemAndOpenInItemsDrawer(relation);
+
 		useContextMenuStore.getState().close();
 	};
 

@@ -1,11 +1,12 @@
 import { AxiosResponse } from 'axios';
+import { ParaQueryParameterValues } from 'src/models/paraquery';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type PostCypherQuerySearchParameters = {
 	queryText: string;
-	parameters?: Record<string, string>;
+	parameters?: ParaQueryParameterValues;
 };
 type PostCypherQuerySearchServerParameters = {
 	querytext: PostCypherQuerySearchParameters['queryText'];

@@ -16,6 +16,7 @@ export type UsePutPerspectiveParameters = {
 export const usePutPerspective = ({
 	perspectiveId,
 	perspectiveName,
+	perspectiveDescription,
 	nodePositions,
 	relationIds,
 	onSuccess,
@@ -34,12 +35,14 @@ export const usePutPerspective = ({
 					? {
 							perspectiveId: perspectiveId,
 							perspectiveName: perspectiveName,
+							perspectiveDescription: perspectiveDescription,
 							nodePositions: nodePositions,
 							relationIds: relationIds
 						}
 					: {
 							perspectiveId: parameters.perspectiveId,
 							perspectiveName: parameters.perspectiveName,
+							perspectiveDescription: parameters.perspectiveDescription,
 							nodePositions: parameters.nodePositions,
 							relationIds: parameters.relationIds
 						};

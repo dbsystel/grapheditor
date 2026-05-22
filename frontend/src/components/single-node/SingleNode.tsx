@@ -9,12 +9,11 @@ import {
 	DBTooltip
 } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Connections } from 'src/components/connections/Connections';
 import { CopyToClipboard } from 'src/components/copy-to-clipboard/CopyToClipboard';
 import { EditSaveBlock } from 'src/components/edit-save-block/EditSaveBlock';
-import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemCenterButton } from 'src/components/item-center-button/ItemCenterButton';
 import { ItemProperties } from 'src/components/item-properties/ItemProperties';
 import { ItemPropertiesHandle } from 'src/components/item-properties/ItemProperties.interfaces';
@@ -26,16 +25,18 @@ import { MarkdownWrapper } from 'src/components/markdown-wrapper/Markdown-Wrappe
 import { MenuButton } from 'src/components/menu-button/MenuButton';
 import { NodeLabelsItemFinder } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder';
 import { NodeLabelsItemFinderHandle } from 'src/components/node-labels-item-finder/NodeLabelsItemFinder.interfaces';
-import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
-import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
 import { MetaForMeta, Node, NodeId } from 'src/models/node';
+import { useConfirmationModalStore } from 'src/stores/confirmation-modal';
 import { useGraphStore } from 'src/stores/graph';
 import { useSearchStore } from 'src/stores/search';
+import { SettingsSectionsLocation, useSettingsStore } from 'src/stores/settings';
+import { useUnsavedChangesStore } from 'src/stores/unsaved-changes';
 import { api } from 'src/utils/api/api';
 import { GraphEditorType } from 'src/utils/constants';
 import { GRAPH_PRESENTATION_GRAPH } from 'src/utils/constants';
-import { getAt, twoObjectValuesAreEqual } from 'src/utils/helpers/general';
+import { getAt } from 'src/utils/helpers/general';
 import {
+	getDefaultUnsavedChangesHandle,
 	getItemDBId,
 	getItemMissingPropertiesForMeta,
 	openInItemsDrawer
@@ -61,9 +62,10 @@ export const SingleNode = ({
 	const sigma = useGraphStore((store) => store.sigma);
 	const { isInsideItemsDrawer } = useItemsDrawerContext();
 	const presentation = useSearchStore((store) => store.presentation);
-	const nodeId = getItemDBId(node);
+	const toggleDefaultOpenSection = useSettingsStore((store) => store.toggleDefaultOpenSection);
 	// had to create a "nodeId" variable explicitly, since direct use of node.id
 	// on the LoadPerspective component would cause "missing in props validation" eslint error
+	const nodeId = getItemDBId(node);
 	const isCenterButtonDisabled =
 		presentation !== GRAPH_PRESENTATION_GRAPH || !sigma.getGraph().hasNode(nodeId);
 	const [selectedLabelIds, setSelectedLabelIds] = useState<Array<NodeId>>([]);
@@ -72,11 +74,13 @@ export const SingleNode = ({
 	const [labelsValue, setLabelsValue] = useState<Array<Node>>([]);
 	const [markedLabelIdsAsWarning, setMarkedLabelIdsAsWarning] = useState<Array<NodeId>>([]);
 	const [currentEditMode, setCurrentEditMode] = useState<SingleNodeEditMode>('none');
-	const [unsavedChangesData, setUnsavedChangesData] = useState<UnsavedChangedModalProps | null>(
-		null
+	const nodeLabelsHandleRef = useRef<NodeLabelsItemFinderHandle>({
+		...getDefaultUnsavedChangesHandle('labels', 'single_node_labels_title'),
+		setHighlightedTagIds: () => {}
+	});
+	const nodePropertiesHandleRef = useRef<ItemPropertiesHandle>(
+		getDefaultUnsavedChangesHandle('properties', 'single_view_properties_title')
 	);
-	const nodeLabelsHandleRef = useRef<NodeLabelsItemFinderHandle>(null);
-	const nodePropertiesHandleRef = useRef<ItemPropertiesHandle>(null);
 	const rootElementClassName = clsx(
 		'single-node single-item',
 		{
@@ -84,10 +88,35 @@ export const SingleNode = ({
 		},
 		className
 	);
+	const sectionsLocation: SettingsSectionsLocation = isInsideItemsDrawer
+		? 'itemsDrawer'
+		: 'mouseover';
+
+	const initOpenIndexes = useMemo(() => {
+		return useSettingsStore
+			.getState()
+			.getItemsDrawerDefaultOpenSectionsIndexes(sectionsLocation, [
+				'node-description',
+				'node-labels',
+				'node-properties',
+				'node-relations'
+			]);
+	}, [node]);
 
 	useEffect(() => {
+		if (isInsideItemsDrawer) {
+			useUnsavedChangesStore.getState().addHandle(nodeLabelsHandleRef.current);
+			useUnsavedChangesStore.getState().addHandle(nodePropertiesHandleRef.current);
+		}
+
 		getNodeLabelsNodes();
 		getMetaForMeta();
+
+		return () => {
+			if (isInsideItemsDrawer) {
+				useUnsavedChangesStore.getState().reset();
+			}
+		};
 	}, [node]);
 
 	const getNodeLabelsNodes = () => {
@@ -139,11 +168,11 @@ export const SingleNode = ({
 			});
 		}
 
-		nodeLabelsHandleRef.current?.setHighlightedTagIds(highlightedLabelIds);
+		nodeLabelsHandleRef.current.setHighlightedTagIds(highlightedLabelIds);
 	};
 
 	const onPropertyRowMouseLeave = () => {
-		nodeLabelsHandleRef.current?.setHighlightedTagIds([]);
+		nodeLabelsHandleRef.current.setHighlightedTagIds([]);
 	};
 
 	const LoadPerspectiveButton = () => {
@@ -154,9 +183,9 @@ export const SingleNode = ({
 		return null;
 	};
 
-	const resetEditModeAndUnsavedChangesData = () => {
+	const resetEditModeAndConfirmation = () => {
 		setCurrentEditMode('none');
-		setUnsavedChangesData(null);
+		useConfirmationModalStore.getState().close();
 	};
 
 	const onEditLabelsClick = () => {
@@ -164,16 +193,21 @@ export const SingleNode = ({
 	};
 
 	const onSaveLabelsClick = async () => {
-		await nodeLabelsHandleRef.current?.handleSave();
-		resetEditModeAndUnsavedChangesData();
+		await nodeLabelsHandleRef.current.handleSave();
+		resetEditModeAndConfirmation();
 	};
 
 	const onUndoLabelsClick = () => {
-		if (!twoObjectValuesAreEqual(node.labels, nodeLabelsHandleRef.current?.labels)) {
-			setUnsavedChangesData({
-				unsavedSectionName: t('single_node_labels_title'),
+		if (nodeLabelsHandleRef.current.checkIfHasUnsavedChanges()) {
+			useConfirmationModalStore.getState().open({
+				title: t('confirm_unsaved_changes_title'),
+				description: t('confirm_unsaved_changes_description', {
+					sectionName: t('single_node_labels_title')
+				}),
 				onCancelClick: undoLabels,
-				onSaveClick: onSaveLabelsClick
+				onConfirmClick: onSaveLabelsClick,
+				cancelLabel: t('confirm_unsaved_changes_cancel_button'),
+				confirmLabel: t('confirm_unsaved_changes_save_button')
 			});
 		} else {
 			undoLabels();
@@ -182,7 +216,7 @@ export const SingleNode = ({
 
 	const undoLabels = () => {
 		nodeLabelsHandleRef.current?.handleUndo();
-		resetEditModeAndUnsavedChangesData();
+		resetEditModeAndConfirmation();
 	};
 
 	const onEditPropertiesClick = () => {
@@ -190,11 +224,16 @@ export const SingleNode = ({
 	};
 
 	const onUndoPropertiesClick = () => {
-		if (!nodePropertiesHandleRef.current?.validateProperties()) {
-			setUnsavedChangesData({
-				unsavedSectionName: t('single_view_properties_title'),
+		if (nodePropertiesHandleRef.current.checkIfHasUnsavedChanges()) {
+			useConfirmationModalStore.getState().open({
+				title: t('confirm_unsaved_changes_title'),
+				description: t('confirm_unsaved_changes_description', {
+					sectionName: t('single_view_properties_title')
+				}),
 				onCancelClick: undoProperties,
-				onSaveClick: onSavePropertiesClick
+				onConfirmClick: onSavePropertiesClick,
+				cancelLabel: t('confirm_unsaved_changes_cancel_button'),
+				confirmLabel: t('confirm_unsaved_changes_save_button')
 			});
 		} else {
 			undoProperties();
@@ -202,20 +241,30 @@ export const SingleNode = ({
 	};
 
 	const onSavePropertiesClick = async () => {
-		const saveOk = await nodePropertiesHandleRef.current?.handleSave();
-
-		if (saveOk) {
-			resetEditModeAndUnsavedChangesData();
-		}
+		await nodePropertiesHandleRef.current.handleSave();
+		resetEditModeAndConfirmation();
 	};
 
 	const undoProperties = () => {
-		nodePropertiesHandleRef.current?.handleUndo();
-		resetEditModeAndUnsavedChangesData();
+		nodePropertiesHandleRef.current.handleUndo();
+		resetEditModeAndConfirmation();
 	};
 
 	const onEditConnectionsClick = () => {
 		setCurrentEditMode('connections');
+	};
+
+	const onDeleteNodeClick = () => {
+		useConfirmationModalStore.getState().open({
+			title: t('confirm_delete_node_title'),
+			description: t('confirm_delete_node', { id: node.id }),
+			onCancelClick: () => useConfirmationModalStore.getState().close(),
+			onConfirmClick: () => {
+				api.nodes.actions.deleteNodesAndUpdateApplication([node.id]);
+				useConfirmationModalStore.getState().close();
+			},
+			confirmLabel: t('confirm_delete_node_button')
+		});
 	};
 
 	const localOpenInItemsDrawer = () => {
@@ -250,9 +299,8 @@ export const SingleNode = ({
 						buttonSize="small"
 						options={[
 							{
-								title: t('single-node-delete-item-button'),
-								onClick: () =>
-									api.nodes.actions.deleteNodesAndUpdateApplication([node.id]),
+								title: t('confirm_delete_node_button'),
+								onClick: onDeleteNodeClick,
 								icon: 'bin'
 							}
 						]}
@@ -290,11 +338,14 @@ export const SingleNode = ({
 				</div>
 			</div>
 
-			<DBAccordion behavior="multiple" initOpenIndex={[0, 1, 2, 3]} variant="card">
+			<DBAccordion behavior="multiple" initOpenIndex={initOpenIndexes} variant="card">
 				<EditSaveBlock
 					isEditMode={false}
 					isEditable={false}
 					headline={t('single_view_description')}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'node-description', isOpen);
+					}}
 				>
 					<MarkdownWrapper className="single-item__description">
 						{node.description}
@@ -308,9 +359,13 @@ export const SingleNode = ({
 					onEditClick={onEditLabelsClick}
 					onSaveClick={onSaveLabelsClick}
 					onUndoClick={onUndoLabelsClick}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'node-labels', isOpen);
+					}}
 				>
 					<NodeLabelsItemFinder
 						handleRef={nodeLabelsHandleRef}
+						defaultLabels={node.labels}
 						mode="edit"
 						node={node}
 						value={labelsValue}
@@ -328,6 +383,9 @@ export const SingleNode = ({
 					onEditClick={onEditPropertiesClick}
 					onSaveClick={onSavePropertiesClick}
 					onUndoClick={onUndoPropertiesClick}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'node-properties', isOpen);
+					}}
 				>
 					<Loading
 						isLoading={isLabelsMetaLoading}
@@ -351,20 +409,13 @@ export const SingleNode = ({
 					isEditMode={false}
 					headline={t('connections_title')}
 					onEditClick={onEditConnectionsClick}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'node-relations', isOpen);
+					}}
 				>
-					<ErrorBoundary>
-						<Connections node={node} isEditMode={isEditable} />
-					</ErrorBoundary>
+					<Connections node={node} isEditMode={isEditable} />
 				</EditSaveBlock>
 			</DBAccordion>
-
-			{unsavedChangesData && (
-				<UnsavedChangesModal
-					unsavedSectionName={unsavedChangesData.unsavedSectionName}
-					onCancelClick={unsavedChangesData.onCancelClick}
-					onSaveClick={unsavedChangesData.onSaveClick}
-				/>
-			)}
 		</DBSection>
 	);
 };

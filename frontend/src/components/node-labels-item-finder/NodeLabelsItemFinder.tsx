@@ -1,14 +1,14 @@
 import './NodeLabelsItemFinder.scss';
 import { DBCheckbox, DBIcon, DBTag, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { Node } from 'src/models/node';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { api } from 'src/utils/api/api';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { compareTwoStringsForSorting } from 'src/utils/helpers/general';
+import { compareTwoStringsForSorting, twoObjectValuesAreEqual } from 'src/utils/helpers/general';
 import {
 	generateNode,
 	getNodeSemanticIdOrId,
@@ -22,7 +22,15 @@ import {
 } from './NodeLabelsItemFinder.interfaces';
 
 export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
-	const { id, className, testId, showTooltipOnHover = true, onTagsSelected, handleRef } = props;
+	const {
+		id,
+		className,
+		testId,
+		showTooltipOnHover = true,
+		onTagsSelected,
+		defaultLabels,
+		handleRef
+	} = props;
 	const { t } = useTranslation();
 	// labels used by the ItemFinder component as options
 	const [labelOptions, setLabelOptions] = useState<Array<Node>>([]);
@@ -56,6 +64,11 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const editLabels = isEditMode && !!props.isEditMode;
 	const isEditModeActive = props.mode === 'edit' && editLabels;
 
+	const patchObject = {
+		id: isEditMode ? props.node.id : '',
+		labels: (value || []).map((label) => label.id)
+	};
+
 	const { isLoading: isLabelsLoading, reFetch: reFetchLabels } = useGetNodesLabelsNodes({
 		executeImmediately: false,
 		onSuccess: (response) => {
@@ -66,13 +79,12 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		}
 	});
 
-	// TODO "labels" seem to be one step behind when "handleRef" is used in "onChange"
-	useImperativeHandle(handleRef, () => ({
-		handleSave,
-		handleUndo,
-		setHighlightedTagIds: setHighlightedTagIds,
-		labels: getNodesSemanticIdOrId(value || [])
-	}));
+	if (handleRef) {
+		handleRef.current.handleSave = handleSave;
+		handleRef.current.handleUndo = handleUndo;
+		handleRef.current.checkIfHasUnsavedChanges = checkIfHasUnsavedChanges;
+		handleRef.current.setHighlightedTagIds = setHighlightedTagIds;
+	}
 
 	useEffect(() => {
 		return () => {
@@ -104,9 +116,15 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		}
 	}, [props.value, isEditModeActive]);
 
-	const getNodesSemanticIdOrId = (nodes: Array<Node>) => {
+	function getNodesSemanticIdOrId(nodes: Array<Node>) {
 		return nodes.map((node) => getNodeSemanticIdOrId(node));
-	};
+	}
+
+	function checkIfHasUnsavedChanges() {
+		const ids = getNodesSemanticIdOrId(value || []);
+
+		return !twoObjectValuesAreEqual((defaultLabels || []).sort(), ids.sort());
+	}
 
 	/**
 	 * Function executed on the ItemFinder labels search.
@@ -125,10 +143,6 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	 * Function executed on the ItemFinder options click.
 	 */
 	const onLabelChange = (item: Node, isItemSelected: boolean, selectedItems: Array<Node>) => {
-		if (handleRef && handleRef.current) {
-			handleRef.current.labels = getNodesSemanticIdOrId(selectedItems);
-		}
-
 		setValue(selectedItems);
 
 		if (isItemSelected && !newlyAddedTags.includes(item.id)) {
@@ -164,24 +178,19 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 		setNewlyAddedTags((prev) => [...prev, newLabel.id]);
 	};
 
-	const handleSave = async () => {
+	async function handleSave() {
 		if (isEditMode) {
-			const patchObject = {
-				id: props.node.id,
-				labels: (value || []).map((label) => label.id)
-			};
-
 			await api.nodes.actions.patchNodesAndUpdateApplication([patchObject]);
 
 			setNewlyAddedTags([]);
 			setOriginalValue(value);
 		}
-	};
+	}
 
-	const handleUndo = () => {
+	function handleUndo() {
 		setValue(originalValue);
 		setNewlyAddedTags([]);
-	};
+	}
 
 	const handleTagSelect = (tagId: string) => {
 		setSelectedTagIds((prev) => {

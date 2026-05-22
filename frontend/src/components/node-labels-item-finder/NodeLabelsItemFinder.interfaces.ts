@@ -1,13 +1,13 @@
 import { LabelVariantType } from '@db-ux/react-core-components/dist/shared/model';
 import { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
 import { ItemFinderProps } from 'src/components/item-finder/ItemFinder.interfaces';
-import { Node, NodeId } from 'src/models/node';
-import { GlobalComponentProps } from 'src/types/components';
+import { Node, NodeId, NodeLabelId } from 'src/models/node';
+import { GlobalComponentProps, UnsavedChangesHandle } from 'src/types/components';
 
 export type NodeLabelsItemFinderProps = GlobalComponentProps & {
 	title?: ReactNode;
 	value?: Array<Node>;
-	labels?: Array<Node>;
+	defaultLabels?: Array<NodeLabelId>;
 	invalidMessage?: string;
 	showTooltipOnHover?: boolean;
 	// needed to create labels "on-the-fly"
@@ -47,9 +47,6 @@ export type NodeLabelsItemFinderTagProps = {
 	tooltipLabel: Node | null;
 };
 
-export type NodeLabelsItemFinderHandle = {
-	handleSave: () => Promise<void>;
-	handleUndo: () => void;
+export type NodeLabelsItemFinderHandle = UnsavedChangesHandle & {
 	setHighlightedTagIds: Dispatch<SetStateAction<Array<NodeId>>>;
-	labels: Array<NodeId>;
-} | null;
+};

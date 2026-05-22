@@ -11,3 +11,4 @@ export type RequireOnlyOne<T, Keys extends keyof T = keyof T> = Omit<T, Keys> &
 	{
 		[K in Keys]: Required<Pick<T, K>> & Partial<Record<Exclude<Keys, K>, never>>;
 	}[Keys];
+type Rename<T, Old extends keyof T, New extends string> = Omit<T, Old> & { [K in New]: T[Old] };

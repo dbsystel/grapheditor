@@ -411,12 +411,13 @@ export const downloadFile = (options: DownloadFileOptions) => {
 };
 
 export const resetApplicationStates = () => {
-	// reset all application states
+	// reset almost all application states (all but login and database stores)
 	useSearchStore.getState().setResult({ data: null, type: '' });
 	useClipboardStore.getState().reset();
 	useContextMenuStore.getState().reset();
 	useDrawerStore.getState().reset();
-	useGraphStore.getState().reset();
+	// exclude persisted keys
+	useGraphStore.getState().resetButExclude(['zoomFactor']);
 	useItemsStore.getState().reset();
 	useParallaxStore.getState().reset();
 	useApplicationStore.getState().reset();

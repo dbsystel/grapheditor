@@ -8,9 +8,9 @@ export type ItemPropertiesTableProps = GlobalComponentProps & {
 	onPropertyRowMouseEnter?: (entry: ItemPropertiesTableEntryWithTopFlag) => void;
 	onPropertyRowMouseLeave?: (entry: ItemPropertiesTableEntryWithTopFlag) => void;
 	onPropertyChange: (key: ItemPropertyKey, updatedProperty: ItemProperty, index?: number) => void;
-	handlePropertyDelete: (key: ItemPropertyKey) => void;
+	onPropertyDelete: (key: ItemPropertyKey) => void;
 	// newType is string because it can be list_<type> (easier to handle that way)
-	handlePropertyTypeChange?: (key: ItemPropertyKey, newType: string) => void;
+	onPropertyTypeChange?: (key: ItemPropertyKey, newType: string) => void;
 	isEditMode?: boolean;
 	// optional prefix to add to property's value widget so it can remount
 	propertyKeyPrefix?: string;

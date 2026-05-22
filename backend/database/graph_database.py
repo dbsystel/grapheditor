@@ -4,6 +4,7 @@
 # direct dependencies on a particular graph database (or even on
 # cypher, when possible) and use a subclass of GraphDatabase instead.
 
+from enum import Enum
 from abc import ABC, abstractmethod
 from database.base_types import BaseNode, BaseRelation
 
@@ -11,6 +12,9 @@ from database.base_types import BaseNode, BaseRelation
 # what would make it harder to swap the database technology in the
 # future. So we opted for a big class to isolate database operation.
 # pylint: disable=too-many-public-methods
+
+class DatabaseFeature(Enum):
+    PERSPECTIVES = "Perspectives"
 
 
 class GraphDatabase(ABC):
@@ -225,4 +229,9 @@ class GraphDatabase(ABC):
     @abstractmethod
     def ids_to_raw_db_ids(self, ids):
         """Convert a list of IDs to a map of them to raw database ID."""
+        pass
+
+    @abstractmethod
+    def features(self) -> list[DatabaseFeature]:
+        """Return a list of supported features"""
         pass

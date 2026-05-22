@@ -43,7 +43,7 @@ export const NetworkGraphRelationTypeDefault = () => {
 	const value = defaultRelationType ? defaultRelationType : undefined;
 	const defaultInputValue = defaultRelationType ? defaultRelationType.title : undefined;
 
-	if ((isLoading && !initialDefaultTypeFetched.current) || !defaultRelationType) {
+	if (isLoading && !initialDefaultTypeFetched.current) {
 		return;
 	}
 
@@ -56,7 +56,6 @@ export const NetworkGraphRelationTypeDefault = () => {
 			variant="above"
 			onChange={onDefaultRelationTypeChange}
 			onEnterKey={onEnterKey}
-			additionalOptions={[defaultRelationType]}
 		/>
 	);
 };

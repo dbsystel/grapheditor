@@ -3,6 +3,7 @@ import { Coordinates, MouseCoords, SigmaNodeEventPayload } from 'sigma/types';
 import {
 	calculateNodeGraphSize,
 	getRelationGraphData,
+	highlightGraphItemAndOpenInItemsDrawer,
 	preventSigmaCameraMovement
 } from 'src/components/network-graph/helpers';
 import { GraphEditorSigmaNodeAttributes } from 'src/components/network-graph/NetworkGraph.interfaces';
@@ -323,6 +324,7 @@ export const NetworkGraphAutoConnectNode = () => {
 		if (newRelationFromServer) {
 			setRelation(newRelationFromServer, true);
 			addGraphRelation(newRelationFromServer);
+			highlightGraphItemAndOpenInItemsDrawer(newRelationFromServer);
 		}
 
 		sigma.refresh();

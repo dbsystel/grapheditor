@@ -2,7 +2,7 @@ import { AxiosResponse } from 'axios';
 import { NodeId } from 'src/models/node';
 import { Relation, RelationType } from 'src/models/relation';
 import { useItemsStore } from 'src/stores/items';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 import { getItemDBId } from 'src/utils/helpers/items';
 

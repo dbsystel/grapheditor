@@ -136,5 +136,11 @@ export const endpoints = {
 	},
 	getHomepageDataPath: () => {
 		return 'files/homepage.json';
+	},
+	getBuildBackendInfoPath: () => {
+		return '/v1/info/build';
+	},
+	getBuildFrontendInfoPath: () => {
+		return 'build-info-frontend.json';
 	}
 } as const;

@@ -8,6 +8,7 @@ export type MenuButtonProps = GlobalComponentProps & {
 	optionsPlacement?: PlacementType;
 	options: Array<MenuButtonOption>;
 	icon?: IconTypes;
+	shouldIgnorePositionFix?: boolean;
 };
 
 export type MenuButtonOption = Pick<

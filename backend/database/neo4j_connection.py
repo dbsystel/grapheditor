@@ -106,10 +106,25 @@ class Neo4jConnection:
         """
         result = self.run(
             """CALL apoc.trigger.list() YIELD name
-            RETURN "addFulltextOnCreateNode" in collect(name)
-            """
-        )
+               RETURN "addFulltextOnCreateNode" in collect(name)
+            """, _as_admin=True)
         return result.single().value()
+
+    def has_uuids(self):
+        """Return whether database contains _uuid__tech_ properties.
+        This is useful to tell if a database supports for example
+        perspectives.
+
+        This method doesn't work if the database is empty, since currently it
+        checks if a sample node has the _uuid__tech_ property.  Calling
+        "apoc.trigger.list" is unfortunately not an option, because regular
+        users can't call it.
+        """
+        result = self.run(
+            "MATCH (n:___tech_) WHERE n._uuid__tech_ IS NOT NULL RETURN n LIMIT 1;"
+        )
+        # if not None, test if single result has uuid.
+        return result and result.single() is not None
 
     def is_valid(self):
         """Test if connection of Neo4j database works."""
@@ -164,10 +179,7 @@ class Neo4jConnection:
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
-                if _as_admin:
-                    tx = self._admin_tx
-                else:
-                    tx = self._tx
+                tx = self._admin_tx if _as_admin else self._tx
                 return tx.run(statement, **params)
             except neo4j.exceptions.AuthError as e:
                 msg = f"Authentication error: {repr(e)}"
@@ -176,18 +188,21 @@ class Neo4jConnection:
             except neo4j.exceptions.Neo4jError as e:
                 if e.code == "Neo.ClientError.Database.DatabaseNotFound":
                     current_app.logger.error(
-                        f"Error using database {self.database}. "
+                        f"Error using database {self.database}: {repr(e)} "
                     )
                     if "login_data" in session and g.tab_id in session["login_data"]:
                         session["login_data"][g.tab_id]["selected_database"] = None
                         self.database = None
-                    raise
+                    # we don't need several retries for this use case.
+                    if retry_count > 1:
+                        abort_with_json(400, f"Database not found: {repr(e)}")
                 elif e.code == "Neo.ClientError.Security.AuthorizationExpired":
                     msg = f"AuthorizationExpired error: {repr(e)}"
                     current_app.logger.error(msg)
                     # Force regenerating token for connection.
                     self._setup_driver()
-                raise
+                else:
+                    raise
             except (neo4j.exceptions.ServiceUnavailable,
                     neo4j.exceptions.SessionExpired,
                     OSError) as e:
@@ -228,7 +243,7 @@ class Neo4jConnection:
         """
         If this is called, the transaction will roll back at the end.
         """
-        current_app.doom_transaction = True
+        g.doom_transaction = True
 
     @staticmethod
     def close(exception):
@@ -402,4 +417,4 @@ def set_current_database_name(name):
 
     login_data = session["login_data"][g.tab_id]
     login_data["selected_database"] = name
-    g.conn.database = login_data.get(name)
+    g.conn.database = name

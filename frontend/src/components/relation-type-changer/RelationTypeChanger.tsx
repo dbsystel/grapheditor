@@ -1,11 +1,12 @@
 import './RelationTypeChanger.scss';
 import { DBTag } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useCallback, useImperativeHandle, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder/RelationTypeItemFinder';
 import { Node } from 'src/models/node';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { api } from 'src/utils/api/api';
+import { twoObjectValuesAreEqual } from 'src/utils/helpers/general';
 import { getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 import { useGetNode } from 'src/utils/hooks/useGetNode';
 import { RelationTypeChangerProps } from './RelationTypeChanger.interfaces';
@@ -41,6 +42,12 @@ export const RelationTypeChanger = ({
 		[selectedType]
 	);
 
+	if (handleRef) {
+		handleRef.current.handleSave = handleSave;
+		handleRef.current.handleUndo = handleUndo;
+		handleRef.current.checkIfHasUnsavedChanges = checkIfHasUnsavedChanges;
+	}
+
 	const onTypeChange = (option: Node) => {
 		setSelectedType(option);
 	};
@@ -51,11 +58,11 @@ export const RelationTypeChanger = ({
 		}
 	};
 
-	const handleUndo = () => {
+	function handleUndo() {
 		setSelectedType(originalType);
-	};
+	}
 
-	const handleSave = async () => {
+	async function handleSave() {
 		if (selectedType) {
 			const patchObject = {
 				id: relation.id,
@@ -65,13 +72,18 @@ export const RelationTypeChanger = ({
 			await api.relations.actions.patchRelationsAndUpdateApplication([patchObject]);
 			setOriginalType(selectedType);
 		}
-	};
+	}
 
-	useImperativeHandle(handleRef, () => ({
-		handleSave,
-		handleUndo,
-		type: selectedType ? getNodeSemanticIdOrId(selectedType) : ''
-	}));
+	function checkIfHasUnsavedChanges() {
+		if (originalType && selectedType) {
+			return !twoObjectValuesAreEqual(
+				getNodeSemanticIdOrId(originalType),
+				getNodeSemanticIdOrId(selectedType)
+			);
+		}
+
+		return false;
+	}
 
 	if (!selectedType) {
 		return;

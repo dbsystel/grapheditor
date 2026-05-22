@@ -74,4 +74,4 @@ describe('Components ${pascalName}', () => {
 fs.writeFileSync(path.join(componentDir, `${pascalName}.tsx`), tsxContent);
 fs.writeFileSync(path.join(componentDir, `${pascalName}.scss`), scssContent);
 fs.writeFileSync(path.join(componentDir, `${pascalName}.interfaces.ts`), interfacesContent);
-fs.writeFileSync(path.join(componentDir, `${pascalName}.tests.tsx`), testsContent);
+fs.writeFileSync(path.join(componentDir, `${pascalName}.test.tsx`), testsContent);

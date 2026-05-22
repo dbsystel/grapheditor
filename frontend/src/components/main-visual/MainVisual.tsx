@@ -72,13 +72,13 @@ export const MainVisual = ({ id, className, testId }: MainVisualProps) => {
 		<div id={id} className={rootElementClassName} data-testid={testId}>
 			{presentation === GRAPH_PRESENTATION_RESULT_TABLE && (
 				<DBSection spacing="none">
-					<GlobalSearchResultsTable />
+					<GlobalSearchResultsTable testId="global-search-results-table" />
 				</DBSection>
 			)}
 
 			{presentation === GRAPH_PRESENTATION_OBJECT_TABLE && (
 				<DBSection spacing="none">
-					<GlobalSearchResultsObjectTable />
+					<GlobalSearchResultsObjectTable testId="global-search-results-object-table" />
 				</DBSection>
 			)}
 

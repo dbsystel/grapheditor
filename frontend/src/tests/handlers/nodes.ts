@@ -1,10 +1,12 @@
 import { http, HttpResponse } from 'msw';
-import { Node, NodeConnection, NodeConnections, NodeId } from 'src/models/node';
+import { Node, NodeConnection, NodeId } from 'src/models/node';
 import { TEST_HOST } from 'src/tests/constants';
 import { getTestNodesLabels, getTestNodesProperties, testNodes } from 'src/tests/data/nodes';
 import { testRelations } from 'src/tests/data/relations';
 import { endpoints } from 'src/utils/endpoints';
+import { PostNodeConnectionsResponse } from 'src/utils/fetch/postNodeConnections';
 import { isObject } from 'src/utils/helpers/general';
+import { generateNode } from 'src/utils/helpers/nodes';
 
 const nodeMap = new Map<string, Node>();
 
@@ -12,7 +14,7 @@ testNodes.forEach((node) => {
 	nodeMap.set(node.id, node);
 });
 
-export const resolveNodeConnections = (nodeId: string): NodeConnections => {
+export const resolveNodeConnections = (nodeId: string): PostNodeConnectionsResponse => {
 	const connections: Array<NodeConnection> = [];
 
 	testRelations.forEach((relation) => {
@@ -23,7 +25,8 @@ export const resolveNodeConnections = (nodeId: string): NodeConnections => {
 				connections.push({
 					direction: 'outgoing',
 					neighbor: targetNode,
-					relation: relation
+					relation: relation,
+					metarelation: generateNode(relation.type)
 				});
 			}
 		} else if (relation.target_id === nodeId) {
@@ -33,7 +36,8 @@ export const resolveNodeConnections = (nodeId: string): NodeConnections => {
 				connections.push({
 					direction: 'incoming',
 					neighbor: sourceNode,
-					relation: relation
+					relation: relation,
+					metarelation: generateNode(relation.type)
 				});
 			}
 		}

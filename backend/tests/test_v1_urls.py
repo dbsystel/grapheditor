@@ -1244,7 +1244,7 @@ def test_default_relation_type():
 def test_fulltext_relation():
     response = client.get(
         BASE_URL + "/api/v1/relations",
-        query_string=dict(text="likes"),
+        query_string=dict(text="likes__dummy_"),
         headers=HEADERS,
     )
     assert response.status_code == 200
@@ -1255,7 +1255,7 @@ def test_fulltext_relation_upper():
     """Fulltext search is case-insensitive."""
     response = client.get(
         BASE_URL + "/api/v1/relations",
-        query_string=dict(text="Likes"),
+        query_string=dict(text="Likes__dummy_"),
         headers=HEADERS,
     )
     assert response.status_code == 200
@@ -1360,7 +1360,7 @@ def test_post_query_with_syntax_error():
         json={"querytext": "(+ 1 2)"},
     )
     assert response.status_code == 400
-    assert "SyntaxError" in response.json["message"]
+    assert "Invalid input" in response.json["message"]
 
 
 def test_post_query_with_runtime_error():
@@ -1507,6 +1507,7 @@ def test_post_node_relations():
     assert len(rels) == 1
     assert rels[0]["relation"]["_grapheditor_type"] == "relation"
     assert rels[0]["neighbor"]["_grapheditor_type"] == "node"
+    assert rels[0]["metarelation"]["title"] == "likes__dummy_"
 
 
 def test_post_node_relations_invalid_id():
@@ -1737,6 +1738,7 @@ def test_put_perspectives():
     json = {
         "name": "Sample_Perspective",
         "node_positions": {alice_id: {"x": 10, "y": 10}},
+        "description": "A different perspective",
         "relation_ids": [],
     }
 
@@ -1747,6 +1749,7 @@ def test_put_perspectives():
     )
     assert put_response.status_code == 200
     assert put_response.json["id"] == pid
+    assert put_response.json["name"] == "Sample_Perspective"
 
     get_response = client.get(
         BASE_URL + f"/api/v1/perspectives/{pid}",
@@ -1760,6 +1763,7 @@ def test_put_perspectives():
         BASE_URL + f"/api/v1/nodes/{pid}",
         headers=HEADERS,
     )
+    assert json["description"] == "A different perspective"
 
 
 def test_style_current_empty():
@@ -2000,13 +2004,18 @@ def test_current_database():
     )
 
     assert post_response.status_code == 200
+    assert {"name": "neo4j", "status": "online", "type": "standard",
+            "features": ["Perspectives"]
+    } == post_response.json
 
     response = client.get(
         BASE_URL + "/api/v1/databases/current",
         headers=HEADERS,
     )
     assert response.status_code == 200
-    assert {"name": "neo4j", "status": "online", "type": "standard"} == response.json
+    assert {"name": "neo4j", "status": "online", "type": "standard",
+            "features": ["Perspectives"]
+    } == response.json
 
 
 def test_all_databases():

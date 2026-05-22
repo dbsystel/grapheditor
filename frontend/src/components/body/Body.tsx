@@ -4,13 +4,13 @@ import { HomepageBody } from 'src/components/homepage-body/HomepageBody';
 import { LeftWidget } from 'src/components/left-widget/LeftWidget';
 import { RightWidget } from 'src/components/right-widget/RightWidget';
 import { useApplicationStore } from 'src/stores/application';
-import { useLoginStore } from 'src/stores/login';
+import { useDatabaseStore } from 'src/stores/database';
 
 // This component doesn't need global component props since it serves to render
 // different layouts based on the view type
 export const Body = () => {
 	const isHomepageView = useApplicationStore((store) => store.isHomepageView);
-	const isDatabasesLoading = useLoginStore((store) => store.isDatabaseLoading);
+	const isDatabasesLoading = useDatabaseStore((store) => store.isLoading);
 
 	if (isDatabasesLoading) {
 		return null;

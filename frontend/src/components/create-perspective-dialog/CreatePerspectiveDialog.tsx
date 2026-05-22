@@ -6,13 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from 'src/components/modal/Modal';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { usePerspectiveStore } from 'src/stores/perspective';
-import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { eventBus } from 'src/utils/event-bus';
-import { patchNodesAndUpdateApplication } from 'src/utils/helpers/nodes';
 import { preparePerspectiveDataAndRefreshNodesPosition } from 'src/utils/helpers/perspectives';
 import { useGetPerspective } from 'src/utils/hooks/useGetPerspective';
 import { usePostPerspective } from 'src/utils/hooks/usePostPerspective';
-import { idFormatter } from 'src/utils/id-formatter';
+import { usePutPerspective } from 'src/utils/hooks/usePutPerspective';
 import {
 	CreatePerspectiveDialogForm,
 	CreatePerspectiveDialogProps
@@ -32,6 +29,7 @@ export const CreatePerspectiveDialog = ({
 	const isLoading = usePerspectiveStore((store) => store.isLoading);
 	const setIsLoading = usePerspectiveStore((store) => store.setIsLoading);
 	const perspective = usePerspectiveStore((store) => store.perspective);
+	const setPerspective = usePerspectiveStore((store) => store.setPerspective);
 	const { control, handleSubmit, reset } = useForm<CreatePerspectiveDialogForm>({
 		mode: 'onSubmit',
 		reValidateMode: 'onChange',
@@ -41,7 +39,7 @@ export const CreatePerspectiveDialog = ({
 		}
 	});
 
-	const { reFetch } = usePostPerspective({
+	const { reFetch: postPerspective } = usePostPerspective({
 		name: '',
 		description: '',
 		nodePositions: {},
@@ -53,6 +51,30 @@ export const CreatePerspectiveDialog = ({
 
 			addNotification({
 				title: t('notifications_success_perspective_create'),
+				type: 'successful'
+			});
+		},
+		onFinally: () => {
+			closeFunction();
+			setIsLoading(false);
+		}
+	});
+
+	const { reFetch: putPerspective } = usePutPerspective({
+		perspectiveId: perspective?.id || '',
+		perspectiveName: perspective?.name || '',
+		perspectiveDescription: perspective?.description || '',
+		nodePositions: {},
+		relationIds: [],
+		onSuccess: async (response) => {
+			setPerspective(response.data);
+
+			if (onSuccess) {
+				onSuccess();
+			}
+
+			addNotification({
+				title: t('notifications_success_perspective_update'),
 				type: 'successful'
 			});
 		},
@@ -90,9 +112,9 @@ export const CreatePerspectiveDialog = ({
 	};
 
 	const createPerspective = async (formData: CreatePerspectiveDialogForm) => {
-		if (!isEditMode) {
-			const { nodePositions, relationIds } = preparePerspectiveDataAndRefreshNodesPosition();
+		const { nodePositions, relationIds } = preparePerspectiveDataAndRefreshNodesPosition();
 
+		if (!isEditMode) {
 			if (!Object.keys(nodePositions).length) {
 				addNotification({
 					title: t('notifications_warning_perspective_create_no_nodes'),
@@ -105,7 +127,7 @@ export const CreatePerspectiveDialog = ({
 			if (formData.name) {
 				setIsLoading(true);
 
-				reFetch({
+				postPerspective({
 					name: formData.name,
 					description: formData.description || '',
 					nodePositions: nodePositions,
@@ -115,39 +137,13 @@ export const CreatePerspectiveDialog = ({
 		} else if (isEditMode && perspective) {
 			setIsLoading(true);
 
-			const patchedNodes = await patchNodesAndUpdateApplication(
-				[
-					{
-						id: perspective.id,
-						properties: {
-							[idFormatter.formatSemanticId(
-								GraphEditorTypeSimplified.META_PROPERTY,
-								'name',
-								'tech'
-							)]: {
-								edit: true,
-								type: 'string',
-								value: formData.name
-							},
-							[idFormatter.formatSemanticId(
-								GraphEditorTypeSimplified.META_PROPERTY,
-								'description',
-								'tech'
-							)]: {
-								edit: true,
-								type: 'string',
-								value: formData.description || ''
-							}
-						}
-					}
-				],
-				false
-			);
-
-			eventBus.publish('nodesUpdate', { nodes: Object.values(patchedNodes) });
-
-			closeFunction();
-			setIsLoading(false);
+			putPerspective({
+				perspectiveId: perspective.id,
+				perspectiveName: formData.name,
+				perspectiveDescription: formData.description || '',
+				nodePositions: nodePositions,
+				relationIds: relationIds
+			});
 		}
 	};
 

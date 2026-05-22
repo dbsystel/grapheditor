@@ -3,7 +3,7 @@ flask
 flask_cors
 flask_session
 flask-smorest
-neo4j==5.28.2
+neo4j==6.1
 markdown
 python-dotenv
 pyparsing

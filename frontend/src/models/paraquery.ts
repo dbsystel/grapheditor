@@ -13,6 +13,9 @@ export type ParaQuery = {
 export type ParaQueryParameter = {
 	default_value?: string;
 	help_text: string;
-	type: 'string';
+	type: ParaQueryParameterType;
 	suggestions?: Array<NodeLabelId>;
 };
+
+export type ParaQueryParameterType = 'string' | 'integer';
+export type ParaQueryParameterValues = Record<string, string | number>;

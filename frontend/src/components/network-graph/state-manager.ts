@@ -6,6 +6,7 @@ import {
 	SigmaStageEventPayload,
 	WheelCoords
 } from 'sigma/types';
+import { getEdgeLabelAtPoint } from 'src/components/network-graph/helpers';
 import { NodeId } from 'src/models/node';
 import { ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { isFunction, isFunctionWithoutParameters, isObject } from 'src/utils/helpers/general';
@@ -14,6 +15,7 @@ import {
 	isControlKeyPressed,
 	isShiftKeyPressed
 } from 'src/utils/keyboard-observer';
+import { Logger } from 'src/utils/logger';
 import { GraphEditorSigma } from './NetworkGraph.interfaces';
 
 type StateManagerStateKeys = keyof typeof StateManagerStates;
@@ -123,6 +125,7 @@ export class StateManager {
 	currentState: StateManagerStateValues;
 	sigma: GraphEditorSigma | null;
 	state: { [StateKey in StateManagerStateValues]: StateManagerState<StateKey> };
+	logger: Logger<StateManagerStateValues>;
 	private lastRelationEvent: SigmaEdgeEventPayload | null;
 	private enterNodeTimeout: number;
 	private enterRelationTimeout: number;
@@ -145,6 +148,8 @@ export class StateManager {
 					// clicked on node, and you want to click again)
 					StateManagerStates.NODE_DOWN,
 					StateManagerStates.RELATION_ENTER,
+					// needed for relation label click
+					StateManagerStates.RELATION_CLICK,
 					StateManagerStates.STAGE_DOWN,
 					StateManagerStates.SCALE_LABELS,
 					StateManagerStates.SCALE_NODES,
@@ -252,6 +257,8 @@ export class StateManager {
 			relationClick: {
 				callbacks: [],
 				transitionTo: [
+					// needed for relation label click
+					StateManagerStates.IDLE,
 					StateManagerStates.RELATION_LEAVE,
 					StateManagerStates.RELATION_CONTEXT_MENU
 				]
@@ -293,6 +300,9 @@ export class StateManager {
 				transitionTo: [StateManagerStates.IDLE]
 			}
 		};
+
+		this.logger = new Logger<StateManagerStateValues>();
+		this.logger.addLog(this.currentState);
 
 		this.initializeEvents();
 	}
@@ -341,6 +351,48 @@ export class StateManager {
 
 			if (event.event.original.ctrlKey) {
 				this.transitionTo(StateManagerStates.NODE_AUTO_CONNECT);
+			}
+		});
+
+		/**
+		 * Handle clicks on relation labels. Sigma.js does not provide click * events for edge labels since they are drawn
+		 * on a Canvas2D layer with no built-in hit detection. This listener manually checks if the click falls within a
+		 * displayed edge label's bounding box and, if so, triggers a RELATION_CLICK with a synthetic event. A manual resetState()
+		 * is required afterwards because no leaveEdge event will follow to transition back to IDLE (unlike regular edge
+		 * clicks which are resolved by the user moving the mouse away from the edge).
+		 * */
+		this.sigma.getContainer().addEventListener('click', (e) => {
+			if (this.currentState !== StateManagerStates.IDLE) {
+				return;
+			}
+
+			const rect = this.sigma!.getContainer().getBoundingClientRect();
+			const x = e.clientX - rect.left;
+			const y = e.clientY - rect.top;
+
+			// check if relation label clicked
+			const edgeKey = getEdgeLabelAtPoint(x, y);
+			if (edgeKey) {
+				const syntheticEvent: SigmaEdgeEventPayload = {
+					event: {
+						x,
+						y,
+						sigmaDefaultPrevented: false,
+						preventSigmaDefault() {
+							this.sigmaDefaultPrevented = true;
+						},
+						original: e
+					},
+					preventSigmaDefault() {
+						this.event.preventSigmaDefault();
+					},
+					edge: edgeKey
+				};
+
+				this.transitionTo(StateManagerStates.RELATION_CLICK);
+				this.executeStateCallbacks(StateManagerStates.RELATION_CLICK, syntheticEvent);
+				// Reset state since there's no leaveEdge event to do it for label-only clicks
+				this.resetState();
 			}
 		});
 
@@ -550,6 +602,8 @@ export class StateManager {
 		const state = this.getSelectedState();
 
 		if (state.transitionTo.includes(newState)) {
+			this.logger.addLog(newState);
+
 			state.callbacks.forEach((callback) => {
 				if (callback.afterCallback && !callback.afterCallbackExecuted) {
 					callback.afterCallbackExecuted = true;

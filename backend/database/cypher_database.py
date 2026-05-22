@@ -1,4 +1,3 @@
-
 # CypherDatabase implements GraphDatabase's interface assuming the
 # underlying technology supports Cypher. For now it may have Neo4j
 # specific parts. If in the future we switch to a different engine, we
@@ -21,8 +20,8 @@ from database.id_handling import (
     parse_unknown_id,
 )
 from database.base_types import BaseNode, BaseRelation
-from database.mapper import python_value_to_cypher
-from database.utils import abort_with_json, map_dict_keys, dict_to_array
+from database.utils import abort_with_json, dict_to_array
+from database.graph_database import DatabaseFeature
 
 
 # We don't want to spread database-specific logic across many files,
@@ -33,6 +32,7 @@ from database.utils import abort_with_json, map_dict_keys, dict_to_array
 
 FT_QUERY_MIN_SCORE = 0.1
 FT_SEARCH_MAX_RESULTS = 5000
+
 
 class CypherDatabase(GraphDatabase):
     def _run(self, *args, **kwargs):
@@ -74,23 +74,6 @@ class CypherDatabase(GraphDatabase):
         }
         return new_nodes
 
-    @staticmethod
-    def _get_update_label_cypher(old_labels, new_labels):
-        """Create cypher to update labels by comparing the complete lists of
-        old_labels and new_labels."""
-        old_set = set(
-            filter(lambda label: not label.startswith("_"), old_labels)
-        )
-        new_set = set(new_labels)
-        to_remove = old_set - new_set - {"___tech_"}
-        to_add = new_set - old_set
-        cypher = ""
-        if to_add:
-            cypher += f"SET n:{':'.join(to_add)}\n"
-        if to_remove:
-            cypher += f"REMOVE n:{':'.join(to_remove)}"
-        return cypher
-
     def _get_node_by_semantic_id(self, semantic_id):
         """Get node by semantic id's."""
 
@@ -100,12 +83,12 @@ class CypherDatabase(GraphDatabase):
             return None
 
         query = (
-            f"MATCH (n:{label.value}) "
-            "WHERE n.name__tech_=$name "
+            "MATCH (n) "
+            "WHERE n.name__tech_=$name AND $label IN labels(n)"
             "RETURN n"
         )
 
-        result = self._run(query, name=name)
+        result = self._run(query, name=name, label=label.value)
         row = result.single()
         if row:
             return BaseNode.from_neo_node(row["n"])
@@ -319,9 +302,23 @@ class CypherDatabase(GraphDatabase):
         if not raw_db_id:
             raw_db_id = existing_node.id
 
-        old_labels = existing_node.labels
-        new_labels = node_data["labels"]
-        label_update = self._get_update_label_cypher(old_labels, new_labels)
+        old_labels = {
+            label for label in existing_node.labels if not label.startswith('_')
+        }
+        new_labels = set(node_data["labels"])
+        label_update = ""
+        removed_labels = list(old_labels - new_labels - {"___tech_"})
+        added_labels = list(new_labels - old_labels)
+        if added_labels:
+            label_update += """
+            CALL apoc.create.addLabels(n, $added_labels)
+            YIELD node AS node_with_added_labels
+            """
+        if removed_labels:
+            label_update += """
+            CALL apoc.create.removeLabels(n, $removed_labels)
+            YIELD node AS node_with_removed_labels
+            """
 
         properties = mapper.compute_updated_properties(
             existing_node.properties,
@@ -331,11 +328,13 @@ class CypherDatabase(GraphDatabase):
         result = self._run(
             f"""MATCH (n) WHERE elementid(n)=$nid
                 SET n=$properties
-                {label_update}
+                { "WITH n " + label_update if label_update else '' }
                 RETURN n
             """,
             nid=raw_db_id,
             properties=properties,
+            added_labels=added_labels,
+            removed_labels=removed_labels
         )
 
         return BaseNode.from_neo_node(result.single()["n"])
@@ -363,12 +362,23 @@ class CypherDatabase(GraphDatabase):
         raw_db_id = existing_node.id
 
         label_update = ""
+        added_labels = []
+        removed_labels = []
         if "labels" in node_data:
-            old_labels = existing_node.labels
-            new_labels = node_data["labels"]
-            label_update = self._get_update_label_cypher(
-                old_labels, new_labels
-            )
+            old_labels = set(existing_node.labels)
+            new_labels = set(node_data["labels"])
+            removed_labels = list(old_labels - new_labels - {"___tech_"})
+            added_labels = list(new_labels - old_labels)
+        if added_labels:
+            label_update += """
+            CALL apoc.create.addLabels(n, $added_labels)
+            YIELD node
+            """
+        if removed_labels:
+            label_update += """
+            CALL apoc.create.removeLabels(n, $removed_labels)
+            YIELD node
+            """
 
         properties = None
         if "properties" in node_data:
@@ -381,18 +391,22 @@ class CypherDatabase(GraphDatabase):
             result = self._run(
                 f"""MATCH (n) WHERE elementid(n)=$nid
                     SET n=$properties
-                    {label_update}
+                    { "WITH n " + label_update if label_update else '' }
                     RETURN n""",
                 nid=raw_db_id,
                 properties=properties,
+                added_labels=added_labels,
+                removed_labels=removed_labels
             )
 
         else:
             result = self._run(
                 f"""MATCH (n) WHERE elementid(n)=$nid
-                    {label_update}
+                    { "WITH n " + label_update if label_update else '' }
                     RETURN n""",
                 nid=raw_db_id,
+                added_labels=added_labels,
+                removed_labels=removed_labels
             )
 
         if not result:
@@ -414,40 +428,51 @@ class CypherDatabase(GraphDatabase):
         )
         return result.single()["c"]
 
-    @staticmethod
-    def _get_node_relations_filter_expressions(filters):
-        rel_props_expr = ""
-        neighbor_props_expr = ""
-        where_clauses = ""
+    def _extract_relation_filter_data(self, filters : dict) -> tuple:
+        """Helper function to extract data needed for filtering neighbor in cypher.
 
-        if rel_props := filters.get("relation_properties"):
-            rel_props_expr = " " + python_value_to_cypher(
-                map_dict_keys(rel_props, get_base_id)
-            )
-
-        if n_props := filters.get("neighbor_properties"):
-            neighbor_props_expr = " " + python_value_to_cypher(
-                map_dict_keys(n_props, get_base_id)
-            )
-
-        if rel_type := filters.get("relation_type", ""):
-            where_clauses += (
-                " AND " + f" type(r) = '{id_handling.get_base_id(rel_type)}' "
-            )
-
-        if n_labels := filters.get("neighbor_labels", ""):
-            where_clauses += (
-                " AND "
-                + f""" ALL(label IN {[id_handling.get_base_id(l)
-                                          for l in n_labels]}
-                       WHERE label IN labels(neighbor))"""
-            )
-
-        return {
-            "relation_properties": rel_props_expr,
-            "neighbor_properties": neighbor_props_expr,
-            "where_clauses": where_clauses,
+        This can be a potential performance problem, as use of indexes is not guaranteed. However,
+        most likely nodes and rels are filtered on their elementid first, so the problem might not
+        be relevant.
+        """
+        rel_props = {
+            get_base_id(k): v for k, v in filters.get('relation_properties', {}).items()
         }
+        rel_type = id_handling.get_base_id(filters.get("relation_type", ''))
+        neighbor_labels = [
+            id_handling.get_base_id(l) for l in filters.get("neighbor_labels", [])
+        ]
+        neighbor_props = {
+            get_base_id(k): v for k, v in filters.get('neighbor_properties', {}).items()
+        }
+
+        rel_props_filter_expr = """
+            AND all(prop_name IN KEYS($rel_props)
+                    WHERE r[prop_name] = $rel_props[prop_name])
+        """
+        neighbor_props_filter_expr = """
+            AND all(prop_name IN KEYS($neighbor_props)
+                    WHERE neighbor[prop_name] = $neighbor_props[prop_name])
+        """
+        neighbor_labels_filter_expr = """
+            AND ALL(label IN $neighbor_labels
+                    WHERE label IN labels(neighbor))
+        """
+
+        where_clauses = f"""
+            {" AND type(r) = $rel_type " if rel_type else ''}
+            {rel_props_filter_expr if rel_props else ''}
+            {neighbor_labels_filter_expr if neighbor_labels else ''}
+            {neighbor_props_filter_expr if neighbor_props else ''}
+        """
+        return (
+            rel_props,
+            rel_type,
+            neighbor_labels,
+            neighbor_props,
+            where_clauses
+        )
+
 
     def _get_node_relations_by_raw_db_id(self, raw_db_id, filters):
         """Get node relations from node with internal db_id."""
@@ -455,17 +480,22 @@ class CypherDatabase(GraphDatabase):
         incoming_with_source = []
         outgoing_with_target = []
         direction = filters["direction"]
-        exprs = self._get_node_relations_filter_expressions(filters)
+
+        rel_props, rel_type, neighbor_labels, neighbor_props, where_clauses = (
+            self._extract_relation_filter_data(filters)
+        )
 
         if direction in {"both", "incoming"}:
-            neighbor_props = exprs.get("neighbor_properties")
-            rel_props = exprs.get("relation_properties")
-            where_clauses = exprs.get("where_clauses")
             incoming_res = self._run(
-                f"MATCH (neighbor{neighbor_props})-[r{rel_props}]->(n)"
-                f" WHERE elementid(n)=$nid {where_clauses} "
+                "MATCH (neighbor)-[r]->(n)"
+                " WHERE elementid(n)=$nid " +
+                where_clauses +
                 "RETURN r, neighbor",
                 nid=raw_db_id,
+                rel_type=rel_type,
+                rel_props=rel_props,
+                neighbor_labels=neighbor_labels,
+                neighbor_props=neighbor_props,
             )
             incoming_with_source = [
                 {
@@ -477,14 +507,16 @@ class CypherDatabase(GraphDatabase):
             ]
 
         if direction in {"both", "outgoing"}:
-            neighbor_props = exprs.get("neighbor_properties")
-            rel_props = exprs.get("relation_properties")
-            where_clauses = exprs.get("where_clauses")
             outgoing_res = self._run(
-                f"MATCH (n)-[r{rel_props}]->(neighbor{neighbor_props}) "
-                f"WHERE elementid(n)=$nid {where_clauses} "
+                "MATCH (n)-[r]->(neighbor) "
+                "WHERE elementid(n)=$nid " +
+                where_clauses +
                 "RETURN r, neighbor",
                 nid=raw_db_id,
+                rel_type=rel_type,
+                rel_props=rel_props,
+                neighbor_labels=neighbor_labels,
+                neighbor_props=neighbor_props,
             )
             outgoing_with_target = [
                 {
@@ -509,20 +541,23 @@ class CypherDatabase(GraphDatabase):
             return None
 
         node_filter = ":" + metatype.value
-
-        exprs = self._get_node_relations_filter_expressions(filters)
+        rel_props, rel_type, neighbor_labels, neighbor_props, where_clauses = (
+            self._extract_relation_filter_data(filters)
+        )
 
         if direction in {"both", "incoming"}:
-            neighbor_props = exprs.get("neighbor_properties")
-            rel_props = exprs.get("relation_properties")
-            where_clauses = exprs.get("where_clauses")
             incoming_res = self._run(
                 # pylint: disable=line-too-long
                 f"""
-                MATCH (neighbor{neighbor_props})-[r{rel_props}]->(n{node_filter})
-                WHERE n.name__tech_=$name {where_clauses}
+                MATCH (neighbor)-[r]->(n{node_filter})
+                WHERE n.name__tech_=$name
+                { where_clauses }
                 RETURN r, neighbor""",
                 name=base_id,
+                rel_type=rel_type,
+                rel_props=rel_props,
+                neighbor_props=neighbor_props,
+                neighbor_labels=neighbor_labels
             )
             incoming_with_source = [
                 {
@@ -534,14 +569,17 @@ class CypherDatabase(GraphDatabase):
             ]
 
         if direction in {"both", "outgoing"}:
-            neighbor_props = exprs.get("neighbor_properties")
-            rel_props = exprs.get("relation_properties")
             # pylint: disable=line-too-long
             outgoing_res = self._run(
-                f"""MATCH (n{node_filter})-[r{rel_props}]->(neighbor{neighbor_props})
-                WHERE n.name__tech_=$name {exprs.get('where_clauses')}
+                f"""MATCH (n{node_filter})-[r]->(neighbor)
+                WHERE n.name__tech_=$name
+                { where_clauses }
                 RETURN r, neighbor""",
                 name=base_id,
+                rel_type=rel_type,
+                rel_props=rel_props,
+                neighbor_labels=neighbor_labels,
+                neighbor_props=neighbor_props,
             )
             outgoing_with_target = [
                 {
@@ -1051,7 +1089,6 @@ class CypherDatabase(GraphDatabase):
         positions = [
             msgspec.json.encode(
             {
-                "id": nid,
                 "_uuid": id_to_uuid[nid] if nid in id_to_uuid else None,
                 "x": pos["x"],
                 "y": pos["y"],
@@ -1105,7 +1142,7 @@ class CypherDatabase(GraphDatabase):
             self._run(rel_query, pid=pid, arr=data)
 
     def create_perspective(self, perspective_data):
-        """CreateS a perspective from a dictionary of elementID's and the corresponding positions.
+        """Creates a perspective from a dictionary of elementID's and the corresponding positions.
 
         Args:
             perspective_data: Dictionary containing the perspective's metadata ('name' and
@@ -1253,15 +1290,17 @@ class CypherDatabase(GraphDatabase):
         MATCH (p)
         WHERE elementid(p) = $raw_db_id
         SET p.name__tech_ = $name,
-        p.nodes__tech_ = [], 
-        p.positions__tech_ = [], 
-        p.relations__tech_ = []
+            p.description__tech_ = $description,
+            p.nodes__tech_ = [], 
+            p.positions__tech_ = [], 
+            p.relations__tech_ = []
         return p
         """
         self._run(
             query,
             raw_db_id=raw_db_id,
-            name=json["name"] if "name" in json else "",
+            name=json.get("name", ""),
+            description=json.get("description", "")
         )
 
         self._set_perspective_node_positions(raw_db_id, json["node_positions"])
@@ -1456,3 +1495,8 @@ class CypherDatabase(GraphDatabase):
                 """
         result = self._run(query)
         return self._sort_property_names(result)
+
+    def features(self) -> list[DatabaseFeature]:
+        if g.conn.has_uuids():
+            return [DatabaseFeature.PERSPECTIVES.value]
+        return []

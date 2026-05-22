@@ -1,6 +1,7 @@
 import './i18n';
 import { BrowserRouter } from 'react-router-dom';
 import { Auth } from 'src/components/auth/Auth';
+import { ConfirmationModal } from 'src/components/confirmation-modal/ConfirmationModal';
 import { ContextMenu } from 'src/components/context-menu/ContextMenu';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { ItemOverviewsRenderer } from 'src/components/item-overviews-renderer/ItemOverviewsRenderer';
@@ -23,6 +24,9 @@ export const App = () => {
 					<RootWrapper />
 					<ErrorBoundary>
 						<ContextMenu />
+					</ErrorBoundary>
+					<ErrorBoundary>
+						<ConfirmationModal />
 					</ErrorBoundary>
 				</Auth>
 			</ErrorBoundary>

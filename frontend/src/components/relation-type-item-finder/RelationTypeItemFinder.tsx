@@ -24,8 +24,7 @@ export const RelationTypeItemFinder = ({
 	onEnterKey,
 	id,
 	className,
-	testId,
-	additionalOptions
+	testId
 }: RelationTypeItemFinderProps) => {
 	const { t } = useTranslation();
 	const [localInputValue, setLocalInputValue] = useState<string | undefined>(inputValue);
@@ -36,8 +35,7 @@ export const RelationTypeItemFinder = ({
 	const { isLoading: isRelationsTypesLoading } = useGetRelationsTypesNodes({
 		onSuccess: (response) => {
 			const nodes = Object.values(response.data.nodes);
-			const extraOptions = additionalOptions ? additionalOptions : [];
-			const options = [...extraOptions, ...nodes];
+			const options = [...nodes];
 
 			setRelationTypes(options);
 			setFilteredRelationTypes(options);

@@ -99,8 +99,9 @@
 @layer single-item--small {
 	.single-item {
 		&--small {
-			// "small" LOL
-			max-inline-size: 550px;
+			// prevent shrinking the component on its section close, which triggers mouseleave since the mouse would not be inside
+			// the component anymore
+			inline-size: 550px;
 			max-block-size: min(550px, 80dvh);
 
 			> .db-accordion {

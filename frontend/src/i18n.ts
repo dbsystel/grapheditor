@@ -6,8 +6,8 @@ import { initReactI18next } from 'react-i18next';
  * For now, we can bundle translations with the rest of the app. If/when
  * they become big (e.g. bigger than 150kb combined), consider loading them outside the app bundle.
  */
-import translationDE from 'src/assets/locales/de/translation.json';
-import translationEN from 'src/assets/locales/en/translation.json';
+import translationDE from 'src/assets/locales/de/translation.json' with { type: 'json' };
+import translationEN from 'src/assets/locales/en/translation.json' with { type: 'json' };
 import { useSettingsStore } from 'src/stores/settings';
 
 // the translations
@@ -52,11 +52,12 @@ i18n.use(Backend)
 		// learn more: https://github.com/i18next/i18next-browser-languageDetector?tab=readme-ov-file#detector-options
 		detection: {
 			caches: []
-		},
-		showSupportNotice: false
+		}
 	});
 
 // load translation files to override local translation files
 i18n.reloadResources(supportedLanguages);
+
+export type I18nType = typeof i18n;
 
 export default i18n;

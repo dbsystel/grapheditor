@@ -2,7 +2,7 @@ import { RefObject } from 'react';
 import { ItemPropertiesTableProps } from 'src/components/item-properties-table/ItemPropertiesTable.interfaces';
 import { Item } from 'src/models/item';
 import { MetaForMeta, NodeId } from 'src/models/node';
-import { GlobalComponentProps } from 'src/types/components';
+import { GlobalComponentProps, UnsavedChangesHandle } from 'src/types/components';
 
 export type ItemPropertiesProps = GlobalComponentProps & ItemPropertiesBase;
 
@@ -16,8 +16,4 @@ type ItemPropertiesBase = {
 	handleRef?: RefObject<ItemPropertiesHandle>;
 };
 
-export type ItemPropertiesHandle = {
-	handleSave: () => Promise<boolean>;
-	handleUndo: () => void;
-	validateProperties: () => boolean;
-} | null;
+export type ItemPropertiesHandle = UnsavedChangesHandle;

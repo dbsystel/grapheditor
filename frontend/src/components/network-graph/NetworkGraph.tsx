@@ -1,6 +1,6 @@
 import './NetworkGraph.scss';
 import clsx from 'clsx';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { LoadGraph } from 'src/components/network-graph/LoadGraph';
 import { NetworkGraphSearch } from 'src/components/network-graph/modules/search/NetworkGraphSearch';
 import { NetworkGraphContainer } from 'src/components/network-graph/NetworkGraphContainer';
@@ -22,7 +22,6 @@ import i18n from 'src/i18n';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { checkBrowserRenderingCapabilities } from 'src/utils/helpers/browser';
-import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { NetworkGraphProps } from './NetworkGraph.interfaces';
 
 // don't puth this into the graphStore, it will reset when graphStore is reset
@@ -54,53 +53,11 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	const isRenderingCapabilitiesWarningShown = useGraphStore(
 		(store) => store.isRenderingCapabilitiesWarningShown
 	);
-	const delayedCallback = useDebounce(100);
-	const rootElementSize = useRef({ width: -1, height: -1 });
-	const observerRef = useRef(
-		new ResizeObserver(function (mutations) {
-			const observerSize = mutations.at(0)?.contentBoxSize.at(0);
-
-			if (observerSize) {
-				const rootElementWidth = rootElementSize.current.width;
-				const rootElementHeight = rootElementSize.current.height;
-				const observerInlineSize = observerSize.inlineSize;
-				const observerBlockSize = observerSize.blockSize;
-
-				// initial render
-				if (rootElementWidth === -1 || rootElementHeight === -1) {
-					rootElementSize.current.width = observerInlineSize;
-					rootElementSize.current.height = observerBlockSize;
-				}
-				// refresh graph only if its width or height has changed
-				else if (
-					rootElementWidth !== observerInlineSize ||
-					rootElementHeight !== observerBlockSize
-				) {
-					rootElementSize.current.width = observerInlineSize;
-					rootElementSize.current.height = observerBlockSize;
-
-					if (useGraphStore.getState().isGraphRendered) {
-						delayedCallback(() => {
-							useGraphStore.getState().sigma.refresh();
-						});
-					}
-				}
-			}
-		})
-	);
 	const rootElementClassName = clsx(
 		'network-graph',
 		isLoading && 'network-graph--is-loading',
 		className
 	);
-
-	const onRefChange = useCallback((element: HTMLDivElement | null) => {
-		if (element) {
-			observerRef.current.observe(element);
-		} else {
-			observerRef.current.disconnect();
-		}
-	}, []);
 
 	useEffect(() => {
 		if (!areRenderingCapabilitiesChecked) {
@@ -127,7 +84,7 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 	}, []);
 
 	return (
-		<div id={id} className={rootElementClassName} data-testid={testId} ref={onRefChange}>
+		<div id={id} className={rootElementClassName} data-testid={testId}>
 			<div className="network-graph__top-widget">
 				<NetworkGraphSearch />
 			</div>

@@ -1,9 +1,7 @@
 import { DBButton, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { fitGraphToViewport } from 'src/components/network-graph/helpers';
-import { useGraphStore } from 'src/stores/graph';
-import { isNode } from 'src/utils/helpers/nodes';
+import { centerAndHighlightItemInGraph } from 'src/components/network-graph/helpers';
 import { ItemCenterButtonProps } from './ItemCenterButton.interfaces';
 
 export const ItemCenterButton = ({
@@ -17,9 +15,7 @@ export const ItemCenterButton = ({
 	const rootElementClassName = clsx('item-center-button', className);
 
 	const onCenterInGraphClick = () => {
-		const nodeIds = isNode(item) ? [item.id] : [item.source_id, item.target_id];
-
-		fitGraphToViewport(useGraphStore.getState().sigma, nodeIds);
+		centerAndHighlightItemInGraph(item);
 	};
 
 	return (

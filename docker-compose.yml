@@ -40,7 +40,7 @@ services:
     env_file: ./.env
 
   neo4j-enterprise:
-    image: "${DOCKER_REGISTRY}neo4j:5.26.5-enterprise" # change this to use a different version
+    image: "${DOCKER_REGISTRY}neo4j:5.26-enterprise" # change this to use a different version
     container_name: "neo4j-enterprise"
     ports:
       - "${NEO4J_BOLT_LISTEN_ADDRESS}:7687"

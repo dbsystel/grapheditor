@@ -51,10 +51,6 @@ class PerspectiveSchema(Schema):
     )
 
 
-class PerspectivePostResponseSchema(Schema):
-    id = fields.Str()
-
-
 perspective_post_example = {
     "name": "Sample",
     "node_positions": {

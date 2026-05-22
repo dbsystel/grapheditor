@@ -9,7 +9,7 @@ import { useNotificationsStore } from 'src/stores/notifications';
 import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
 import { api } from 'src/utils/api/api';
-import { processPerspective } from 'src/utils/helpers/nodes';
+import { processPerspective } from 'src/utils/helpers/perspectives';
 import { usePostStyleUpload } from 'src/utils/hooks/usePostStyleUpload';
 import {
 	GrassfileManagerStyleUploadProps,

@@ -21,6 +21,7 @@ export const HeaderPerspectiveSaveButton = ({
 	const { reFetch, isLoading } = usePutPerspective({
 		perspectiveId: perspectiveId,
 		perspectiveName: perspective?.name || '',
+		perspectiveDescription: perspective?.description || '',
 		nodePositions: {},
 		relationIds: [],
 		onSuccess: async () => {
@@ -43,6 +44,7 @@ export const HeaderPerspectiveSaveButton = ({
 		reFetch({
 			perspectiveId: perspectiveId,
 			perspectiveName: perspective?.name || '',
+			perspectiveDescription: perspective?.description || '',
 			nodePositions: nodePositions,
 			relationIds: relationIds
 		});

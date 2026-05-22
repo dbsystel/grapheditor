@@ -346,7 +346,9 @@ export const NetworkGraphNodeHtmlLabel = () => {
 				removeHighlightedStyle(labelContainer);
 			}
 
-			labelContainerStyles.push('scale:' + 1 / sigma.getRenderParams().zoomRatio);
+			labelContainerStyles.push(
+				'transform: scale(' + 1 / sigma.getRenderParams().zoomRatio + ')'
+			);
 
 			// use "+= ;" to replace existing named properties with any new values,
 			// add new ones and leave the rest alone

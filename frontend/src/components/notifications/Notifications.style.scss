@@ -24,7 +24,7 @@
 		animation: none;
 		transition: none;
 
-		p {
+		div[data-area="content"] {
 			word-wrap: break-word;
 			// "pre-wrap" to keep error stack formatting
 			white-space: pre-wrap;

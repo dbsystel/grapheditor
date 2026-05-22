@@ -1,0 +1,25 @@
+.left-widget__debug {
+	h6 {
+		margin-bottom: var(--db-spacing-fixed-functional-xs);
+	}
+
+	> div {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: var(--db-spacing-fixed-functional-2xs);
+		margin-bottom: var(--db-spacing-fixed-functional-xs);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	.db-divider {
+		margin: var(--db-spacing-fixed-functional-lg) 0;
+	}
+
+	.db-card {
+		padding: var(--db-spacing-fixed-functional-2xs);
+	}
+}

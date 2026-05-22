@@ -34,8 +34,25 @@
 			width: 36px;
 		}
 
+		&__cell-direction {
+			.db-icon {
+				&:before {
+					// make the icon thicker
+					-webkit-text-stroke: 0.5px;
+				}
+			}
+		}
+
 		&__relation-name {
 			width: 32.5%;
+
+			.db-tag {
+				block-size: auto;
+
+				label {
+					word-break: break-all;
+				}
+			}
 		}
 
 		&__node-icon {

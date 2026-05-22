@@ -8,7 +8,8 @@
 @forward './db-tooltip-fix';
 
 @layer db-ux-core-components {
-	@include meta.load-css('@db-ux/core-components/build/styles/rollup.scss');
+	@include meta.load-css('@db-ux/core-foundations/build/styles/theme/rollup.scss');
+	@include meta.load-css('@db-ux/core-components/build/styles/bundle.scss');
 }
 
 /* changes to whitelabel theme must be placed here */
@@ -70,6 +71,24 @@
 			}
 		}
 	}
+
+	// temporary solution until https://github.com/db-ux-design-system/core-web/issues/6580 is fixed
+	// start
+	dialog:not([data-position=absolute])[data-variant],
+	dialog:not([data-position=absolute])[data-backdrop] {
+		position: fixed;
+		inset: 0;
+		z-index: 9995;
+	}
+
+	dialog {
+		padding: 0;
+		margin: 0;
+		border: 0;
+		z-index: 9996;
+		color: inherit;
+	}
+	// end
 
 	@media screen and (min-width: 64em) {
 		.db-section:not([data-force-mobile]) {

@@ -35,16 +35,12 @@ export const graphMultiselectOptions = (): Partial<
 		},
 		delete: {
 			label: i18n.t('context_menu_delete'),
-			onClick: () => {
-				deleteNodesAction(nodeIds);
-			},
+			onClick: () => deleteNodesAction(nodeIds),
 			shouldRender: () => nodeIds.length > 0
 		},
 		delete_relations: {
 			label: i18n.t('context_menu_delete_relations'),
-			onClick: () => {
-				deleteRelationsAction(relationIds);
-			},
+			onClick: () => deleteRelationsAction(relationIds),
 			shouldRender: () => relationIds.length > 0
 		},
 		copy: {

@@ -2,6 +2,7 @@ import './LeftWidget.scss';
 import { DBAccordion, DBAccordionItem } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { LeftWidgetDebug } from 'src/components/left-widget/debug/LeftWidgetDebug';
 import { LeftWidgetNetworkGraphSettings } from 'src/components/left-widget/network-graph-settings/LeftWidgetNetworkGraphSettings';
 import { LeftWidgetNewItemSettings } from 'src/components/left-widget/new-item-settings/LeftWidgetNewItemSettings';
 import { ParallaxFilters } from 'src/components/parallax-filters/ParallaxFilters';
@@ -17,6 +18,7 @@ export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 	const filtersLabel = t('left_widget_filters_accordion_label');
 	const newItemSettingsLabel = t('left_widget_new_item_settings_accordion_label');
 	const networkGraphLabel = t('left_widget_network_graph_settings_accordion_label');
+	const debugLabel = t('left_widget_debug_label');
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -37,6 +39,9 @@ export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 					</DBAccordionItem>
 					<DBAccordionItem headline={networkGraphLabel}>
 						<LeftWidgetNetworkGraphSettings />
+					</DBAccordionItem>
+					<DBAccordionItem headline={debugLabel}>
+						<LeftWidgetDebug />
 					</DBAccordionItem>
 				</DBAccordion>
 			</Sidebar>

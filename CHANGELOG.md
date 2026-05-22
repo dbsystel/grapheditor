@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## 2026.5.1
+
+- Version info is available in the debug menu
+- New graph node/relation is now focused in graph and open in detail window
+- Persistent user preferences for initially expanded sections in item detail views (items 
+  drawer and mouseover)
+- Relations can be selected by clicking on the label
+- Perspective for dummy data
+- Perspective menu is only shown when uuid mechanism is in place
+- Zoom speed stays persistent
+- Debug menu on the left side
+- Paraqueries now support integer parameters
+- Relation info and its type meta info are now directly accessible
+- Perspectives are saved completely, even when just names are modified
+
 ## 2026.4.1
 
 - Variable width sidebars

@@ -17,11 +17,7 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 	const language = useSettingsStore((store) => store.language);
 	const setLanguage = useSettingsStore((store) => store.setLanguage);
 	const theme = useSettingsStore((store) => store.theme);
-	const rootElementClassName = clsx(
-		'header-settings',
-		className,
-		'menu-button--ignore-position-fix'
-	);
+	const rootElementClassName = clsx('header-settings', className);
 	const themeOptions = [
 		{ value: 'light', label: t('theme_light'), icon: 'sun' },
 		{ value: 'dark', label: t('theme_dark'), icon: 'moon' }
@@ -139,6 +135,7 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 			icon="gear_wheel"
 			optionsPlacement="bottom-end"
 			options={options}
+			shouldIgnorePositionFix={true}
 		/>
 	);
 };

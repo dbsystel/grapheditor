@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { NodeId } from 'src/models/node';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type DeleteNodesParameters = { nodeIds: Array<NodeId> };

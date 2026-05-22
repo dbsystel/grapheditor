@@ -13,6 +13,7 @@ export const EditSaveBlock = ({
 	onEditClick,
 	onSaveClick,
 	onUndoClick,
+	onToggle,
 	id,
 	className,
 	testId
@@ -36,6 +37,7 @@ export const EditSaveBlock = ({
 				/>
 			}
 			data-testid={testId}
+			onToggle={onToggle}
 		>
 			<ErrorBoundary>{children}</ErrorBoundary>
 		</DBAccordionItem>

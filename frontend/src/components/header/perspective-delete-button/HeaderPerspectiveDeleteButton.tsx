@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'src/i18n';
+import { useConfirmationModalStore } from 'src/stores/confirmation-modal';
 import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
@@ -29,6 +30,7 @@ export const HeaderPerspectiveDeleteButton = ({
 
 	const perspectiveDelete = () => {
 		setIsLoading(true);
+		useConfirmationModalStore.getState().close();
 
 		api.nodes.actions
 			.deleteNodesAndUpdateApplication([perspectiveId])
@@ -54,18 +56,30 @@ export const HeaderPerspectiveDeleteButton = ({
 			});
 	};
 
+	const onDeletePerspectiveClick = () => {
+		useConfirmationModalStore.getState().open({
+			title: t('confirm_delete_perspective_title'),
+			description: t('confirm_delete_perspective', { id: perspectiveId }),
+			onCancelClick: () => useConfirmationModalStore.getState().close(),
+			onConfirmClick: perspectiveDelete,
+			confirmLabel: t('confirm_delete_perspective_title')
+		});
+	};
+
 	return (
-		<DBButton
-			onClick={perspectiveDelete}
-			type="button"
-			width="full"
-			variant="ghost"
-			id={id}
-			className={rootElementClassName}
-			data-testid={testId}
-			disabled={isLoading}
-		>
-			{t('header_delete_perspective')}
-		</DBButton>
+		<>
+			<DBButton
+				onClick={onDeletePerspectiveClick}
+				type="button"
+				width="full"
+				variant="ghost"
+				id={id}
+				className={rootElementClassName}
+				data-testid={testId}
+				disabled={isLoading}
+			>
+				{t('header_delete_perspective')}
+			</DBButton>
+		</>
 	);
 };

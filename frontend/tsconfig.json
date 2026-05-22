@@ -5,8 +5,7 @@
 		"lib": ["DOM", "DOM.Iterable", "ESNext"],
 		"allowJs": false,
 		"skipLibCheck": true,
-		"esModuleInterop": false,
-		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
 		"module": "ESNext",
@@ -17,7 +16,9 @@
 		"jsx": "react-jsx",
 		"noFallthroughCasesInSwitch": true,
 		"types": ["vite/client", "vitest/globals", "vite-plugin-svgr/client", "@vitest/browser-playwright"],
-		"baseUrl": ".",
+		"paths": {
+			"src/*": ["./src/*"]
+		},
 		"strictNullChecks": true,
 		"strictFunctionTypes": true,
 		"strictBindCallApply": true,

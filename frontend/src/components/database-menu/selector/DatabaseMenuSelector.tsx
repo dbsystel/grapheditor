@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database } from 'src/models/database';
-import { useLoginStore } from 'src/stores/login';
+import { useDatabaseStore } from 'src/stores/database';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { resetApplicationStates } from 'src/utils/helpers/general';
 import { useGetDatabaseCurrent } from 'src/utils/hooks/useGetDatabaseCurrent';
@@ -32,20 +32,20 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 
 	useGetDatabaseCurrent({
 		onSuccess: (response) => {
+			useDatabaseStore.getState().setCurrentDatabase(response.data);
 			setSelectedDatabase(response.data.name);
-			useLoginStore.getState().setDatabase(response.data.name);
 		},
 		onFinally() {
-			useLoginStore.getState().setIsDatabaseLoading(false);
+			useDatabaseStore.getState().setIsLoading(false);
 		},
 		executeImmediately: true
 	});
 
 	const { reFetch, isLoading: isPostDatabaseCurrentLoading } = usePostDatabaseCurrent({
 		name: '',
-		onSuccess: () => {
+		onSuccess: (response) => {
 			resetApplicationStates();
-			useLoginStore.getState().setDatabase(selectedDatabaseRef.current);
+			useDatabaseStore.getState().setCurrentDatabase(response.data);
 
 			addNotification({
 				title: t('notifications_success_user_database_change'),
@@ -54,7 +54,6 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		},
 		onError: () => {
 			setSelectedDatabase(previouslySelectedDatabaseRef.current);
-			useLoginStore.getState().setDatabase(previouslySelectedDatabaseRef.current);
 
 			addNotification({
 				title: t('notifications_failure_user_database_change'),
@@ -62,17 +61,17 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 			});
 		},
 		onFinally() {
-			useLoginStore.getState().setIsDatabaseLoading(false);
+			useDatabaseStore.getState().setIsLoading(false);
 		}
 	});
 
 	useEffect(() => {
-		useLoginStore.getState().setIsDatabaseLoading(true);
+		useDatabaseStore.getState().setIsLoading(true);
 	}, []);
 
 	const onDatabaseChange = (values: Array<string>) => {
 		const newlySelectedDatabase = values[0];
-		useLoginStore.getState().setIsDatabaseLoading(true);
+		useDatabaseStore.getState().setIsLoading(true);
 
 		previouslySelectedDatabaseRef.current = selectedDatabase;
 		selectedDatabaseRef.current = newlySelectedDatabase;

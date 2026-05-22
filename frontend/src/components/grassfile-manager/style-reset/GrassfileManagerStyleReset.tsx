@@ -6,7 +6,7 @@ import { useNotificationsStore } from 'src/stores/notifications';
 import { usePerspectiveStore } from 'src/stores/perspective';
 import { useSearchStore } from 'src/stores/search';
 import { api } from 'src/utils/api/api';
-import { processPerspective } from 'src/utils/helpers/nodes';
+import { processPerspective } from 'src/utils/helpers/perspectives';
 import { useGetStyleReset } from 'src/utils/hooks/useGetStyleReset';
 import { GrassfileManagerStyleResetProps } from './GrassfileManagerStyleReset.interfaces';
 

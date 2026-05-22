@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AddNewProperty } from 'src/components/add-new-property/AddNewProperty';
 import {
@@ -71,11 +71,11 @@ export const ItemProperties = ({
 	});
 	const rootElementClassName = clsx('item-properties', className);
 
-	useImperativeHandle(handleRef, () => ({
-		handleSave,
-		handleUndo,
-		validateProperties
-	}));
+	if (handleRef) {
+		handleRef.current.handleSave = handleSave;
+		handleRef.current.handleUndo = handleUndo;
+		handleRef.current.checkIfHasUnsavedChanges = checkIfHasUnsavedChanges;
+	}
 
 	useEffect(() => {
 		propertiesStorage.setProperties(clone(item.properties));
@@ -150,7 +150,7 @@ export const ItemProperties = ({
 		sortTopEntriesMap(true);
 	};
 
-	const handleSave = async () => {
+	async function handleSave() {
 		if (!isLoading) {
 			const itemPropertiesValidation = areItemPropertiesValid(propertiesStorage.properties);
 
@@ -161,7 +161,7 @@ export const ItemProperties = ({
 					)
 				);
 
-				return false;
+				return;
 			}
 
 			setActiveTabIndex(0);
@@ -180,24 +180,20 @@ export const ItemProperties = ({
 			}
 
 			setIsLoading(false);
-
-			return true;
 		}
+	}
 
-		return false;
-	};
-
-	const handleUndo = () => {
+	function handleUndo() {
 		propertiesStorage.setProperties(clone(item.properties));
 		refreshPropertyKeyPrefix();
 		setActiveTabIndex(0);
 		clearTopEntriesCache();
 		refreshPropsStorageAndProcessTableEntries();
-	};
+	}
 
-	const validateProperties = () => {
-		return twoObjectValuesAreEqual(item.properties, propertiesStorage.properties);
-	};
+	function checkIfHasUnsavedChanges() {
+		return !twoObjectValuesAreEqual(item.properties, propertiesStorage.properties);
+	}
 
 	const refreshPropertyKeyPrefix = () => {
 		propertyKeyPrefix.current = window.crypto.randomUUID();
@@ -227,13 +223,13 @@ export const ItemProperties = ({
 		propertiesStorage.setProperty(key, updatedProperty);
 	};
 
-	const handlePropertyDelete = (key: ItemPropertyKey) => {
+	const onPropertyDelete = (key: ItemPropertyKey) => {
 		propertiesStorage.deleteProperty(key);
 		refreshPropsStorageAndProcessTableEntries();
 	};
 
 	// newType is string because it can be list_<type> (easier to handle that way)
-	const handlePropertyTypeChange = (key: ItemPropertyKey, newType: string) => {
+	const onPropertyTypeChange = (key: ItemPropertyKey, newType: string) => {
 		const mainType = newType.startsWith('list_') ? 'list' : newType;
 		const subType = newType.startsWith('list_') ? newType.slice(5) : null;
 		const existingProperty = propertiesStorage.getProperty(key);
@@ -299,8 +295,8 @@ export const ItemProperties = ({
 				onPropertyRowMouseEnter={onPropertyRowMouseEnter}
 				onPropertyRowMouseLeave={onPropertyRowMouseLeave}
 				onPropertyChange={onPropertyChange}
-				handlePropertyDelete={handlePropertyDelete}
-				handlePropertyTypeChange={handlePropertyTypeChange}
+				onPropertyDelete={onPropertyDelete}
+				onPropertyTypeChange={onPropertyTypeChange}
 				isEditMode={isEditMode}
 				propertyKeyPrefix={propertyKeyPrefix.current}
 			/>

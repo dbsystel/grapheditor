@@ -1,3 +1,4 @@
+import { ParaQueryParameterValues } from 'src/models/paraquery';
 import { useSearchStore } from 'src/stores/search';
 import { api } from 'src/utils/api/api';
 import { getParaQueries } from 'src/utils/fetch/getParaQueries';
@@ -11,7 +12,7 @@ export const paraQueriesApi = {
 	actions: {
 		executeParaQuery: async (
 			cyperQuery: string,
-			cypherQueryParameters: Record<string, string>
+			cypherQueryParameters: ParaQueryParameterValues
 		) => {
 			useSearchStore.getState().setQuery(cyperQuery);
 			useSearchStore.getState().setCypherQueryParameters(cypherQueryParameters);

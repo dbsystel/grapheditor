@@ -2,15 +2,24 @@ import {
 	GraphEditorSigmaNodeAttributes,
 	GraphEditorSigmaRelationAttributes
 } from 'src/components/network-graph/NetworkGraph.interfaces';
-import { NodePositions } from 'src/models/perspective';
+import { Node } from 'src/models/node';
+import { NodePositions, Perspective } from 'src/models/perspective';
+import { Relation, RelationId } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
+import { usePerspectiveStore } from 'src/stores/perspective';
+import { useSearchStore } from 'src/stores/search';
+import {
+	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
+	GRAPH_LAYOUT_PERSPECTIVE
+} from 'src/utils/constants';
+import { buildPerspectiveSearchResult } from 'src/utils/helpers/search';
 
 export const preparePerspectiveDataAndRefreshNodesPosition = () => {
 	const setNodePosition = useItemsStore.getState().setNodePosition;
 	const graph = useGraphStore.getState().sigma.getGraph();
 	const nodePositions: NodePositions = {};
-	const visibleRelationIds: string[] = [];
+	const visibleRelationIds: Array<RelationId> = [];
 
 	graph.forEachNode((nodeId: string, attributes: GraphEditorSigmaNodeAttributes) => {
 		// hidden nodes are excluded from perspectives
@@ -39,4 +48,29 @@ export const preparePerspectiveDataAndRefreshNodesPosition = () => {
 		nodePositions: nodePositions,
 		relationIds: visibleRelationIds
 	};
+};
+
+export const processPerspective = (perspective: Perspective) => {
+	const nodes: Map<string, Node> = new Map(Object.entries(perspective.nodes));
+	const relations: Map<string, Relation> = new Map();
+
+	const { setAlgorithm, setIsResultProcessed, setResult } = useSearchStore.getState();
+	const { unHighlightNodes, unHighlightRelations } = useGraphStore.getState();
+	const setPerspective = usePerspectiveStore.getState().setPerspective;
+
+	// map relations properly since GET /api/v1/perspectives currently
+	// returns an object which keys are short ID form, and not the long one
+	Object.values(perspective.relations).forEach((relation) => {
+		relations.set(relation.id, relation);
+	});
+
+	unHighlightNodes();
+	unHighlightRelations();
+	setPerspective(perspective);
+	setAlgorithm(GRAPH_LAYOUT_PERSPECTIVE);
+	setIsResultProcessed(false);
+	setResult({
+		data: buildPerspectiveSearchResult(nodes, relations),
+		type: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
+	});
 };

@@ -1,9 +1,11 @@
-import { NodeConnections } from 'src/models/node';
-import { backendApi } from 'src/utils/backend-api';
+import { NodeConnection, NodeId } from 'src/models/node';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
-export type PostNodeConnectionsParameters = { nodeId: string };
-export type PostNodeConnectionsResponse = NodeConnections;
+export type PostNodeConnectionsParameters = { nodeId: NodeId };
+export type PostNodeConnectionsResponse = {
+	relations: Array<NodeConnection>;
+};
 
 export const postNodeConnections = ({ nodeId }: PostNodeConnectionsParameters) => {
 	return backendApi.post<PostNodeConnectionsResponse>(

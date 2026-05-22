@@ -4,6 +4,7 @@ export type ToggleGroupOption<T = string> = {
 	value: T;
 	label: string;
 	icon: string;
+	isDisabled?: boolean;
 };
 
 export type ToggleGroupProps<T extends string = string> = GlobalComponentProps & {

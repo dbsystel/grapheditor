@@ -6,6 +6,8 @@ import { createPortal } from 'react-dom';
 import { objectHasOwnProperty } from 'src/utils/helpers/general';
 import { ParaQueryEditorProps } from './ParaQueryEditor.interfaces';
 
+const allowedTypes = ['string', 'integer'];
+
 /**
  * Component responsible for rendering a para-query with parameters.
  */
@@ -53,17 +55,21 @@ export const ParaQueryEditor = ({
 			? paraQuery.parameters[parameterKey || '']
 			: null;
 
-		if (!parameter || parameter.type.toLowerCase() !== 'string') {
+		if (!parameter || !allowedTypes.includes(parameter.type.toLowerCase())) {
 			return '';
 		}
 
+		const type = parameter.type;
+		const isTypeInteger = type === 'integer';
+
 		const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-			onParameterChange(parameterKey, event.target.value);
+			onParameterChange(parameterKey, event.target.value, type);
 		};
 
 		const defaultValue = defaultParameterValues
 			? defaultParameterValues[parameterKey]
 			: parameter.default_value;
+		const inputType = isTypeInteger ? 'number' : 'string';
 
 		return (
 			<DBInput
@@ -72,6 +78,7 @@ export const ParaQueryEditor = ({
 				onChange={onChange}
 				dataList={parameter.suggestions}
 				validation="no-validation"
+				type={inputType}
 			/>
 		);
 	};

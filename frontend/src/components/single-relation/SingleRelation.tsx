@@ -9,7 +9,7 @@ import {
 	DBTooltip
 } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CopyToClipboard } from 'src/components/copy-to-clipboard/CopyToClipboard';
 import { EditSaveBlock } from 'src/components/edit-save-block/EditSaveBlock';
@@ -22,16 +22,17 @@ import { Loading } from 'src/components/loading/Loading';
 import { MenuButton } from 'src/components/menu-button/MenuButton';
 import { RelationTypeChanger } from 'src/components/relation-type-changer/RelationTypeChanger';
 import { RelationTypeChangerHandle } from 'src/components/relation-type-changer/RelationTypeChanger.interfaces';
-import { UnsavedChangedModalProps } from 'src/components/unsaved-changes-modal/UnsavedChangedModal.interfaces';
-import { UnsavedChangesModal } from 'src/components/unsaved-changes-modal/UnsavedChangesModal';
 import { MetaForMeta, Node } from 'src/models/node';
+import { useConfirmationModalStore } from 'src/stores/confirmation-modal';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { useSearchStore } from 'src/stores/search';
+import { SettingsSectionsLocation, useSettingsStore } from 'src/stores/settings';
+import { useUnsavedChangesStore } from 'src/stores/unsaved-changes';
 import { api } from 'src/utils/api/api';
 import { GraphEditorType } from 'src/utils/constants';
 import { GRAPH_PRESENTATION_GRAPH } from 'src/utils/constants';
-import { openInItemsDrawer } from 'src/utils/helpers/items';
+import { getDefaultUnsavedChangesHandle, openInItemsDrawer } from 'src/utils/helpers/items';
 import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
 import { idFormatter } from 'src/utils/id-formatter';
 import { SingleRelationEditMode, SingleRelationProps } from './SingleRelation.interfaces';
@@ -56,16 +57,18 @@ export const SingleRelation = ({
 	const [isTypeMetaLoading, setIsTypeMetaLoading] = useState(false);
 	const [currentEditMode, setCurrentEditMode] = useState<SingleRelationEditMode>('none');
 	const [typeMeta, setTypeMeta] = useState<MetaForMeta>({});
-	const [unsavedChangesData, setUnsavedChangesData] = useState<UnsavedChangedModalProps | null>(
-		null
-	);
+	const toggleDefaultOpenSection = useSettingsStore((store) => store.toggleDefaultOpenSection);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
 	const sigma = useGraphStore((store) => store.sigma);
 	const presentation = useSearchStore((store) => store.presentation);
 	const isCenterButtonDisabled =
 		presentation !== GRAPH_PRESENTATION_GRAPH || !sigma.getGraph().hasEdge(relation.id);
-	const relationTypeHandleRef = useRef<RelationTypeChangerHandle>(null);
-	const relationPropertiesHandleRef = useRef<ItemPropertiesHandle>(null);
+	const relationTypeHandleRef = useRef<RelationTypeChangerHandle>(
+		getDefaultUnsavedChangesHandle('relation-type', 'single_relation_type')
+	);
+	const relationPropertiesHandleRef = useRef<ItemPropertiesHandle>(
+		getDefaultUnsavedChangesHandle('properties', 'single_view_properties_title')
+	);
 	const rootElementClassName = clsx(
 		'single-relation single-item',
 		{
@@ -73,8 +76,26 @@ export const SingleRelation = ({
 		},
 		className
 	);
+	const sectionsLocation: SettingsSectionsLocation = isInsideItemsDrawer
+		? 'itemsDrawer'
+		: 'mouseover';
+
+	const initOpenIndexes = useMemo(() => {
+		return useSettingsStore
+			.getState()
+			.getItemsDrawerDefaultOpenSectionsIndexes(sectionsLocation, [
+				'relation-relation',
+				'relation-type',
+				'relation-properties'
+			]);
+	}, [relation]);
 
 	useEffect(() => {
+		if (isInsideItemsDrawer) {
+			useUnsavedChangesStore.getState().addHandle(relationPropertiesHandleRef.current);
+			useUnsavedChangesStore.getState().addHandle(relationTypeHandleRef.current);
+		}
+
 		(async () => {
 			setIsLoadingSourceAndTargetNodes(true);
 
@@ -107,6 +128,12 @@ export const SingleRelation = ({
 
 			setIsLoadingSourceAndTargetNodes(false);
 		})();
+
+		return () => {
+			if (isInsideItemsDrawer) {
+				useUnsavedChangesStore.getState().reset();
+			}
+		};
 	}, [relation]);
 
 	const getMetaForMeta = () => {
@@ -125,9 +152,9 @@ export const SingleRelation = ({
 			});
 	};
 
-	const resetEditModeAndUnsavedChangesData = () => {
+	const resetEditModeAndConfirmation = () => {
 		setCurrentEditMode('none');
-		setUnsavedChangesData(null);
+		useConfirmationModalStore.getState().close();
 	};
 
 	const onTypeEditClick = () => {
@@ -135,16 +162,21 @@ export const SingleRelation = ({
 	};
 
 	const onTypeSaveClick = async () => {
-		await relationTypeHandleRef.current?.handleSave();
-		resetEditModeAndUnsavedChangesData();
+		await relationTypeHandleRef.current.handleSave();
+		resetEditModeAndConfirmation();
 	};
 
 	const onTypeUndoClick = () => {
-		if (relation.type !== relationTypeHandleRef.current?.type) {
-			setUnsavedChangesData({
-				unsavedSectionName: t('single_relation_type'),
+		if (relationTypeHandleRef.current.checkIfHasUnsavedChanges()) {
+			useConfirmationModalStore.getState().open({
+				title: t('confirm_unsaved_changes_title'),
+				description: t('confirm_unsaved_changes_description', {
+					sectionName: t('single_relation_type')
+				}),
 				onCancelClick: undoType,
-				onSaveClick: onTypeSaveClick
+				onConfirmClick: onTypeSaveClick,
+				cancelLabel: t('confirm_unsaved_changes_cancel_button'),
+				confirmLabel: t('confirm_unsaved_changes_save_button')
 			});
 		} else {
 			undoType();
@@ -152,8 +184,8 @@ export const SingleRelation = ({
 	};
 
 	const undoType = () => {
-		relationTypeHandleRef.current?.handleUndo();
-		resetEditModeAndUnsavedChangesData();
+		relationTypeHandleRef.current.handleUndo();
+		resetEditModeAndConfirmation();
 	};
 
 	const onEditPropertiesClick = () => {
@@ -161,11 +193,16 @@ export const SingleRelation = ({
 	};
 
 	const onUndoPropertiesClick = () => {
-		if (relationPropertiesHandleRef.current?.validateProperties) {
-			setUnsavedChangesData({
-				unsavedSectionName: t('single_view_properties_title'),
+		if (relationPropertiesHandleRef.current.checkIfHasUnsavedChanges()) {
+			useConfirmationModalStore.getState().open({
+				title: t('confirm_unsaved_changes_title'),
+				description: t('confirm_unsaved_changes_description', {
+					sectionName: t('single_view_properties_title')
+				}),
 				onCancelClick: undoProperties,
-				onSaveClick: onSavePropertiesClick
+				onConfirmClick: onSavePropertiesClick,
+				cancelLabel: t('confirm_unsaved_changes_cancel_button'),
+				confirmLabel: t('confirm_unsaved_changes_save_button')
 			});
 		} else {
 			undoProperties();
@@ -173,16 +210,26 @@ export const SingleRelation = ({
 	};
 
 	const onSavePropertiesClick = async () => {
-		const saveOk = await relationPropertiesHandleRef.current?.handleSave();
-
-		if (saveOk) {
-			resetEditModeAndUnsavedChangesData();
-		}
+		await relationPropertiesHandleRef.current.handleSave();
+		resetEditModeAndConfirmation();
 	};
 
 	const undoProperties = () => {
 		relationPropertiesHandleRef.current?.handleUndo();
-		resetEditModeAndUnsavedChangesData();
+		resetEditModeAndConfirmation();
+	};
+
+	const onDeleteRelationClick = () => {
+		useConfirmationModalStore.getState().open({
+			title: t('confirm_delete_relation_title'),
+			description: t('confirm_delete_relation', { id: relation.id }),
+			onCancelClick: () => useConfirmationModalStore.getState().close(),
+			onConfirmClick: () => {
+				api.relations.actions.deleteRelationsAndUpdateApplication([relation.id]);
+				useConfirmationModalStore.getState().close();
+			},
+			confirmLabel: t('confirm_delete_relation_button')
+		});
 	};
 
 	const localOpenInItemsDrawer = () => {
@@ -208,11 +255,8 @@ export const SingleRelation = ({
 						buttonSize="small"
 						options={[
 							{
-								title: t('single-relation-delete-item-button'),
-								onClick: () =>
-									api.relations.actions.deleteRelationsAndUpdateApplication([
-										relation.id
-									]),
+								title: t('confirm_delete_relation_button'),
+								onClick: onDeleteRelationClick,
 								icon: 'bin'
 							}
 						]}
@@ -248,11 +292,14 @@ export const SingleRelation = ({
 				</div>
 			</div>
 
-			<DBAccordion behavior="multiple" initOpenIndex={[0, 1, 2, 3]} variant="card">
+			<DBAccordion behavior="multiple" initOpenIndex={initOpenIndexes} variant="card">
 				<EditSaveBlock
 					isEditable={false}
 					isEditMode={false}
 					headline={t('single-relation-relation')}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'relation-relation', isOpen);
+					}}
 				>
 					{isLoadingSourceAndTargetNodes === false && (
 						<DBSection spacing="none" className="single-relation__relation">
@@ -284,6 +331,9 @@ export const SingleRelation = ({
 					onEditClick={onTypeEditClick}
 					onSaveClick={onTypeSaveClick}
 					onUndoClick={onTypeUndoClick}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'relation-type', isOpen);
+					}}
 				>
 					<RelationTypeChanger
 						handleRef={relationTypeHandleRef}
@@ -299,6 +349,9 @@ export const SingleRelation = ({
 					onEditClick={onEditPropertiesClick}
 					onSaveClick={onSavePropertiesClick}
 					onUndoClick={onUndoPropertiesClick}
+					onToggle={(isOpen) => {
+						toggleDefaultOpenSection(sectionsLocation, 'relation-properties', isOpen);
+					}}
 				>
 					<Loading
 						isLoading={isTypeMetaLoading}
@@ -314,14 +367,6 @@ export const SingleRelation = ({
 					</Loading>
 				</EditSaveBlock>
 			</DBAccordion>
-
-			{unsavedChangesData && (
-				<UnsavedChangesModal
-					unsavedSectionName={unsavedChangesData.unsavedSectionName}
-					onCancelClick={unsavedChangesData.onCancelClick}
-					onSaveClick={unsavedChangesData.onSaveClick}
-				/>
-			)}
 		</DBSection>
 	);
 };

@@ -1,3 +1,5 @@
+import { buildInfoBackend } from './buildInfoBackend';
+import { buildInfoFrontend } from './buildInfoFrontend';
 import { contextMenuApi } from './contextMenu';
 import { databasesApi } from './databases';
 import { itemsApi } from './items';
@@ -23,5 +25,7 @@ export const api = {
 	relations: relationsApi,
 	search: searchApi,
 	styles: stylesApi,
-	users: usersApi
+	users: usersApi,
+	buildInfoBackend: buildInfoBackend,
+	buildInfoFrontend: buildInfoFrontend
 };

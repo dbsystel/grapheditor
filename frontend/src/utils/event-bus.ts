@@ -1,16 +1,16 @@
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 
-class EventBusClass {
-	listeners: ListenerMap;
+export class EventBusClass<TEvents> {
+	listeners: ListenerMap<TEvents>;
 
 	constructor() {
-		this.listeners = {};
+		this.listeners = {} as ListenerMap<TEvents>;
 	}
 
-	public subscribe<EventName extends keyof EventBusEvents>(
+	public subscribe<EventName extends keyof TEvents>(
 		eventName: EventName,
-		callback: (data: EventBusEvents[EventName]) => void
+		callback: (data: TEvents[EventName]) => void
 	): () => void {
 		if (!this.listeners[eventName]) {
 			this.listeners[eventName] = { listeners: [] };
@@ -23,9 +23,9 @@ class EventBusClass {
 		};
 	}
 
-	public unsubscribe<EventName extends keyof EventBusEvents>(
+	public unsubscribe<EventName extends keyof TEvents>(
 		eventName: EventName,
-		callback: (data: EventBusEvents[EventName]) => void
+		callback: (data: TEvents[EventName]) => void
 	) {
 		const eventListeners = this.listeners[eventName];
 
@@ -36,11 +36,11 @@ class EventBusClass {
 		}
 	}
 
-	public subscribeOnce<EventName extends keyof EventBusEvents>(
+	public subscribeOnce<EventName extends keyof TEvents>(
 		eventName: EventName,
-		callback: (data: EventBusEvents[EventName]) => void
+		callback: (data: TEvents[EventName]) => void
 	) {
-		const wrapper = (data: EventBusEvents[EventName]) => {
+		const wrapper = (data: TEvents[EventName]) => {
 			callback(data);
 			this.unsubscribe(eventName, wrapper);
 		};
@@ -48,9 +48,9 @@ class EventBusClass {
 		this.subscribe(eventName, wrapper);
 	}
 
-	public publish<EventName extends keyof EventBusEvents>(
+	public publish<EventName extends keyof TEvents>(
 		eventName: EventName,
-		data: EventBusEvents[EventName]
+		data: TEvents[EventName]
 	) {
 		const eventListeners = this.listeners[eventName];
 
@@ -60,15 +60,15 @@ class EventBusClass {
 	}
 
 	public reset() {
-		this.listeners = {};
+		this.listeners = {} as ListenerMap<TEvents>;
 	}
 }
 
-export const eventBus = new EventBusClass();
+export const eventBus = new EventBusClass<EventBusEvents>();
 
-type ListenerMap = {
-	[K in keyof EventBusEvents]?: {
-		listeners: Array<(data: EventBusEvents[K]) => void>;
+type ListenerMap<TEvents> = {
+	[K in keyof TEvents]?: {
+		listeners: Array<(data: TEvents[K]) => void>;
 	};
 };
 

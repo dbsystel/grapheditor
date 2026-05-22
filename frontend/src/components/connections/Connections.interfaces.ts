@@ -7,11 +7,7 @@ export type ConnectionsProps = GlobalComponentProps & {
 	isEditMode?: boolean;
 };
 
-export type ConnectionsData = Array<{
-	source?: Node;
-	relation?: Relation;
-	target?: Node;
-}>;
+export type ConnectionsData = Array<ConnectionObject>;
 
 export type ConnectionsBoxProps = {
 	title?: string;
@@ -27,6 +23,12 @@ export type ConnectionObject = {
 	source?: Node;
 	relation?: Relation;
 	target?: Node;
+	metarelation?: Node;
 };
 
 export type ConnectionDirection = 'incoming' | 'outgoing';
+export type ConnectionRenderDirectionProps = {
+	isSelfLoop: boolean;
+	direction: ConnectionDirection;
+	relation: Relation;
+};

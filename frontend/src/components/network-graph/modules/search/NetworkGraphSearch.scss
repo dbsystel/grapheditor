@@ -3,6 +3,7 @@
 #{NetworkGraph.$network-graph-root-element-selector} {
 	&__search {
 		position: relative;
+		flex-grow: 1;
 
 		&-list {
 			position: absolute;

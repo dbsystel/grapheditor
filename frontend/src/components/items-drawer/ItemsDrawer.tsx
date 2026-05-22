@@ -9,9 +9,12 @@ import { ItemsDrawerProvider } from 'src/components/items-drawer/context/ItemsDr
 import { Sidebar } from 'src/components/sidebar/Sidebar';
 import { SingleNode } from 'src/components/single-node/SingleNode';
 import { SingleRelation } from 'src/components/single-relation/SingleRelation';
+import i18n from 'src/i18n';
 import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
+import { useConfirmationModalStore } from 'src/stores/confirmation-modal';
 import { DrawerStoreEntry, useDrawerStore } from 'src/stores/drawer';
+import { useUnsavedChangesStore } from 'src/stores/unsaved-changes';
 import { eventBus, EventBusEvents } from 'src/utils/event-bus';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
@@ -67,12 +70,49 @@ export const ItemsDrawer = ({ id, className, testId }: ItemsDrawerProps) => {
 		};
 	}, []);
 
-	const onClose = () => {
-		if (activeDrawerEntry && activeDrawerEntry.onDrawerClose) {
-			activeDrawerEntry.onDrawerClose(activeDrawerEntry);
-		}
+	const onClose = async () => {
+		const handlesWithUnsavedChanges = useUnsavedChangesStore
+			.getState()
+			.getHandlesWithUnsavedChanges();
 
-		reset();
+		if (handlesWithUnsavedChanges.length) {
+			const sectionNames = handlesWithUnsavedChanges
+				.map((handle) => i18n.t(handle.sectionNameTranslationKey))
+				.map((sectionName) => {
+					return '\u2022 ' + sectionName + '\n';
+				});
+
+			useConfirmationModalStore.getState().open({
+				title: i18n.t('items_drawer_confirm_unsaved_changes_title'),
+				description: (
+					<>
+						{i18n.t('items_drawer_confirm_unsaved_changes_description', {
+							sections: sectionNames.join(',')
+						})}
+					</>
+				),
+				onCancelClick: () => {
+					reset();
+					useConfirmationModalStore.getState().close();
+				},
+				onConfirmClick: () => {
+					Promise.all(
+						handlesWithUnsavedChanges.map((handle) => handle.handleSave())
+					).then(() => {
+						reset();
+						useConfirmationModalStore.getState().close();
+					});
+				},
+				cancelLabel: i18n.t('items_drawer_confirm_unsaved_changes_cancel_button'),
+				confirmLabel: i18n.t('items_drawer_confirm_unsaved_changes_save_button')
+			});
+		} else {
+			if (activeDrawerEntry && activeDrawerEntry.onDrawerClose) {
+				activeDrawerEntry.onDrawerClose(activeDrawerEntry);
+			}
+
+			reset();
+		}
 	};
 
 	if (activeDrawerEntry) {

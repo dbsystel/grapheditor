@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { MetaForMeta, NodeId } from 'src/models/node';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { GraphEditorType } from 'src/utils/constants';
 import { endpoints } from 'src/utils/endpoints';
 

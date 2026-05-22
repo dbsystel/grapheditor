@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { RelationId } from 'src/models/relation';
-import { backendApi } from 'src/utils/backend-api';
+import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type DeleteRelationsParameters = { relationIds: Array<RelationId> };

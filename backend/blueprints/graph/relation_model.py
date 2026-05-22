@@ -140,6 +140,7 @@ class NodeRelationsEntrySchema(Schema):
     relation = fields.Nested(RelationSchema())
     neighbor = fields.Nested(node_model.NodeSchema())
     direction = fields.Str()
+    metarelation = fields.Nested(node_model.NodeSchema())
 
 
 class NodeRelationsSchema(Schema):

@@ -23,8 +23,8 @@ export const ItemPropertiesTable = ({
 	onPropertyRowMouseEnter,
 	onPropertyRowMouseLeave,
 	onPropertyChange,
-	handlePropertyDelete,
-	handlePropertyTypeChange,
+	onPropertyDelete,
+	onPropertyTypeChange,
 	isEditMode,
 	id,
 	className,
@@ -38,6 +38,10 @@ export const ItemPropertiesTable = ({
 		},
 		className
 	);
+
+	if (!entries.length) {
+		return null;
+	}
 
 	return (
 		<Table id={id} className={rootElementClassName} width="full" testId={testId}>
@@ -63,14 +67,14 @@ export const ItemPropertiesTable = ({
 						}
 					};
 
-					const localPropertyDeleteHandle = () => {
-						handlePropertyDelete(key);
+					const localOnPropertyDelete = () => {
+						onPropertyDelete(key);
 					};
 
 					// newType is string because it can be list_<type> (easier to handle that way)
-					const localPropertyTypeChangeHandle = (newType: string) => {
-						if (handlePropertyTypeChange) {
-							handlePropertyTypeChange(key, newType);
+					const localOnPropertyTypeChange = (newType: string) => {
+						if (onPropertyTypeChange) {
+							onPropertyTypeChange(key, newType);
 						}
 					};
 
@@ -84,7 +88,7 @@ export const ItemPropertiesTable = ({
 					const menuOptions: Array<MenuButtonOption> = [
 						{
 							title: t('item_properties_table_delete_property'),
-							onClick: localPropertyDeleteHandle,
+							onClick: localOnPropertyDelete,
 							icon: 'bin',
 							closeMenuOnClick: true
 						},
@@ -96,7 +100,7 @@ export const ItemPropertiesTable = ({
 									icon: property.type === option.value ? 'check' : '',
 									onClick: () => {
 										if (isString(option.value)) {
-											localPropertyTypeChangeHandle(option.value);
+											localOnPropertyTypeChange(option.value);
 										}
 									},
 									optionsPlacement: 'bottom-end',
@@ -156,9 +160,10 @@ export const ItemPropertiesTable = ({
 									className="item-properties-table__cell item-properties-table__menu"
 								>
 									<MenuButton
-										className="item-properties-table__menu-button menu-button--ignore-position-fix menu-button--inline-end-fix"
+										className="item-properties-table__menu-button menu-button--inline-end-fix"
 										optionsPlacement="bottom-start"
 										options={menuOptions}
+										shouldIgnorePositionFix={true}
 									/>
 								</TableCell>
 							)}

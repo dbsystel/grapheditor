@@ -98,16 +98,18 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 				clearCanvasContexts(canvasElements);
 
 				sigmaToClear.kill();
+				StateManager.getInstance().logger.reset();
 
 				// cleanups
-				useGraphStore.getState().reset();
+				// exclude persisted keys
+				useGraphStore.getState().resetButExclude(['zoomFactor']);
 				useExpandNodeStore.getState().reset();
 			}
 		};
 	}, []);
 
 	return (
-		<div className="network-graph__container" ref={containerRef}>
+		<div className="network-graph__container network-graph__container--hide" ref={containerRef}>
 			{graphSigmaIsSet && children}
 		</div>
 	);

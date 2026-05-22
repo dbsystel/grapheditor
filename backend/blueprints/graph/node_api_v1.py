@@ -284,9 +284,16 @@ class NodeRelations(MethodView):
             abort(404)
         for rel_info in rel_map:
             base_rel = rel_info['relation']
-            rel_info['relation'] = GraphEditorRelation.from_base_relation(base_rel)
+            converted_rel = GraphEditorRelation.from_base_relation(base_rel)
+            rel_info['relation'] = converted_rel
+            if base_metarel := current_app.graph_db.get_node_by_id(converted_rel.type):
+                metarel = GraphEditorNode.from_base_node(base_metarel)
+            else:
+                metarel = GraphEditorNode.create_pseudo_node(converted_rel.type)
+
             base_node = rel_info['neighbor']
             rel_info['neighbor'] = GraphEditorNode.from_base_node(base_node)
+            rel_info['metarelation'] = metarel
         return dict(relations = rel_map)
 
 

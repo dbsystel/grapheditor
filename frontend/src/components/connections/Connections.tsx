@@ -9,13 +9,22 @@ import { Table } from 'src/components/table/Table';
 import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
-import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
+import { useConfirmationModalStore } from 'src/stores/confirmation-modal';
 import { useGraphStore } from 'src/stores/graph';
 import { api } from 'src/utils/api/api';
-import { processNodeConnections, sortNodeConnections } from 'src/utils/helpers/nodes';
+import {
+	getDirectionIcon,
+	processNodeConnections,
+	sortNodeConnections
+} from 'src/utils/helpers/nodes';
 import { idFormatter } from 'src/utils/id-formatter';
-import { ConnectionObject, ConnectionsBoxProps, ConnectionsProps } from './Connections.interfaces';
+import {
+	ConnectionRenderDirectionProps,
+	ConnectionsBoxProps,
+	ConnectionsData,
+	ConnectionsProps
+} from './Connections.interfaces';
 import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelation';
 
 /**
@@ -23,8 +32,9 @@ import { ConnectionsAddRelation } from './tabs/add-relation/ConnectionsAddRelati
  * Depending on from which startpoint it has been rendered.
  */
 export const Connections = ({ node, isEditMode, id, className, testId }: ConnectionsProps) => {
-	const [connectionBoxData, setConnectionBoxData] = useState<Array<ConnectionObject>>([]);
-	const [newConnectionBoxData, setNewConnectionBoxData] = useState<Array<ConnectionObject>>([]);
+	const { t } = useTranslation();
+	const [connectionBoxData, setConnectionBoxData] = useState<ConnectionsData>([]);
+	const [newConnectionBoxData, setNewConnectionBoxData] = useState<ConnectionsData>([]);
 	const rootElementClassName = clsx('connections', className);
 	const [renderKey, setRenderKey] = useState('');
 
@@ -38,30 +48,35 @@ export const Connections = ({ node, isEditMode, id, className, testId }: Connect
 	}, [node, renderKey]);
 
 	const onDelete = (relation: Relation) => {
-		api.relations.actions.deleteRelationsAndUpdateApplication([relation.id]).then(() => {
-			setConnectionBoxData((prevState) => {
-				return prevState.filter((connection) => {
-					if (!connection.relation) {
-						return true;
-					}
+		useConfirmationModalStore.getState().open({
+			title: t('confirm_delete_relation_title'),
+			description: t('confirm_delete_relation', { id: relation.id }),
+			onCancelClick: () => useConfirmationModalStore.getState().close(),
+			onConfirmClick: () => {
+				api.relations.actions
+					.deleteRelationsAndUpdateApplication([relation.id])
+					.then(() => {
+						setConnectionBoxData((prevState) => {
+							return prevState.filter((connection) => {
+								if (!connection.relation) {
+									return true;
+								}
 
-					return connection.relation.id !== relation.id;
-				});
-			});
+								return connection.relation.id !== relation.id;
+							});
+						});
 
-			useGraphStore.getState().indexParallelRelations();
-			useGraphStore.getState().adaptRelationsTypeAndCurvature();
+						useGraphStore.getState().indexParallelRelations();
+						useGraphStore.getState().adaptRelationsTypeAndCurvature();
+					});
+				useConfirmationModalStore.getState().close();
+			},
+			confirmLabel: t('confirm_delete_relation_button')
 		});
 	};
 
-	const onSave = (sourceNode: Node, targetNode: Node, relation: Relation) => {
-		const newConnection: ConnectionObject = {
-			target: targetNode,
-			relation: relation,
-			source: sourceNode
-		};
-
-		setNewConnectionBoxData((prevState) => [...prevState, newConnection]);
+	const onSave = () => {
+		setRenderKey(window.crypto.randomUUID());
 	};
 
 	const onTabClose = () => {
@@ -120,7 +135,6 @@ export const Connections = ({ node, isEditMode, id, className, testId }: Connect
  * 2. it shows if a node has outgoing relations to another node, by also naming the relation type.
  * 3. it's uses on a relation detail view to show if the relation connects two nodes.
  * The span is an arrow that shows the direction the relation goes to.
- *
  */
 
 const ConnectionsBox = ({
@@ -144,12 +158,16 @@ const ConnectionsBox = ({
 				const relation = dataItem.relation;
 				const sourceNode = dataItem.source;
 				const targetNode = dataItem.target;
+				const metarelation = dataItem.metarelation;
+				// Determine the "other" node (not the current node)
+				const otherNode = direction === 'incoming' ? sourceNode : targetNode;
+				const isSelfLoop = otherNode?.id === node.id;
 
 				return (
 					<TableRow key={index} variant="hoverable">
 						<TableCell className="connections__cell connections__icon-only">
 							<div className="connections__node-icon">
-								<DBButton variant="ghost" size="small" noText>
+								<DBButton variant="ghost" size="small" noText type="button">
 									<DBIcon icon="box" />
 									<DBTooltip placement="right">
 										{t('single-node-node')}{' '}
@@ -159,29 +177,18 @@ const ConnectionsBox = ({
 							</div>
 						</TableCell>
 
-						<TableCell className="connections__cell connections__icon-only">
-							{(() => {
-								// Determine the "other" node (not the current node)
-								const otherNode =
-									direction === 'incoming' ? sourceNode : targetNode;
-								const isSelfReference = otherNode?.id === node.id;
-
-								if (direction === 'outgoing' && !isSelfReference) {
-									return <div data-icon="arrow_right"></div>;
-								}
-								if (direction === 'incoming' && !isSelfReference) {
-									return <div data-icon="arrow_left"></div>;
-								}
-
-								if (isSelfReference) {
-									return <div data-icon="undo"></div>;
-								}
-								return null;
-							})()}
+						<TableCell className="connections__cell connections__icon-only connections__cell-direction">
+							{relation && (
+								<RenderDirection
+									direction={direction}
+									isSelfLoop={isSelfLoop}
+									relation={relation}
+								/>
+							)}
 						</TableCell>
 
 						<TableCell className="connections__cell connections__relation-name">
-							{relation && <ItemInfo item={relation} />}
+							{metarelation && <ItemInfo item={metarelation} asTag={true} />}
 						</TableCell>
 
 						{direction === 'incoming' && sourceNode && (
@@ -202,7 +209,7 @@ const ConnectionsBox = ({
 							>
 								<MenuButton
 									optionsPlacement="bottom-end"
-									className="connections__menu-button menu-button--ignore-position-fix menu-button--inline-end-fix"
+									className="connections__menu-button menu-button--inline-end-fix"
 									options={[
 										{
 											icon: 'bin',
@@ -211,6 +218,7 @@ const ConnectionsBox = ({
 											closeMenuOnClick: true
 										}
 									]}
+									shouldIgnorePositionFix={true}
 								/>
 							</TableCell>
 						)}
@@ -218,5 +226,19 @@ const ConnectionsBox = ({
 				);
 			})}
 		</TableBody>
+	);
+};
+
+const RenderDirection = ({ direction, isSelfLoop, relation }: ConnectionRenderDirectionProps) => {
+	if (!relation) {
+		return null;
+	}
+
+	const icon = getDirectionIcon(direction, isSelfLoop);
+
+	return (
+		<ItemInfo item={relation}>
+			<DBIcon icon={icon} weight="32" />
+		</ItemInfo>
 	);
 };

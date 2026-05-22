@@ -79,12 +79,9 @@ export type NodeLabels = Array<NodeLabelId>;
 
 export type MetaForMeta = Record<NodeId, Array<Node>>;
 
-export type NodeConnections = {
-	relations: Array<NodeConnection>;
-};
-
 export type NodeConnection = {
 	direction: 'incoming' | 'outgoing';
 	neighbor: Node;
 	relation: Relation;
+	metarelation: Node;
 };

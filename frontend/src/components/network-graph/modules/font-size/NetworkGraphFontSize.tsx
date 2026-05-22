@@ -5,15 +5,15 @@ import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGraphStore } from 'src/stores/graph';
 import { useSearchStore } from 'src/stores/search';
-import { GlobalComponentProps } from 'src/types/components';
 import {
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP,
 	GRAPH_PRESENTATION_GRAPH
 } from 'src/utils/constants';
+import { NetworkGraphFontSizeProps } from './NetworkGraphFontSize.interfaces';
 
-export const NetworkGraphFontSize = ({ id, className, testId }: GlobalComponentProps) => {
+export const NetworkGraphFontSize = ({ id, className, testId }: NetworkGraphFontSizeProps) => {
 	const { t } = useTranslation();
 	const rootElementClassName = clsx('network-graph__font-size', className);
 	const searchStore = useSearchStore((store) => store);

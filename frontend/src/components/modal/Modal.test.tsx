@@ -49,8 +49,8 @@ describe('Components - Modal', () => {
 	it('should not render header when showHeader is false', async () => {
 		const screen = await render(<Modal isOpen={true} />);
 
-		const modalHeader = screen.container.querySelector('[role=\'heading\']');
-		const closeButton = screen.container.querySelector('[role=\'button\']');
+		const modalHeader = screen.container.querySelector('[role="heading"]');
+		const closeButton = screen.container.querySelector('[role="button"]');
 
 		expect(modalHeader).toBe(null);
 		expect(closeButton).toBe(null);

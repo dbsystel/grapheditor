@@ -10,22 +10,13 @@ import {
 	PseudoNode
 } from 'src/models/node';
 import { NodeId } from 'src/models/node';
-import { Perspective } from 'src/models/perspective';
 import { Relation, RelationId } from 'src/models/relation';
-import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { usePerspectiveStore } from 'src/stores/perspective';
-import { useSearchStore } from 'src/stores/search';
-import {
-	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
-	GRAPH_LAYOUT_PERSPECTIVE,
-	GraphEditorTypeSimplified
-} from 'src/utils/constants';
+import { GraphEditorTypeSimplified } from 'src/utils/constants';
 import { deleteNodes } from 'src/utils/fetch/deleteNodes';
 import { patchNodes } from 'src/utils/fetch/patchNodes';
 import { isObject } from 'src/utils/helpers/general';
-import { buildPerspectiveSearchResult } from 'src/utils/helpers/search';
 import { idFormatter } from 'src/utils/id-formatter';
 
 export const isNode = (data: unknown): data is Node => {
@@ -151,33 +142,8 @@ export const generateNode = (id: string, data?: Omit<Partial<Node>, 'id'>): Node
 	};
 };
 
-export const processPerspective = (perspective: Perspective) => {
-	const nodes: Map<string, Node> = new Map(Object.entries(perspective.nodes));
-	const relations: Map<string, Relation> = new Map();
-
-	const { setAlgorithm, setIsResultProcessed, setResult } = useSearchStore.getState();
-	const { unHighlightNodes, unHighlightRelations } = useGraphStore.getState();
-	const setPerspective = usePerspectiveStore.getState().setPerspective;
-
-	// map relations properly since GET /api/v1/perspectives currently
-	// returns an object which keys are short ID form, and not the long one
-	Object.values(perspective.relations).forEach((relation) => {
-		relations.set(relation.id, relation);
-	});
-
-	unHighlightNodes();
-	unHighlightRelations();
-	setPerspective(perspective);
-	setAlgorithm(GRAPH_LAYOUT_PERSPECTIVE);
-	setIsResultProcessed(false);
-	setResult({
-		data: buildPerspectiveSearchResult(nodes, relations),
-		type: GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
-	});
-};
-
 export const processNodeConnections = (node: Node, connections: Array<NodeConnection>) => {
-	const relations: Array<Relation> = [];
+	const entries: Array<{ relation: Relation; metarelation: Node }> = [];
 	const connectionsArray: Array<ConnectionObject> = [];
 	const nodeId = getNodeDbOrId(node);
 
@@ -195,18 +161,24 @@ export const processNodeConnections = (node: Node, connections: Array<NodeConnec
 		nodeMap.set(connection.neighbor.id, connection.neighbor);
 
 		if (!processedRelationIds.includes(connection.relation.id)) {
-			relations.push(connection.relation);
+			entries.push({
+				relation: connection.relation,
+				metarelation: connection.metarelation
+			});
 			processedRelationIds.push(connection.relation.id);
 		}
 	});
 
-	relations.forEach((relation) => {
+	entries.forEach((entry) => {
+		const relation = entry.relation;
+
 		if (relation.source_id === nodeId) {
 			const targetNode = nodeMap.get(relation.target_id);
 			if (targetNode) {
 				const connection: ConnectionObject = {
 					target: targetNode,
-					relation: relation
+					relation: relation,
+					metarelation: entry.metarelation
 				};
 				connectionsArray.push(connection);
 			}
@@ -215,7 +187,8 @@ export const processNodeConnections = (node: Node, connections: Array<NodeConnec
 			if (sourceNode) {
 				const connection: ConnectionObject = {
 					source: sourceNode,
-					relation: relation
+					relation: relation,
+					metarelation: entry.metarelation
 				};
 				connectionsArray.push(connection);
 			}
@@ -274,47 +247,38 @@ export async function deleteNodesAndUpdateApplication(nodeIds: Array<NodeId>) {
 	const addNotification = notificationsStore.addNotification;
 
 	const isOnlyOneNodeToDelete = nodeIds.length === 1;
-	const confirmMessage = isOnlyOneNodeToDelete ? 'confirm_delete_node' : 'confirm_delete_nodes';
 	const successTitle = isOnlyOneNodeToDelete
 		? 'notifications_success_node_delete'
 		: 'notifications_success_nodes_delete_title';
-	const translationVariables = isOnlyOneNodeToDelete ? { id: nodeIds.at(0) } : undefined;
 
-	if (window.confirm(i18n.t(confirmMessage, translationVariables))) {
-		// on server we only need to remove nodes, their relations will be implicitly removed
-		const nodesDeletionResponse = await deleteNodes({ nodeIds: nodeIds });
-		const isDeletionSuccessful = nodesDeletionResponse.data.num_deleted === nodeIds.length;
+	// on server we only need to remove nodes, their relations will be implicitly removed
+	const nodesDeletionResponse = await deleteNodes({ nodeIds: nodeIds });
+	const isDeletionSuccessful = nodesDeletionResponse.data.num_deleted === nodeIds.length;
 
-		itemsStore.removeNodes(nodeIds);
+	itemsStore.removeNodes(nodeIds);
 
-		if (nodesDeletionResponse.data.num_deleted === 0) {
-			addNotification({
-				title: i18n.t('notifications_info_nodes_delete_no_nodes_deleted'),
-				type: 'informational'
-			});
-		} else if (isDeletionSuccessful) {
-			addNotification({
-				title: i18n.t(successTitle),
-				type: 'successful'
-			});
-		} else {
-			addNotification({
-				title: i18n.t('notifications_warning_nodes_delete_title'),
-				description: i18n.t('notifications_warning_nodes_delete_description'),
-				type: 'warning'
-			});
-		}
-
-		return nodesDeletionResponse.data;
+	if (nodesDeletionResponse.data.num_deleted === 0) {
+		addNotification({
+			title: i18n.t('notifications_info_nodes_delete_no_nodes_deleted'),
+			type: 'informational'
+		});
+	} else if (isDeletionSuccessful) {
+		addNotification({
+			title: i18n.t(successTitle),
+			type: 'successful'
+		});
 	} else {
-		throw new Error('User confirmation failed.');
+		addNotification({
+			title: i18n.t('notifications_warning_nodes_delete_title'),
+			description: i18n.t('notifications_warning_nodes_delete_description'),
+			type: 'warning'
+		});
 	}
+
+	return nodesDeletionResponse.data;
 }
 
-export async function patchNodesAndUpdateApplication(
-	nodes: Array<PatchNode>,
-	storeNodesInStore = true
-) {
+export async function patchNodesAndUpdateApplication(nodes: Array<PatchNode>) {
 	const notificationsStore = useNotificationsStore.getState();
 	const itemsStore = useItemsStore.getState();
 
@@ -329,9 +293,7 @@ export async function patchNodesAndUpdateApplication(
 			: 'notifications_success_nodes_update';
 
 	// the items store must contain only nodes which are to be displayed in the graph/tables
-	if (storeNodesInStore) {
-		itemsStore.setNodes(serverNodes);
-	}
+	itemsStore.setNodes(serverNodes);
 
 	if (isPatchSuccessful) {
 		addNotification({
@@ -348,3 +310,15 @@ export async function patchNodesAndUpdateApplication(
 
 	return nodesPatchResponse.data.nodes;
 }
+
+export const getDirectionIcon = (direction: string, isSelfLoop: boolean) => {
+	if (isSelfLoop) {
+		return 'undo';
+	}
+
+	if (direction === 'outgoing') {
+		return 'arrow_right';
+	}
+
+	return 'arrow_left';
+};
