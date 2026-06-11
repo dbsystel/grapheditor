@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Database } from 'src/models/database';
 import { useDatabaseStore } from 'src/stores/database';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { resetApplicationStates } from 'src/utils/helpers/general';
+import { resetApplicationStates } from 'src/utils/helpers/application';
 import { useGetDatabaseCurrent } from 'src/utils/hooks/useGetDatabaseCurrent';
 import { useGetDatabases } from 'src/utils/hooks/useGetDatabases';
 import { usePostDatabaseCurrent } from 'src/utils/hooks/usePostDatabaseCurrent';

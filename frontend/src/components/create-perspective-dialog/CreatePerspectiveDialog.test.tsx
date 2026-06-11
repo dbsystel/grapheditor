@@ -24,7 +24,7 @@ describe('Components - CreatePerspectiveDialog', () => {
 
 		const perspectiveTitleInput = screen.getByTestId('create_perspective_title_input');
 		const saveButton = screen.getByRole('button', {
-			name: i18n.t('header_create_new_perspective_save_button')
+			name: i18n.t('create_perspective_dialog_create_new_perspective_save_button')
 		});
 
 		expect(perspectiveTitleInput).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('Components - CreatePerspectiveDialog', () => {
 	//
 	// 	const perspectiveTitleInput = screen.getByTestId('create_perspective_title_input');
 	// 	const saveButton = screen.getByRole('button', {
-	// 		name: i18n.t('header_create_new_perspective_save_button')
+	// 		name: i18n.t('create_perspective_dialog_create_new_perspective_save_button')
 	// 	});
 	//
 	// 	expect(perspectiveTitleInput).toBeInTheDocument();

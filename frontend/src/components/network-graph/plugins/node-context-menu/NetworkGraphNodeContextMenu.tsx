@@ -21,6 +21,7 @@ export const NetworkGraphNodeContextMenu = () => {
 				useContextMenuStore.getState().open({
 					type: 'graph-multiselect',
 					event: event,
+					triggerItem: node,
 					nodeIds: highlightedNodeIds.values().toArray(),
 					relationIds: highlightedRelationIds.values().toArray(),
 					x: x,

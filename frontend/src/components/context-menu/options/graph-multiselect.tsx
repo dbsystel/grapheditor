@@ -80,6 +80,56 @@ export const graphMultiselectOptions = (): Partial<
 				{
 					label: i18n.t('context_menu_apply_layout_vertical'),
 					onClick: () => applyLayoutAction('vertical')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_horizontal_spread'),
+					onClick: () => applyLayoutAction('horizontal-spread'),
+					shouldRender: () => nodeIds.length > 2
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_vertical_spread'),
+					onClick: () => applyLayoutAction('vertical-spread'),
+					shouldRender: () => nodeIds.length > 2
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_horizontal_center'),
+					onClick: () => applyLayoutAction('horizontal-center')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_vertical_center'),
+					onClick: () => applyLayoutAction('vertical-center')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_top_align'),
+					onClick: () => applyLayoutAction('top-align')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_right_align'),
+					onClick: () => applyLayoutAction('right-align')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_bottom_align'),
+					onClick: () => applyLayoutAction('bottom-align')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_left_align'),
+					onClick: () => applyLayoutAction('left-align')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_top'),
+					onClick: () => applyLayoutAction('top')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_right'),
+					onClick: () => applyLayoutAction('right')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_bottom'),
+					onClick: () => applyLayoutAction('bottom')
+				},
+				{
+					label: i18n.t('context_menu_apply_layout_left'),
+					onClick: () => applyLayoutAction('left')
 				}
 			],
 			shouldRender: () => nodeIds.length > 0

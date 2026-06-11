@@ -20,7 +20,8 @@ import {
 	GraphEditorTypeSimplified
 } from 'src/utils/constants';
 import { getHomepageData } from 'src/utils/fetch/getHomepageData';
-import { goToApplicationView, isString } from 'src/utils/helpers/general';
+import { goToApplicationView } from 'src/utils/helpers/application';
+import { isString } from 'src/utils/helpers/general';
 import { isValidSearchType } from 'src/utils/helpers/search';
 import { idFormatter } from 'src/utils/id-formatter';
 import { HomepageBodyProps } from './HomepageBody.interfaces';

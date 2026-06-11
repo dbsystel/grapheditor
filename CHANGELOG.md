@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.6.1
+
+- Basic documentation for the meta model
+- Graph scaling
+- Automated node arrangement
+- Context menu - node horizontal/vertical spread/center, top/right/bottom/left alignment 
 
 ## 2026.5.1
 

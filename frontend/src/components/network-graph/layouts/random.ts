@@ -1,4 +1,4 @@
-import random from 'graphology-layout/random';
+import random from 'graphology-layout/random.js';
 import { useGraphStore } from 'src/stores/graph';
 
 /**

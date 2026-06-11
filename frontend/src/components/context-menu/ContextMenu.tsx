@@ -2,7 +2,7 @@ import './ContextMenu.scss';
 import { DBButton } from '@db-ux/react-core-components';
 import { autoPlacement, autoUpdate, offset, useFloating } from '@floating-ui/react';
 import clsx from 'clsx';
-import { Fragment, ReactNode, useEffect, useState } from 'react';
+import { Fragment, ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loading } from 'src/components/loading/Loading';
 import { Modal } from 'src/components/modal/Modal';
@@ -24,10 +24,12 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 		fromServer: []
 	});
 	const rootElementClassName = clsx('context-menu', className);
-	const setContextMenuRef = (element: HTMLDivElement | null) => {
-		refs.setFloating(element);
-		refContextMenu.current = element;
-	};
+
+	const filteredOptions = useMemo(() => {
+		return filterContextMenuOptions(contextMenuOptions).sort((a, b) =>
+			compareTwoStringsForSorting(a.label, b.label)
+		);
+	}, [contextMenuOptions]);
 
 	const { refs, floatingStyles } = useFloating({
 		strategy: 'fixed',
@@ -70,8 +72,6 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 
 	const refContextMenu = useOutsideClick<HTMLDivElement>({
 		callback: () => {
-			// it might be the order should be reversed, but for now
-			// this seems to be working fine
 			close();
 		}
 	});
@@ -123,9 +123,10 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 		}
 	};
 
-	const filteredOptions = filterContextMenuOptions(contextMenuOptions).sort((a, b) =>
-		compareTwoStringsForSorting(a.label, b.label)
-	);
+	const setContextMenuRef = (element: HTMLDivElement | null) => {
+		refs.setFloating(element);
+		refContextMenu.current = element;
+	};
 
 	if (!isOpen) {
 		return null;
@@ -154,27 +155,25 @@ export const ContextMenu = ({ id, className, testId }: ContextMenuProps) => {
 					>
 						{!!contextMenuCustomContent && contextMenuCustomContent}
 						{!contextMenuCustomContent && (
-							<div>
-								<ul className="context-menu__list">
-									{filteredOptions.map((option, index) => {
-										return (
-											<li key={index}>
-												<DBButton
-													className="context-menu__button"
-													variant="ghost"
-													size="small"
-													onClick={() => {
-														onOptionClick(option);
-													}}
-												>
-													{option.label}
-												</DBButton>
-												{renderOptions(option.options)}
-											</li>
-										);
-									})}
-								</ul>
-							</div>
+							<ul className="context-menu__list">
+								{filteredOptions.map((option, index) => {
+									return (
+										<li key={index}>
+											<DBButton
+												className="context-menu__button"
+												variant="ghost"
+												size="small"
+												onClick={() => {
+													onOptionClick(option);
+												}}
+											>
+												{option.label}
+											</DBButton>
+											{renderOptions(option.options)}
+										</li>
+									);
+								})}
+							</ul>
 						)}
 					</Loading>
 				)}

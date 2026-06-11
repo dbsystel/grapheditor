@@ -1,10 +1,14 @@
 .create-perspective-dialog {
-	&__input {
+	&__content {
 		margin-bottom: var(--db-spacing-fixed-lg);
+	}
 
-		.db-textarea {
-			margin-top: var(--db-spacing-fixed-md);
-		}
+	&__info-text {
+		margin-top: var(--db-spacing-fixed-xs);
+	}
+
+	&__description {
+		margin-top: var(--db-spacing-fixed-md);
 	}
 
 	&__buttons {

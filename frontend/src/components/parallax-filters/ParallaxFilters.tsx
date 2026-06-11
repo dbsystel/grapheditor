@@ -118,11 +118,9 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 					</p>
 				) : (
 					<div className="parallax-filters__content">
-						<h6>{labelsTitle}</h6>
 						<DBCustomSelect
 							options={labelsFilterDropdown}
 							values={filtersRef.current.labels}
-							showLabel={false}
 							placeholder={labelSelectPlaceholder}
 							showSearch={true}
 							searchPlaceholder={labelSelectSearchPlaceholder}
@@ -131,13 +129,16 @@ export const ParallaxFilters = ({ id, className, testId }: ParallaxFiltersProps)
 							showClearSelection={true}
 							onOptionSelected={onLabelsFilterChange}
 							dropdownWidth="full"
-							label=""
+							label={labelsTitle}
 							selectAllLabel={labelSelectSelectAllLabel}
 							multiple={true}
 						/>
 
-						<h6>{propertiesTitle}</h6>
 						<div className="parallax-filters__filters">
+							{/* fake element, just to get label styling */}
+							<div className="db-input">
+								<label>{propertiesTitle}</label>
+							</div>
 							{parallaxData.properties.map((propertyNode, index) => {
 								const propertyId = getNodeSemanticIdOrId(propertyNode);
 								const defaultValue =

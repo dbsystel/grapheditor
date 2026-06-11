@@ -752,3 +752,24 @@ export const getEdgeLabelAtPoint = (x: number, y: number): string | null => {
 
 	return topMostEdge;
 };
+
+export const scaleNodeCoordinates = (scaleX: number, scaleY: number) => {
+	const sigma = useGraphStore.getState().sigma;
+	const graph = sigma.getGraph();
+
+	graph.forEachNode((nodeId, attributes) => {
+		// store original positions if not already stored
+		if (attributes._originalX === undefined || attributes._originalY === undefined) {
+			graph.setNodeAttribute(nodeId, '_originalX', attributes.x);
+			graph.setNodeAttribute(nodeId, '_originalY', attributes.y);
+		}
+
+		graph.mergeNodeAttributes(nodeId, {
+			x: attributes._originalX * scaleX,
+			y: attributes._originalY * scaleY
+		});
+	});
+
+	// Reset custom bbox so sigma re-computes extent from actual positions
+	sigma.setCustomBBox(null);
+};

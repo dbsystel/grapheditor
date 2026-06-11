@@ -15,7 +15,7 @@ export const useGetBuildInfoBackend = ({
 	onError,
 	onFinally,
 	executeImmediately = true
-}: GetBuildInfoBackendParameters) => {
+}: GetBuildInfoBackendParameters = {}) => {
 	return useApiHook<AxiosResponse<GetBuildInfoBackendResponse>>({
 		executeImmediately,
 		onSuccess,

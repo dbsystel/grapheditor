@@ -8,14 +8,6 @@
 	&__content {
 		margin-left: 5px;
 
-		h6 {
-			margin-bottom: var(--db-spacing-fixed-sm);
-		}
-
-		h6:nth-of-type(2) {
-			margin-top: var(--db-spacing-fixed-lg);
-		}
-
 		.db-custom-select-dropdown {
 			inset-inline-start: auto !important;
 			inset-block-start: auto !important;
@@ -44,16 +36,13 @@
 	&__filters {
 		display: flex;
 		flex-direction: column;
-
-		.db-button {
-			margin-top: var(--db-spacing-fixed-sm);
-			align-self: flex-end;
-		}
+		margin-top: var(--db-spacing-fixed-md);
 	}
 
 	&__buttons {
 		display: flex;
 		column-gap: var(--db-spacing-fixed-sm);
 		justify-content: end;
+		margin-top: var(--db-spacing-fixed-md);
 	}
 }

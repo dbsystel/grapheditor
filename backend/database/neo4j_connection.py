@@ -1,3 +1,4 @@
+from time import sleep
 from threading import Lock
 import neo4j
 from flask import current_app, g, request, session
@@ -8,6 +9,7 @@ from database.settings import config
 from database.utils import abort_with_json, split_statements
 
 MAX_RETRIES = 3
+SLEEP_DURATION = 1
 drivers_lock = Lock()
 db_versions_lock = Lock()
 
@@ -181,6 +183,13 @@ class Neo4jConnection:
             try:
                 tx = self._admin_tx if _as_admin else self._tx
                 return tx.run(statement, **params)
+            except neo4j.exceptions.TokenExpired as e:
+                msg = f"Token expired error: {repr(e)}"
+                current_app.logger.error(msg)
+                # Force regenerating token for connection.
+                self._setup_driver()
+                retry_count += 1
+                sleep(SLEEP_DURATION)
             except neo4j.exceptions.AuthError as e:
                 msg = f"Authentication error: {repr(e)}"
                 current_app.logger.error(msg)
@@ -201,6 +210,7 @@ class Neo4jConnection:
                     current_app.logger.error(msg)
                     # Force regenerating token for connection.
                     self._setup_driver()
+                    sleep(SLEEP_DURATION)
                 else:
                     raise
             except (neo4j.exceptions.ServiceUnavailable,
@@ -212,6 +222,7 @@ class Neo4jConnection:
                 Retrying ({retry_count}).
                 """)
                 self._setup_driver()
+                sleep(SLEEP_DURATION)
         if retry_count >= MAX_RETRIES:
             abort_with_json(400, "Can't run statement.")
 

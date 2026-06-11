@@ -3,17 +3,16 @@
 	padding-inline: var(--db-spacing-fixed-md);
 	height: 100%;
 
+	&__cell-content {
+		display: flex;
+		position: relative;
+	}
+
 	.table-head {
 		position: sticky;
 		top: 0;
 		z-index: 1;
 		white-space: nowrap;
-	}
-
-	.table-body {
-		.table-cell {
-			position: relative;
-		}
 	}
 
 	p {

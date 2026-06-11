@@ -9,6 +9,7 @@ import { graphMultiselectOptions } from 'src/components/context-menu/options/gra
 import { graphNodeOptions } from 'src/components/context-menu/options/graph-node';
 import { graphRelationOptions } from 'src/components/context-menu/options/graph-relation';
 import { nodeOptions } from 'src/components/context-menu/options/node';
+import { Item } from 'src/models/item';
 import { NodeId } from 'src/models/node';
 import { RelationId } from 'src/models/relation';
 import { create } from 'zustand';
@@ -42,6 +43,7 @@ type ContextMenuStore<T = ContextMenuType> = {
 	x: number;
 	y: number;
 	event: ContextMenuEventType<T>;
+	triggerItem: Item | null;
 	getOptions: () => Partial<Record<ContextMenuAction, ContextMenuOption>>;
 	open: ({
 		x,
@@ -50,6 +52,7 @@ type ContextMenuStore<T = ContextMenuType> = {
 		event,
 		nodeIds,
 		relationIds,
+		triggerItem,
 		onClose
 	}: {
 		x?: number;
@@ -58,6 +61,7 @@ type ContextMenuStore<T = ContextMenuType> = {
 		event: ContextMenuEventType<T>;
 		nodeIds?: Array<NodeId>;
 		relationIds?: Array<RelationId>;
+		triggerItem?: Item;
 		onClose?: (() => void) | null;
 	}) => void;
 	close: () => void;
@@ -90,7 +94,8 @@ const getInitialState: () => InitialState = () => {
 		x: 0,
 		y: 0,
 		onClose: null,
-		isActionLoading: false
+		isActionLoading: false,
+		triggerItem: null
 	};
 };
 

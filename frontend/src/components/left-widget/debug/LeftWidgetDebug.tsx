@@ -16,8 +16,8 @@ export const LeftWidgetDebug = ({ id, className, testId }: LeftWidgetDebugProps)
 	const rootElementClassName = clsx('left-widget__debug', className);
 	const isSigmaReady = useGraphStore((store) => store.isSigmaReady);
 	const [logsSize, setLogsSize] = useState('');
-	const { response: buildInfoBackendResponse } = useGetBuildInfoBackend({});
-	const { response: buildInfoFrontendResponse } = useGetBuildInfoFrontend({});
+	const { response: buildInfoBackendResponse } = useGetBuildInfoBackend();
+	const { response: buildInfoFrontendResponse } = useGetBuildInfoFrontend();
 
 	useEffect(() => {
 		if (isSigmaReady) {
@@ -53,8 +53,11 @@ export const LeftWidgetDebug = ({ id, className, testId }: LeftWidgetDebugProps)
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<h6>Export</h6>
-			<div>
+			{/* fake element, just to get label styling */}
+			<div className="db-input">
+				<label>Export</label>
+			</div>
+			<div className="left-widget__debug-block">
 				<DBButton onClick={exportLogs}>
 					{t('network_graph_settings_export_state_logs')}
 				</DBButton>
@@ -68,8 +71,11 @@ export const LeftWidgetDebug = ({ id, className, testId }: LeftWidgetDebugProps)
 			</div>
 
 			<DBDivider />
-			<h6>Version</h6>
-			<div>
+			{/* fake element, just to get label styling */}
+			<div className="db-input">
+				<label>Version</label>
+			</div>
+			<div className="left-widget__debug-block">
 				<p>Backend:</p>
 
 				{buildInfoBackendResponse && (
@@ -83,7 +89,7 @@ export const LeftWidgetDebug = ({ id, className, testId }: LeftWidgetDebugProps)
 				)}
 			</div>
 
-			<div>
+			<div className="left-widget__debug-block">
 				<p>Frontend:</p>
 
 				{buildInfoFrontendResponse && (

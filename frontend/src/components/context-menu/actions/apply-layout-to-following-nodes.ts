@@ -2,6 +2,7 @@ import { calculateNodeGraphSize } from 'src/components/network-graph/helpers';
 import { NodeId } from 'src/models/node';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
+import { GRAPH_CONTEXT_MENU_LAYOUT_DISTANCE_BETWEEN_NODES } from 'src/utils/constants';
 
 export const applyLayoutToFollowingNodesAction = (
 	nodeId: NodeId,
@@ -15,10 +16,6 @@ export const applyLayoutToFollowingNodesAction = (
 		y: graph.getNodeAttribute(nodeId, 'y'),
 		size: graph.getNodeAttribute(nodeId, 'size')
 	};
-
-	// after scaling this value will match .grass file node diameter value,
-	// meaning 50 here is like "diameter: 50px" in .grass
-	const distanceBetweenNodes = 50;
 
 	const getNodeNeighbors = (nodeId: NodeId) => {
 		const neighbors = graph.outNeighbors(nodeId);
@@ -39,7 +36,7 @@ export const applyLayoutToFollowingNodesAction = (
 		useGraphStore.getState().highlightNode(nodeId);
 
 		const scaledNodeDistance = sigma.scaleSize(
-			calculateNodeGraphSize(distanceBetweenNodes * 2)
+			calculateNodeGraphSize(GRAPH_CONTEXT_MENU_LAYOUT_DISTANCE_BETWEEN_NODES * 2)
 		);
 		let offset = 0;
 

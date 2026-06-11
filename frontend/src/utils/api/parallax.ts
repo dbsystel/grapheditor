@@ -5,7 +5,7 @@ import { useSearchStore } from 'src/stores/search';
 import { api } from 'src/utils/api/api';
 import { GLOBAL_SEARCH_TYPE_VALUE_PARALLAX } from 'src/utils/constants';
 import { postParallax } from 'src/utils/fetch/postParallax';
-import { isHomepageView } from 'src/utils/helpers/general';
+import { isHomepageView } from 'src/utils/helpers/application';
 import { buildSimpleSearchResult } from 'src/utils/helpers/search';
 
 export const parallaxApi = {

@@ -17,7 +17,11 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
-import { goToApplicationView, goToHomepageView, isHomepageView } from 'src/utils/helpers/general';
+import {
+	goToApplicationView,
+	goToHomepageView,
+	isHomepageView
+} from 'src/utils/helpers/application';
 import { isCypherQueryOrFullText } from 'src/utils/helpers/search';
 import { HeaderProps } from './Header.interfaces';
 

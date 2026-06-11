@@ -14,11 +14,13 @@ import {
 	GLOBAL_SEARCH_TYPE_KEY,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
-import { goToApplicationView, isHomepageView, isObject } from 'src/utils/helpers/general';
+import { goToApplicationView, isHomepageView } from 'src/utils/helpers/application';
+import { isObject } from 'src/utils/helpers/general';
 import { isNode } from 'src/utils/helpers/nodes';
 import { processPerspective } from 'src/utils/helpers/perspectives';
 import { useGetNodesPerspectivesNodes } from 'src/utils/hooks/useGetNodesPerspectivesNodes';
 import { useGetPerspective } from 'src/utils/hooks/useGetPerspective';
+import { idFormatter } from 'src/utils/id-formatter';
 import { PerspectiveFinderProps } from './PerspectiveFinder.interfaces';
 
 export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderProps) => {
@@ -33,8 +35,8 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 	const { isLoading: isPerspectiveLoading, reFetch: fetchPerspectiveNodes } =
 		useGetNodesPerspectivesNodes({
 			executeImmediately: false,
-			onSuccess: (data) => {
-				setPerspectiveOptions(data.map((node) => formatOption(node)));
+			onSuccess: (response) => {
+				setPerspectiveOptions(response.data.map((node) => formatOption(node)));
 			}
 		});
 
@@ -81,6 +83,8 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 			label += ' (' + nodeOrPerspective.description + ')';
 		}
 
+		label += ' - ' + idFormatter.formatId(nodeOrPerspective.id);
+
 		return {
 			label: label,
 			value: nodeOrPerspective.id
@@ -113,6 +117,9 @@ export const PerspectiveFinder = ({ id, className, testId }: PerspectiveFinderPr
 	return (
 		<div className={rootElementClassName} id={id} data-testid={testId}>
 			<DBCustomSelect
+				// fix "changing an uncontrolled input to be controlled", and it seems this prop
+				// is acting like a default value for the search - https://github.com/db-ux-design-system/core-web/issues/6779
+				searchValue=""
 				options={perspectiveOptions}
 				values={values}
 				showLabel={false}

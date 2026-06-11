@@ -2,13 +2,14 @@ import './LeftWidget.scss';
 import { DBAccordion, DBAccordionItem } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
+import { GraphOptions } from 'src/components/graph-options/GraphOptions';
 import { LeftWidgetDebug } from 'src/components/left-widget/debug/LeftWidgetDebug';
 import { LeftWidgetNetworkGraphSettings } from 'src/components/left-widget/network-graph-settings/LeftWidgetNetworkGraphSettings';
 import { LeftWidgetNewItemSettings } from 'src/components/left-widget/new-item-settings/LeftWidgetNewItemSettings';
 import { ParallaxFilters } from 'src/components/parallax-filters/ParallaxFilters';
 import { Sidebar } from 'src/components/sidebar/Sidebar';
 import { LeftWidgetProps } from './LeftWidget.interfaces';
-import { LeftWidgetPresentation } from './presentation/LeftWidgetPresentation';
 
 export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 	const { t } = useTranslation();
@@ -29,19 +30,29 @@ export const LeftWidget = ({ id, className, testId }: LeftWidgetProps) => {
 			>
 				<DBAccordion behavior="multiple" initOpenIndex={[0]} variant="card">
 					<DBAccordionItem headline={presentationLabel}>
-						<LeftWidgetPresentation />
+						<ErrorBoundary>
+							<GraphOptions />
+						</ErrorBoundary>
 					</DBAccordionItem>
 					<DBAccordionItem headline={filtersLabel}>
-						<ParallaxFilters />
+						<ErrorBoundary>
+							<ParallaxFilters />
+						</ErrorBoundary>
 					</DBAccordionItem>
 					<DBAccordionItem headline={newItemSettingsLabel}>
-						<LeftWidgetNewItemSettings />
+						<ErrorBoundary>
+							<LeftWidgetNewItemSettings />
+						</ErrorBoundary>
 					</DBAccordionItem>
 					<DBAccordionItem headline={networkGraphLabel}>
-						<LeftWidgetNetworkGraphSettings />
+						<ErrorBoundary>
+							<LeftWidgetNetworkGraphSettings />
+						</ErrorBoundary>
 					</DBAccordionItem>
 					<DBAccordionItem headline={debugLabel}>
-						<LeftWidgetDebug />
+						<ErrorBoundary>
+							<LeftWidgetDebug />
+						</ErrorBoundary>
 					</DBAccordionItem>
 				</DBAccordion>
 			</Sidebar>

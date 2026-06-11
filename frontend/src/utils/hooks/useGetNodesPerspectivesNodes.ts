@@ -1,10 +1,10 @@
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosResponse } from 'axios';
 import { api } from 'src/utils/api/api';
 import { GetNodesPerspectivesNodesResponse } from 'src/utils/fetch/getNodesPerspectivesNodes';
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetNodesPerspectivesNodesParameters = {
-	onSuccess: (data: GetNodesPerspectivesNodesResponse) => void;
+	onSuccess: (data: AxiosResponse<GetNodesPerspectivesNodesResponse>) => void;
 	onError?: (error: AxiosError) => void;
 	onFinally?: () => void;
 	executeImmediately?: boolean;
@@ -19,7 +19,7 @@ export const useGetNodesPerspectivesNodes = ({
 	onFinally,
 	executeImmediately
 }: GetNodesPerspectivesNodesParameters) => {
-	return useApiHook<GetNodesPerspectivesNodesResponse>({
+	return useApiHook<AxiosResponse<GetNodesPerspectivesNodesResponse>>({
 		executeImmediately: executeImmediately,
 		onSuccess: onSuccess,
 		onError: onError,

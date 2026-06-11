@@ -1,3 +1,4 @@
+import { NetworkGraphCoordinatesScale } from 'src/components/network-graph/modules/coordinates-scale/NetworkGraphCoordinatesScale';
 import { NetworkGraphFontSize } from 'src/components/network-graph/modules/font-size/NetworkGraphFontSize';
 import { NetworkGraphZoomFactor } from 'src/components/network-graph/modules/zoom-factor/NetworkGraphZoomFactor';
 
@@ -6,6 +7,7 @@ export const LeftWidgetNetworkGraphSettings = () => {
 		<>
 			<NetworkGraphZoomFactor />
 			<NetworkGraphFontSize />
+			<NetworkGraphCoordinatesScale />
 		</>
 	);
 };

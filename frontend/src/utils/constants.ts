@@ -181,6 +181,8 @@ export const GRAPH_ARROW_HEAD_LENGTH_TO_THICKNESS_RATIO = 5;
 export const GRAPH_ARROW_HEAD_WIDENESS_TO_THICKNESS_RATIO = 3.5;
 export const GRAPH_RENDER_HTML_LABELS_THRESHOLD = 200;
 export const GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM = 0.3; // higher number means greater zoom-out
+// after scaling this value will match .grass file node diameter value, meaning 50 here is like "diameter: 50px" in .grass
+export const GRAPH_CONTEXT_MENU_LAYOUT_DISTANCE_BETWEEN_NODES = 50;
 
 export const ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS = 700;
 export const ITEM_OVERVIEW_MOUSE_LEAVE_TIMEOUT_MILLISECONDS = 100;

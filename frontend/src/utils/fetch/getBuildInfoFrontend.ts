@@ -7,5 +7,8 @@ export type GetBuildInfoFrontendResponse = {
 };
 
 export const getBuildInfoFrontend = () => {
-	return frontendApi.get<GetBuildInfoFrontendResponse>(endpoints.getBuildFrontendInfoPath());
+	return frontendApi.get<GetBuildInfoFrontendResponse>(endpoints.getBuildFrontendInfoPath(), {
+		headers: { Accept: 'application/json' },
+		responseType: 'json'
+	});
 };

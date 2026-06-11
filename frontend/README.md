@@ -159,12 +159,12 @@ digraph G {
 
 In order to start local frontend development, we need to do a couple of things.
 
-1. **create frontend/.env file**
+1. **create frontend/.env file**:
     - Copy `frontend/.env.dist` to `frontend/.env`
 
-2. **run `npm run setup`**
+2. **run `npm run setup`**:
 
-To reliably protect our project from supply chain attacks via npm, please always use "npm run setup" instead of "npm install" <br>
+	To reliably protect our project from supply chain attacks via npm, please always use "npm run setup" instead of "npm install" <br>
 – this ensures that only reviewed and explicitly allowed installation scripts are executed, while all others are automatically blocked. <br>
 This prevents malicious code scripts from being silently installed without restricting normal development.
 
@@ -180,6 +180,9 @@ This prevents malicious code scripts from being silently installed without restr
 6. **mock data**: - If you need mock data to explore the project, please visit http://localhost:4999/swagger. Under the headline "Dev tools" you can
    find `/dev/reset` and `/dev/osm_data` endpoints. For a simple set of data, you can use the `/dev/reset` endpoint, for a more
    complex set of data please use the `/dev/osm_data` endpoint.
+
+7. **Frontend Build Info**: The frontend version displayed in the browser is generated from the file `public/build-info-frontend.json`.
+   When working locally, run `npm run generate-build-info` once before starting the dev server in order to generate the `public/build-info-frontend.json` file.
 
 If you successfully followed this short tutorial, you should see our homepage in your browser.
 
@@ -348,10 +351,15 @@ These variables are used by the setup project (src/tests/e2e/setup.test.ts) to a
 Playwright is configured in playwright.config.ts. In local development, it reuses an already running dev server (npm run dev). In CI, it starts the dev server automatically.
 
 Make sure the backend and Neo4j are running, then:
+
 - `npm run test:e2e` - Run all E2E tests headless
 - `npm run test:e2e:headed` - Run with pre-configured browser
 - `npm run test:e2e:ui` - Open Playwright UI mode
 - `npm run test:e2e:report` - View last test report
+- `npm run test:e2e:update-browsers` - Update browser binaries locally
+
+If E2E tests fail to start locally after dependency updates, you may need to refresh local Playwright browser binaries
+by running `npm run test:e2e:update-browsers`.
 
 ## Notes
 

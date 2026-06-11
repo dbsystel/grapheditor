@@ -12,7 +12,8 @@ import { useNotificationsStore } from 'src/stores/notifications';
 import { setApiHeaderTabId } from 'src/utils/api';
 import { api } from 'src/utils/api/api';
 import { SSO_HOST_STORAGE_KEY } from 'src/utils/constants';
-import { parseError, resetApplicationStates } from 'src/utils/helpers/general';
+import { resetApplicationStates } from 'src/utils/helpers/application';
+import { parseError } from 'src/utils/helpers/general';
 import { AuthProps } from './Auth.interfaces';
 
 export const Auth = ({ children, id, className, testId }: AuthProps) => {

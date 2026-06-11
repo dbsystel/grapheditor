@@ -54,11 +54,15 @@
 	}
 
 	&__tags-edit-mode {
-		border: 1px solid var(--db-adaptive-on-bg-basic-emphasis-60-default) !important;
+		border: 1px solid var(--db-adaptive-on-bg-basic-emphasis-60-default);
 		gap: 0;
 
 		label {
 			border: none !important;
+		}
+
+		.db-tab-remove-button {
+			border: none;
 		}
 	}
 

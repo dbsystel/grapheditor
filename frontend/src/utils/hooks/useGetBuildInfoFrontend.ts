@@ -15,7 +15,7 @@ export const useGetBuildInfoFrontend = ({
 	onError,
 	onFinally,
 	executeImmediately = true
-}: GetBuildInfoFrontendParameters) => {
+}: GetBuildInfoFrontendParameters = {}) => {
 	return useApiHook<AxiosResponse<GetBuildInfoFrontendResponse>>({
 		executeImmediately,
 		onSuccess,

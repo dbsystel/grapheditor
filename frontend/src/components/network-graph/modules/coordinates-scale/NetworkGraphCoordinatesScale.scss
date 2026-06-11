@@ -1,0 +1,13 @@
+.network-graph__coordinates-scale {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--db-spacing-fixed-md);
+
+	&-block {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+		margin-top: var(--db-spacing-fixed-md);
+		gap: var(--db-spacing-fixed-md);
+	}
+}

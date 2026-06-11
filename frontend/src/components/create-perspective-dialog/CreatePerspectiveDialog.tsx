@@ -1,12 +1,16 @@
 import './CreatePerspectiveDialog.scss';
-import { DBButton, DBInput, DBTextarea } from '@db-ux/react-core-components';
+import { DBButton, DBInfotext, DBInput, DBTextarea } from '@db-ux/react-core-components';
+import { SemanticType } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
+import { ChangeEvent, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Modal } from 'src/components/modal/Modal';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { usePerspectiveStore } from 'src/stores/perspective';
+import { api } from 'src/utils/api/api';
 import { preparePerspectiveDataAndRefreshNodesPosition } from 'src/utils/helpers/perspectives';
+import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { useGetPerspective } from 'src/utils/hooks/useGetPerspective';
 import { usePostPerspective } from 'src/utils/hooks/usePostPerspective';
 import { usePutPerspective } from 'src/utils/hooks/usePutPerspective';
@@ -30,7 +34,14 @@ export const CreatePerspectiveDialog = ({
 	const setIsLoading = usePerspectiveStore((store) => store.setIsLoading);
 	const perspective = usePerspectiveStore((store) => store.perspective);
 	const setPerspective = usePerspectiveStore((store) => store.setPerspective);
-	const { control, handleSubmit, reset } = useForm<CreatePerspectiveDialogForm>({
+	const [duplicatePerspectiveNameInfo, setDuplicatePerspectiveNameInfo] = useState<{
+		text: string;
+		semantic: SemanticType;
+	}>({
+		text: '',
+		semantic: 'informational'
+	});
+	const { control, handleSubmit, reset, setValue } = useForm<CreatePerspectiveDialogForm>({
 		mode: 'onSubmit',
 		reValidateMode: 'onChange',
 		defaultValues: {
@@ -38,6 +49,7 @@ export const CreatePerspectiveDialog = ({
 			description: ''
 		}
 	});
+	const delayedCallback = useDebounce(500);
 
 	const { reFetch: postPerspective } = usePostPerspective({
 		name: '',
@@ -147,51 +159,97 @@ export const CreatePerspectiveDialog = ({
 		}
 	};
 
+	const onNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setValue('name', event.target.value.trim());
+
+		delayedCallback(() => {
+			const perspectiveName = event.target.value.trim();
+
+			api.nodes.fetch.getNodesPerspectivesNodes().then((response) => {
+				let perspectiveNameExists = false;
+
+				for (let i = 0, l = response.data.length; i < l; i++) {
+					const perspectiveNode = response.data[i];
+
+					if (perspectiveNode.title === perspectiveName) {
+						perspectiveNameExists = true;
+						setDuplicatePerspectiveNameInfo({
+							text: t('create_perspective_dialog_not_unique_name', {
+								name: perspectiveName
+							}),
+							semantic: 'informational'
+						});
+						break;
+					}
+				}
+
+				if (!perspectiveNameExists) {
+					setDuplicatePerspectiveNameInfo({
+						text: t('create_perspective_dialog_unique_name', { name: perspectiveName }),
+						semantic: 'successful'
+					});
+				}
+			});
+		});
+	};
+
 	return (
 		<Modal
 			isOpen={true}
 			headline={
 				isEditMode
-					? t('header_edit_perspective_title')
-					: t('header_create_new_perspective_title')
+					? t('create_perspective_dialog_edit_perspective_title')
+					: t('create_perspective_dialog_create_new_perspective_title')
 			}
 			description={
 				isEditMode
-					? t('header_edit_perspective_description')
-					: t('header_create_new_perspective_description')
+					? t('create_perspective_dialog_edit_perspective_description')
+					: t('create_perspective_dialog_create_new_perspective_description')
 			}
 			onClose={closeFunction}
 		>
 			<form onSubmit={handleSubmit(createPerspective)} className={rootElementClassName}>
-				<div className="create-perspective-dialog__input">
+				<div className="create-perspective-dialog__content">
 					<Controller
 						control={control}
 						name="name"
 						rules={validationRules}
-						render={({ field: { value, onBlur, onChange }, fieldState: { error } }) => (
+						render={({ field: { onBlur }, fieldState: { error } }) => (
 							<DBInput
 								required
-								label={t('header_create_new_perspective_label_title')}
-								placeholder={t('header_create_new_perspective_placeholder_title')}
+								label={t(
+									'create_perspective_dialog_create_new_perspective_label_title'
+								)}
+								placeholder={t(
+									'create_perspective_dialog_create_new_perspective_placeholder_title'
+								)}
 								onBlur={onBlur}
-								onChange={onChange}
+								onChange={onNameChange}
 								disabled={isLoading}
 								invalidMessage={error?.message || undefined}
 								validation={error ? 'invalid' : undefined}
-								value={value}
 								data-testid="create_perspective_title_input"
 							/>
 						)}
 					/>
-
+					{duplicatePerspectiveNameInfo.text && (
+						<DBInfotext
+							className="create-perspective-dialog__info-text"
+							semantic={duplicatePerspectiveNameInfo.semantic}
+							text={duplicatePerspectiveNameInfo.text}
+						/>
+					)}
 					<Controller
 						control={control}
 						name="description"
 						render={({ field: { value, onBlur, onChange } }) => (
 							<DBTextarea
-								label={t('header_create_new_perspective_label_description')}
+								className="create-perspective-dialog__description"
+								label={t(
+									'create_perspective_dialog_create_new_perspective_label_description'
+								)}
 								placeholder={t(
-									'header_create_new_perspective_placeholder_description'
+									'create_perspective_dialog_create_new_perspective_placeholder_description'
 								)}
 								onBlur={onBlur}
 								value={value}
@@ -208,7 +266,7 @@ export const CreatePerspectiveDialog = ({
 						disabled={isLoading}
 						icon="cross"
 					>
-						{t('header_create_new_perspective_stop_button')}
+						{t('create_perspective_dialog_create_new_perspective_stop_button')}
 					</DBButton>
 
 					<DBButton
@@ -220,8 +278,8 @@ export const CreatePerspectiveDialog = ({
 						variant="brand"
 					>
 						{isEditMode
-							? t('header_edit_perspective_save_button')
-							: t('header_create_new_perspective_save_button')}
+							? t('create_perspective_dialog_edit_perspective_save_button')
+							: t('create_perspective_dialog_create_new_perspective_save_button')}
 					</DBButton>
 				</div>
 			</form>

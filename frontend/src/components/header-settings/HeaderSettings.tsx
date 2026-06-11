@@ -7,7 +7,7 @@ import { Logout } from 'src/components/logout/Logout';
 import { MenuButton } from 'src/components/menu-button/MenuButton';
 import { MenuButtonOption } from 'src/components/menu-button/MenuButton.interfaces';
 import { useSettingsStore } from 'src/stores/settings';
-import { isAppSupportedLanguage, setApplicationTheme } from 'src/utils/helpers/general';
+import { isApplicationSupportedLanguage, setApplicationTheme } from 'src/utils/helpers/application';
 import { HeaderSettingsProps } from './HeaderSettings.interfaces';
 
 export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) => {
@@ -31,7 +31,7 @@ export const HeaderSettings = ({ id, className, testId }: HeaderSettingsProps) =
 	const onLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
 		const languageValue = event.target.value;
 
-		if (isAppSupportedLanguage(languageValue)) {
+		if (isApplicationSupportedLanguage(languageValue)) {
 			i18n.changeLanguage(languageValue);
 			setLanguage(languageValue);
 		}

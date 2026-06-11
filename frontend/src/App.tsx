@@ -9,7 +9,7 @@ import { Notifications } from 'src/components/notifications/Notifications';
 import { RootWrapper } from 'src/components/root-wrapper/RootWrapper';
 import { useSearchStore } from 'src/stores/search';
 import { useSettingsStore } from 'src/stores/settings';
-import { setApplicationTheme } from 'src/utils/helpers/general';
+import { setApplicationTheme } from 'src/utils/helpers/application';
 import { initializeKeyboardObserver } from 'src/utils/keyboard-observer';
 
 useSearchStore.getState().initialize();

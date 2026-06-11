@@ -22,13 +22,15 @@ export const RenderSearchResultCellElement = ({
 
 		return (
 			<TableCell key={index}>
-				<RenderContent content={resultValue} key={index} />
-				{storeItem && (
-					<CopyToClipboard
-						nodes={isResultNode ? [storeItem] : []}
-						relations={isResultRelation ? [storeItem] : []}
-					/>
-				)}
+				<div className="global-search-results-table__cell-content">
+					<RenderContent content={resultValue} key={index} />
+					{storeItem && (
+						<CopyToClipboard
+							nodes={isResultNode ? [storeItem] : []}
+							relations={isResultRelation ? [storeItem] : []}
+						/>
+					)}
+				</div>
 			</TableCell>
 		);
 	});

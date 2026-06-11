@@ -1,12 +1,8 @@
 .left-widget__debug {
-	h6 {
-		margin-bottom: var(--db-spacing-fixed-functional-xs);
-	}
-
-	> div {
+	&-block {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
 		gap: var(--db-spacing-fixed-functional-2xs);
 		margin-bottom: var(--db-spacing-fixed-functional-xs);
 

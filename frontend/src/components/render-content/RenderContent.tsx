@@ -18,11 +18,6 @@ import { isRelation } from 'src/utils/helpers/relations';
 import { idFormatter } from 'src/utils/id-formatter';
 import { RenderContentProps } from './RenderContent.interfaces';
 
-/**
- * This component should render output as markdown only if the initial input (the "content" prop) is
- * of type "string". By the "initial input" we mean the input originally given to the component, before
- * recursive calls.
- */
 export const RenderContent = ({
 	content,
 	id,
