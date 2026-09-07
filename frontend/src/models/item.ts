@@ -256,8 +256,7 @@ export type ItemPropertyDynamicType =
 	| ItemPropertyDynamicTypePath;
 
 export type ItemPropertyTypeWithListSubtypes =
-	| ItemPropertyTypeNonList
-	| `list_${ItemPropertyTypeNonList}`;
+	ItemPropertyTypeNonList | `list_${ItemPropertyTypeNonList}`;
 
 export type ItemPropertyTypeNonList = Exclude<ItemPropertyType, 'list'>;
 

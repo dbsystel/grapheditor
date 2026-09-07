@@ -1,20 +1,22 @@
 <!-- TOC -->
-* [Intro](#intro)
-  * [Status and features](#status-and-features)
-  * [Screenshot](#screenshot)
-  * [Architecture](#architecture)
-* [Authors](#authors)
-* [LICENSE](#license)
-* [Contributions, updates and contact](#contributions-updates-and-contact)
-* [Updates and contributions](#updates-and-contributions)
-* [Running it](#running-it)
-  * [Docker](#docker)
-    * [Mac issues with allocated memory](#mac-issues-with-allocated-memory)
-    * [Changes in node_modules](#changes-in-node_modules)
-    * [Mounting host directories with correct rights](#mounting-host-directories-with-correct-rights)
-  * [Exe](#exe)
-  * [Directly](#directly)
-<!-- TOC -->
+
+- [Intro](#intro)
+  - [Status and features](#status-and-features)
+  - [Screenshot](#screenshot)
+  - [Architecture](#architecture)
+- [Authors](#authors)
+- [LICENSE](#license)
+- [Use of AI](#use-of-ai)
+- [Contributions, updates and contact](#contributions-updates-and-contact)
+- [Updates and contributions](#updates-and-contributions)
+- [Running it](#running-it)
+  - [Docker](#docker)
+    - [Mac issues with allocated memory](#mac-issues-with-allocated-memory)
+    - [Changes in node_modules](#changes-in-node_modules)
+    - [Mounting host directories with correct rights](#mounting-host-directories-with-correct-rights)
+  - [Exe](#exe)
+  - [Directly](#directly)
+  <!-- TOC -->
 
 # Intro
 
@@ -70,7 +72,7 @@ The editor consists of two parts:
 
 # Authors
 
-The graph editor is produced and published by DB Systel GmbH, a 100% subsidary of Deutsche Bahn. 
+The graph editor is produced and published by DB Systel GmbH, a 100% subsidary of Deutsche Bahn.
 The whole of team InfraGraphAnalytics (IGA) has been working hard to make the grapheditor possible.
 We also had outside inspiration, thanks a lot for this!
 
@@ -94,6 +96,12 @@ General Public License for more details.
 
 See [LICENSE.txt](LICENSE.txt) for the full license.
 
+## Use of AI
+
+Parts of this project's code are developed with the assistance of AI tools. All AI-generated
+contributions are reviewed by human developers following a four-eyes principle before being
+published.
+
 # Contributions, updates and contact
 
 See [CONTRIBUTING](CONTRIBUTING.md)
@@ -114,7 +122,7 @@ You are welcome to send us merge requests.
 
 To build the docker images, run `sh build.sh dev` (or `sh build.sh prod` for production).
 
-To run a dev server for backend and frontend, run `docker-compose up`  (see /frontend/README.md if
+To run a dev server for backend and frontend, run `docker-compose up` (see /frontend/README.md if
 you are working with GUI).
 
 If you need mock data to explore the project, please visit http://localhost:4999/api/swagger. Before
@@ -170,6 +178,3 @@ You can run the frontend and backend directly. Please check
 
 - [Frontend README](frontend/README.md)
 - [Backend README](backend/README.md)
-
-
-

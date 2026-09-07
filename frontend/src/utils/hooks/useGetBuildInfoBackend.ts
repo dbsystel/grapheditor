@@ -21,6 +21,6 @@ export const useGetBuildInfoBackend = ({
 		onSuccess,
 		onError,
 		onFinally,
-		fetchFunction: api.buildInfoBackend.fetch.getBuildInfoBackend
+		fetchFunction: api.build.fetch.getBuildInfoBackend
 	});
 };

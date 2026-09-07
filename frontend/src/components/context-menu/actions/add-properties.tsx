@@ -1,13 +1,10 @@
-import { DBButton, DBCard } from '@db-ux/react-core-components';
-import { useState } from 'react';
+import { DBButton } from '@db-ux/react-core-components';
+import { useRef, useState } from 'react';
 import { AddNewProperty } from 'src/components/add-new-property/AddNewProperty';
+import { AddNewPropertyHandle } from 'src/components/add-new-property/AddNewProperty.interfaces';
 import { ContextMenuTopBlock } from 'src/components/context-menu/sub-menu/top-block/ContextMenuTopBlock';
-import { ItemInfo } from 'src/components/item-info/ItemInfo';
-import { Table } from 'src/components/table/Table';
-import { TableBody } from 'src/components/table-body/TableBody';
-import { TableCell } from 'src/components/table-cell/TableCell';
-import { TableHead } from 'src/components/table-head/TableHead';
-import { TableRow } from 'src/components/table-row/TableRow';
+import { ItemPropertiesTable } from 'src/components/item-properties-table/ItemPropertiesTable';
+import { ItemPropertiesTableEntryWithTopFlag } from 'src/components/item-properties-table/ItemPropertiesTable.interfaces';
 import i18n from 'src/i18n';
 import { ItemProperties, ItemProperty, ItemPropertyKey } from 'src/models/item';
 import { Node, PatchNode } from 'src/models/node';
@@ -17,14 +14,12 @@ import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { api } from 'src/utils/api/api';
 import { clone } from 'src/utils/helpers/general';
-import { idFormatter } from 'src/utils/id-formatter';
 import { ContextMenuSubMenu } from '../sub-menu/ContextMenuSubMenu';
+import { NewPropertiesMap } from './add-properties.interfaces';
 
 export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
-	const [newProperties, setNewProperties] = useState<
-		Record<ItemPropertyKey, { property: ItemProperty; node?: Node }>
-	>({});
-
+	const addNewPropertyHandleRef = useRef<AddNewPropertyHandle>(null);
+	const [newProperties, setNewProperties] = useState<NewPropertiesMap>({});
 	const onPropertyCreate = async (
 		key: ItemPropertyKey,
 		newProperty: ItemProperty,
@@ -63,6 +58,20 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 	};
 
 	const patchItems = async () => {
+		if (addNewPropertyHandleRef.current?.hasPendingData()) {
+			const submitted = await addNewPropertyHandleRef.current.submitPendingData();
+
+			if (!submitted) {
+				return;
+			}
+		}
+
+		const propertyKeysToApply = Object.keys(newProperties);
+
+		if (propertyKeysToApply.length === 0) {
+			return;
+		}
+
 		const selectedNodeIds = useContextMenuStore.getState().nodeIds;
 		const selectedRelationIds = useContextMenuStore.getState().relationIds;
 
@@ -110,55 +119,53 @@ export const AddPropertiesAction = ({ goBack }: { goBack: () => void }) => {
 		}
 	};
 
+	const onPropertyChange = (key: ItemPropertyKey, updatedProperty: ItemProperty) => {
+		const newPropertiesClone = clone(newProperties);
+
+		if (newPropertiesClone[key]) {
+			newPropertiesClone[key].property = updatedProperty;
+			setNewProperties(newPropertiesClone);
+		}
+	};
+
+	const handlePropertyDelete = (key: ItemPropertyKey) => {
+		const newPropertiesClone = clone(newProperties);
+
+		delete newPropertiesClone[key];
+		setNewProperties(newPropertiesClone);
+	};
+
 	const propertyKeys = Object.keys(newProperties);
 	const hasNewProperties = propertyKeys.length > 0;
-	const isApplyButtonDisabled = !hasNewProperties;
 	const applyButtonText = i18n.t('context_menu__add_properties_action_apply_button');
-	const propertyKeyHeading = i18n.t('form_property_key');
-	const propertyValueHeading = i18n.t('form_property_value');
-	const propertyTypeHeading = i18n.t('form_property_type');
+
+	const tableEntries: Array<ItemPropertiesTableEntryWithTopFlag> = propertyKeys.map(
+		(propertyKey) => {
+			const entry = newProperties[propertyKey];
+
+			return [entry.property, propertyKey, entry.node as Node, false];
+		}
+	);
 
 	return (
 		<ContextMenuSubMenu className="context-menu__paste-properties-action">
 			<ContextMenuTopBlock closeSubMenuFunction={goBack} />
-			<AddNewProperty onPropertyCreate={onPropertyCreate} />
-			{hasNewProperties && (
-				<DBCard className="context-menu__expanded-content">
-					<div>
-						<Table>
-							<TableHead>
-								<TableRow>
-									<TableCell>{propertyKeyHeading}</TableCell>
-									<TableCell width="full">{propertyValueHeading}</TableCell>
-									<TableCell>{propertyTypeHeading}</TableCell>
-								</TableRow>
-							</TableHead>
-							<TableBody>
-								{propertyKeys.map((propertyKey) => {
-									const propertyEntry = newProperties[propertyKey];
 
-									return (
-										<TableRow key={propertyKey}>
-											<TableCell>
-												{propertyEntry.node && (
-													<ItemInfo item={propertyEntry.node} />
-												)}
-												{!propertyEntry.node &&
-													idFormatter.parseIdToName(propertyKey)}
-											</TableCell>
-											<TableCell>
-												{JSON.stringify(propertyEntry.property.value)}
-											</TableCell>
-											<TableCell>{propertyEntry.property.type}</TableCell>
-										</TableRow>
-									);
-								})}
-							</TableBody>
-						</Table>
-					</div>
-				</DBCard>
+			<AddNewProperty
+				onPropertyCreate={onPropertyCreate}
+				handleRef={addNewPropertyHandleRef}
+			/>
+			{hasNewProperties && (
+				<ItemPropertiesTable
+					entries={tableEntries}
+					areTopEntriesMissingProperties={false}
+					onPropertyChange={onPropertyChange}
+					onPropertyDelete={handlePropertyDelete}
+					isEditMode={true}
+					shouldIgnoreMenuPositionFix={false}
+				/>
 			)}
-			<DBButton onClick={patchItems} disabled={isApplyButtonDisabled} variant="brand">
+			<DBButton onClick={patchItems} variant="brand">
 				{applyButtonText}
 			</DBButton>
 		</ContextMenuSubMenu>

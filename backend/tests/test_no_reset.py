@@ -2,14 +2,14 @@ import os
 
 import pytest
 
-# pylint falsely thinks find_db_or_start_testcontainer and logged_in are not
+# pylint falsely thinks find_database_connection and logged_in are not
 # used, but they are passed as fixture to tests.
 # pylint: disable=unused-import, import-error
 from setup import (
     BASE_URL,
     HEADERS,
     logged_in,
-    find_db_or_start_testcontainer,
+    find_database_connection,
     client_with_transaction,
 )
 
@@ -25,7 +25,7 @@ def setup(logged_in):
     # client as a global to use in remaining tests is fine.
     # pylint: disable=global-statement
     global client
-    client = logged_in
+    client, _ = logged_in
     yield
 
 

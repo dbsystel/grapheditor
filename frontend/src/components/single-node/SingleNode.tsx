@@ -128,7 +128,7 @@ export const SingleNode = ({
 	const getMetaForMeta = () => {
 		setIsLabelsMetaLoading(true);
 
-		api.metaForMeta.fetch
+		api.meta.fetch
 			.postMetaForMeta({
 				ids: node.labels,
 				resultType: GraphEditorType.META_PROPERTY
@@ -301,7 +301,8 @@ export const SingleNode = ({
 							{
 								title: t('confirm_delete_node_button'),
 								onClick: onDeleteNodeClick,
-								icon: 'bin'
+								icon: 'bin',
+								closeMenuOnClick: true
 							}
 						]}
 					/>

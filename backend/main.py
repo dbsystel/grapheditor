@@ -16,12 +16,14 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from flask_session import Session
 from authlib.common.security import generate_token
+from cryptography.fernet import Fernet
 
 from blueprints.display.style_support import load_default_style
 from blueprints.maintenance.info_api_v1 import blp as info_api
 from blueprints.maintenance.database_api import blp as database_api
 from blueprints.maintenance.dev_api import blp as dev_api
 from blueprints.maintenance.login_api import blp as login_api
+from blueprints.maintenance.request_api import blp as request_api
 from blueprints.graph.node_api_v1 import blp as node_api
 from blueprints.graph.relation_api_v1 import blp as relation_api
 from blueprints.graph.meta_api_v1 import blp as meta_api
@@ -31,11 +33,13 @@ from blueprints.graph.paraquery_api_v1 import blp as paraquery_api
 from blueprints.display.perspective_api_v1 import blp as perspective_api
 from blueprints.display.style_api_v1 import blp as style_api
 from blueprints.context_menu_api_v1 import blp as context_menu_api
+from blueprints.graph.export_api_v1 import blp as export_api  # 00_ai
 
-from database.auth import oauth
+from database.auth import oauth, LoginRequired, encrypt_token
 from database.cypher_database import CypherDatabase
 from database.neo4j_connection import neo4j_connect
 from database.settings import config
+from database.utils import can_send_error_message
 
 from utils import basedir, get_customized_file_dir
 
@@ -86,7 +90,7 @@ os.environ["GRAPHEDITOR_BASEDIR"] = basedir
 
 app.json.sort_keys = False
 
-app.config["CORS_HEADERS"] = ["Content-Type", "X-Tab-Id"]
+app.config["CORS_HEADERS"] = ["Content-Type", "X-Tab-Id", "x-request-id"]
 app.config["SESSION_PERMANENT"] = True
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "sessions"
@@ -174,6 +178,8 @@ api.register_blueprint(query_api, url_prefix=f"{api_prefix}/api/v1/query")
 
 api.register_blueprint(perspective_api, url_prefix=f"{api_prefix}/api/v1/perspectives")
 
+api.register_blueprint(request_api, url_prefix=f"{api_prefix}/api/v1/requests")
+
 api.register_blueprint(style_api, url_prefix=f"{api_prefix}/api/v1/styles")
 
 api.register_blueprint(
@@ -181,6 +187,8 @@ api.register_blueprint(
 )
 
 api.register_blueprint(info_api, url_prefix=f"{api_prefix}/api/v1/info")
+
+api.register_blueprint(export_api, url_prefix=f"{api_prefix}/api/v1/transfer")  # 00_ai
 
 oauth_enabled = "OIDC_CLIENT_ID" in os.environ
 
@@ -196,6 +204,16 @@ if oauth_enabled:
     register_oauth()
 
 
+@app.errorhandler(LoginRequired)
+def handle_login_required(e):
+    msg = f"Login required: {e.message}"
+    current_app.logger.info(msg)
+
+    if can_send_error_message():
+        return {"message": msg}, 401
+    return 401
+
+
 @app.route('/sso_login')
 def sso_login():
     redirect_uri = app.config.get("OIDC_REDIRECT_URL") or url_for('authorize', _external=True)
@@ -208,8 +226,19 @@ def sso_login():
 @app.route('/authorize')
 def authorize():
     token = oauth.oidc.authorize_access_token()
-    session["oidc_auth_token"] = token
-    return redirect('/')
+    enc_key_str = request.cookies.get("enc_key")
+    if not enc_key_str:
+        enc_key_str = Fernet.generate_key().decode()
+    session["oidc_auth_token"] = encrypt_token(token, enc_key_str.encode())
+    response = redirect('/')
+    response.set_cookie(
+        "enc_key",
+        enc_key_str,
+        httponly=True,
+        samesite="Strict",
+        secure=config.https_enabled,
+    )
+    return response
 
 
 # Make sure that transactions are finished etc.
@@ -231,8 +260,10 @@ def route_requires_connection():
         "/api/v1/paraqueries",
         "/api/v1/perspectives",
         "/api/v1/query",
+        "/api/v1/requests",
         "/api/v1/relations",
         "/api/v1/context-menu/actions",
+        "/api/v1/transfer",  # 00_ai
     ]
     return request.method.lower() != "options" and (
         not request.path
@@ -241,13 +272,16 @@ def route_requires_connection():
 
 
 @app.before_request
-def load_metamodels():
+def prepare_connection():
+    "Stuff needed before processing requests that use a connection"
     if route_requires_connection():
         if "x-tab-id" not in request.headers:
             abort(401)
         current_app.graph_db = CypherDatabase()
         neo4j_connect()
-        current_app.graph_db.load_metamodels()
+        if request_id := request.headers.get("x-request-id"):
+            current_app.logger.debug(f"SETTING REQUEST ID: {request_id}")
+            g.request_id = request_id
 
 
 @app.before_request

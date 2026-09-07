@@ -1,9 +1,8 @@
-import { buildInfoBackend } from './buildInfoBackend';
-import { buildInfoFrontend } from './buildInfoFrontend';
+import { buildApi } from 'src/utils/api/build';
 import { contextMenuApi } from './contextMenu';
 import { databasesApi } from './databases';
 import { itemsApi } from './items';
-import { metaForMetaApi } from './metaForMeta';
+import { metaApi } from './meta';
 import { nodesApi } from './nodes';
 import { parallaxApi } from './parallax';
 import { paraQueriesApi } from './paraQueries';
@@ -17,7 +16,7 @@ export const api = {
 	contextMenu: contextMenuApi,
 	databases: databasesApi,
 	items: itemsApi,
-	metaForMeta: metaForMetaApi,
+	meta: metaApi,
 	nodes: nodesApi,
 	parallax: parallaxApi,
 	paraQueries: paraQueriesApi,
@@ -26,6 +25,5 @@ export const api = {
 	search: searchApi,
 	styles: stylesApi,
 	users: usersApi,
-	buildInfoBackend: buildInfoBackend,
-	buildInfoFrontend: buildInfoFrontend
+	build: buildApi
 };

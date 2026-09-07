@@ -1,11 +1,13 @@
 import 'src/components/item-finder/ItemFinder.scss';
-import { DBBadge, DBInfotext, DBInput, DBTooltip } from '@db-ux/react-core-components';
+import { DBBadge, DBButton, DBInfotext, DBInput, DBTooltip } from '@db-ux/react-core-components';
 import { ChangeEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
-import { KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { FocusEvent, KeyboardEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Node } from 'src/models/node';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { isArray, isObject, isString } from 'src/utils/helpers/general';
+import { areNodesSameById } from 'src/utils/helpers/nodes';
 import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { useOutsideClick } from 'src/utils/hooks/useOutsideClick';
 import { idFormatter } from 'src/utils/id-formatter';
@@ -24,12 +26,15 @@ import { ItemFinderProps } from './ItemFinder.interfaces';
 export const ItemFinder = ({
 	defaultInputValue,
 	onInput,
+	onInputFocus,
+	onInputBlur,
 	inputValue,
 	onChange,
 	onEnterKey,
 	isMultiselect,
 	isDisabled,
 	options,
+	optionDelimiterAfterIndexes,
 	defaultValue,
 	searchTimeoutMilliseconds = 300,
 	label,
@@ -43,8 +48,18 @@ export const ItemFinder = ({
 	testId,
 	placeholder,
 	hideBadges = false,
-	noInputMatchTooltip
+	noInputMatchTooltip,
+	shouldShowNoInputMatchTooltip = true,
+	hasMoreOptions,
+	allowReset,
+	resetTooltipText,
+	onReset
 }: ItemFinderProps) => {
+	const { t } = useTranslation();
+	// TODO fix to respect following rules:
+	// - if user provided inputValue, show that as input text (this is currently bypassed when user
+	//	 starts typing somethig into the input field)
+	// - otherwise switch to internal input value
 	const [internalInputValue, setInternalInputValue] = useState<string>(defaultInputValue || '');
 	const [showList, setShowList] = useState(false);
 	// check internalSelectedOptions for up-to-date list of selected options
@@ -55,7 +70,6 @@ export const ItemFinder = ({
 		)
 	);
 	const delayedCallback = useDebounce(searchTimeoutMilliseconds);
-	const inputFocusEventTriggered = useRef(false);
 	const ref = useOutsideClick<HTMLDivElement>({
 		callback: () => {
 			const currentlyHoveredOverview = useItemOverviewPopoverStore
@@ -83,6 +97,13 @@ export const ItemFinder = ({
 			? []
 			: [internalValue];
 	const rootElementClassName = clsx('item-finder', className);
+
+	// TODO check if https://github.com/db-ux-design-system/core-web/issues/7141 is resolved
+	const onRefChange = useCallback((element: HTMLInputElement | null) => {
+		if (element) {
+			element.setAttribute('autocomplete', 'off');
+		}
+	}, []);
 
 	// observe user input value change
 	useEffect(() => {
@@ -139,7 +160,15 @@ export const ItemFinder = ({
 	 * Simple function the check if an option is selected.
 	 */
 	const isOptionSelected = (option: Node) => {
-		return internalSelectedOptions.find((selectedOption) => selectedOption.id === option.id);
+		return internalSelectedOptions.find((selectedOption) =>
+			areNodesSameById(selectedOption, option)
+		);
+	};
+
+	const hasOptionDelimiter = (index: number) => {
+		return optionDelimiterAfterIndexes
+			? optionDelimiterAfterIndexes.includes(index) && index !== options.length - 1
+			: false;
 	};
 
 	/**
@@ -184,13 +213,34 @@ export const ItemFinder = ({
 		}
 	};
 
-	const inputFocusHandler = () => {
-		inputFocusEventTriggered.current = true;
+	const inputFocusHandler = (event: FocusEvent<HTMLInputElement>) => {
 		shouldShowList(true);
+
+		if (onInputFocus) {
+			onInputFocus(event);
+		}
 	};
 
-	const inputBlurHandler = () => {
-		inputFocusEventTriggered.current = false;
+	const inputBlurHandler = (event: FocusEvent<HTMLInputElement>) => {
+		if (onInputBlur) {
+			onInputBlur(event);
+		}
+	};
+
+	/**
+	 * Clears the current selection and the input value.
+	 *
+	 * In uncontrolled mode this fully resets the component via its internal state.
+	 * In controlled mode the parent still owns "value", so it has to react to "onReset"
+	 * and null out the controlled "value" for the reset to fully take effect.
+	 */
+	const handleReset = () => {
+		setInternalInputValue('');
+		setSelectedOptions([]);
+
+		if (onReset) {
+			onReset();
+		}
 	};
 
 	const listClassName = clsx(
@@ -203,6 +253,9 @@ export const ItemFinder = ({
 	const message = validMessage || invalidMessage;
 	const showConfirmInputTooltip =
 		noInputMatchTooltip && options.length === 0 && !!internalInputValue;
+	const listItemDefaultClassName = 'item-finder__list-item';
+	// strictly selection-gated: only offer the clear button once something is selected
+	const showResetButton = allowReset && internalSelectedOptions.length > 0;
 
 	return (
 		<div ref={ref} id={id} className={rootElementClassName} data-testid={testId}>
@@ -222,23 +275,44 @@ export const ItemFinder = ({
 					disabled={isDisabled}
 					role="combobox"
 					data-show-confirmation-tooltip={showConfirmInputTooltip}
+					ref={onRefChange}
 				>
-					<DBTooltip
-						animation={false}
-						className="item-finder__input-confirmation-tooltip db-tooltip-fix db-tooltip-fix--top"
-					>
-						{noInputMatchTooltip}
-					</DBTooltip>
+					{shouldShowNoInputMatchTooltip && (
+						<DBTooltip
+							animation={false}
+							className="item-finder__input-confirmation-tooltip db-tooltip-fix db-tooltip-fix--top"
+						>
+							{noInputMatchTooltip}
+						</DBTooltip>
+					)}
 				</DBInput>
+				{showResetButton && (
+					<DBButton
+						type="button"
+						icon="cross"
+						variant="ghost"
+						size="medium"
+						noText
+						className="item-finder__reset-button"
+						onClick={handleReset}
+					>
+						<DBTooltip showArrow={false}>
+							{resetTooltipText ?? t('item_finder_reset_button_tooltip')}
+						</DBTooltip>
+					</DBButton>
+				)}
 				{showList && options.length > 0 && (
 					<ul className={listClassName}>
 						{options.map((option, index) => {
 							const isOptionString = isString(option);
 							const isSelected = isOptionSelected(option);
+							const hasDelimiter = hasOptionDelimiter(index);
+
 							const listItemClassName = clsx(
-								'item-finder__list-item',
+								listItemDefaultClassName,
 								isMultiselect && 'item-finder__list-item--checkbox',
-								isSelected && 'item-finder__list-item--checked'
+								isSelected && 'item-finder__list-item--checked',
+								hasDelimiter && 'item-finder__list-item--delimiter'
 							);
 
 							return (
@@ -276,6 +350,21 @@ export const ItemFinder = ({
 								</li>
 							);
 						})}
+
+						{hasMoreOptions && (
+							<li
+								className={
+									listItemDefaultClassName + ' item-finder__list-item--disabled'
+								}
+							>
+								<div className="item-finder__list-item-content">
+									...
+									<DBTooltip>
+										{t('item_finder_has_more_options_tooltip')}
+									</DBTooltip>
+								</div>
+							</li>
+						)}
 					</ul>
 				)}
 			</div>

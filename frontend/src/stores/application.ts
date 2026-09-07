@@ -26,3 +26,5 @@ export const useApplicationStore = create<ApplicationStore>((set) => ({
 		set(getInitialState());
 	}
 }));
+
+(window as any).useApplicationStore = useApplicationStore;

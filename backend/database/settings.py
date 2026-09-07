@@ -9,6 +9,7 @@ load_dotenv(find_dotenv())
 
 config = AttrDict(
     debug=int(os.environ.get("GUI_DEBUG", 0)),
+    https_enabled=bool(int(os.environ.get("GUI_HTTPS_ENABLED", 0))),
     profile_dir=os.environ.get("GUI_PROFILE_DIR", ""),
     neo4j=os.environ.get("GUI_NEO4J", "neo4j://localhost:7687"),
     user=os.environ.get("GUI_USER", " "),

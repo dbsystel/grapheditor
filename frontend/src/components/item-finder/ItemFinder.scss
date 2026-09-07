@@ -3,9 +3,15 @@
 
 	&__input-wrapper {
 		position: relative;
+		display: flex;
+		align-items: flex-start;
+		column-gap: var(--db-spacing-fixed-2xs);
 	}
 
 	&__input {
+		flex: 1 1 auto;
+		min-width: 0;
+
 		&[data-variant="floating"] {
 			#{$this}__input-confirmation-tooltip {
 				inset-block-end: calc(100% + 5px)!important;
@@ -21,6 +27,10 @@
 				}
 			}
 		}
+	}
+
+	&__reset-button {
+		flex: 0 0 auto;
 	}
 
 	&__list {
@@ -81,6 +91,10 @@
 				transform: translateY(-50%);
 			}
 		}
+
+		&--delimiter {
+			border-bottom: 1px solid;
+		}
 	}
 
 	&__list-item-content {
@@ -89,9 +103,11 @@
 		flex-direction: column;
 		padding: 5px 15px 5px 20px;
 
-		&:hover {
-			text-decoration: underline;
-			cursor: pointer;
+		#{$this}__list-item:not(#{$this}__list-item--disabled) > & {
+			&:hover {
+				text-decoration: underline;
+				cursor: pointer;
+			}
 		}
 	}
 

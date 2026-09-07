@@ -1,5 +1,6 @@
 import 'src/assets/scss/layers.scss';
 import 'src/assets/scss/main.scss';
+import '@theme/theme.scss';
 import { checkBrowserRenderingCapabilities } from 'src/utils/helpers/browser';
 
 /**

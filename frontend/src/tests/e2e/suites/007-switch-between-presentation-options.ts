@@ -1,10 +1,7 @@
 import { expect } from '@playwright/test';
 import { E2ETestFunctionProps } from '../E2E.interfaces';
 
-export const _007_switchBetweenPresentationOptions = async ({
-	page,
-	i18n
-}: E2ETestFunctionProps) => {
+export const _007_switchBetweenPresentationOptions = async ({ page }: E2ETestFunctionProps) => {
 	const leftSidebar = page.locator('.left-widget').getByRole('complementary');
 
 	// open left sidebar

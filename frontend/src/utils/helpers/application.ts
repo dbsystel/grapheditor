@@ -12,14 +12,14 @@ import { AppLanguage, AppTheme, useSettingsStore } from 'src/stores/settings';
 import { APP_LANGUAGES } from 'src/utils/constants';
 import { eventBus } from 'src/utils/event-bus';
 
+// reset most of application states
 export const resetApplicationStates = () => {
-	// reset almost all application states (all but login and database stores)
 	useSearchStore.getState().setResult({ data: null, type: '' });
 	useClipboardStore.getState().reset();
 	useContextMenuStore.getState().reset();
 	useDrawerStore.getState().reset();
 	// exclude persisted keys
-	useGraphStore.getState().resetButExclude(['zoomFactor']);
+	useGraphStore.getState().resetButExclude(['zoomFactor', 'nodeAxisFactor']);
 	useItemsStore.getState().reset();
 	useParallaxStore.getState().reset();
 	useApplicationStore.getState().reset();

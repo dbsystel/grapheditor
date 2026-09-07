@@ -12,7 +12,6 @@ from database.base_types import BaseElement
 def pascal_case(s):
     return "".join(x for x in s.title() if x.isalnum())
 
-
 def find_a_value(obj: BaseElement, attributes: list[str] | None = None,
                  keys: list[str] | None =None, default=None):
     attributes = [] if attributes is None else attributes
@@ -51,6 +50,10 @@ def remove_newlines(s):
     return s.replace("\n", "")
 
 
+def can_send_error_message() -> bool:
+    return config.dev_mode or config.send_error_messages
+
+
 def abort_with_json(code, msg="", always_send_message=False):
     """Return code to client, together with a JSON object with the
     error description as message.  If msg is not empty and
@@ -67,9 +70,7 @@ def abort_with_json(code, msg="", always_send_message=False):
     if msg:
         current_app.logger.error(msg)
 
-    if (
-        config.dev_mode or config.send_error_messages or always_send_message
-    ) and msg:
+    if (can_send_error_message() or always_send_message) and msg:
         # Simply calling abort(code, msg) returns an HTML page describing the
         # error. We want to return a description in JSON form instead.
         abort(make_response(jsonify({"message": msg}), code))

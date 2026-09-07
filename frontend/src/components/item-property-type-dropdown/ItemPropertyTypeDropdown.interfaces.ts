@@ -8,8 +8,7 @@ import {
 import { GlobalComponentProps } from 'src/types/components';
 
 export type ItemPropertyTypeDropdownProps =
-	| ItemPropertyTypeDropdownExcludeListOptions
-	| ItemPropertyTypeDropdownIncludeListOptions;
+	ItemPropertyTypeDropdownExcludeListOptions | ItemPropertyTypeDropdownIncludeListOptions;
 
 type ItemPropertyTypeDropdownBase = GlobalComponentProps &
 	Omit<ComponentProps<typeof DBSelect>, 'onChange' | 'value'> & {

@@ -3,16 +3,27 @@ import dotenv from 'dotenv';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
+const isLocalhost = (host: string) => {
+	return host.includes('//localhost:');
+};
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, '.env') });
 
 const isCI = !!process.env.CI;
+const env: Record<string, string> = {};
+
+if (isLocalhost(process.env.E2E_NEO4J_HOST || '')) {
+	env.VITE_BACKEND_PORT = process.env.E2E_VITE_BACKEND_PORT || '5000';
+}
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
+	globalSetup: './src/tests/e2e/global-setup.ts',
+	globalTeardown: './src/tests/e2e/global-teardown.ts',
 	testDir: './src/tests/e2e',
 	outputDir: './playwright-screenshots',
 	/* Run tests in files sequentially */
@@ -62,6 +73,7 @@ export default defineConfig({
 		command: 'npm run dev',
 		url: 'http://localhost:8080',
 		reuseExistingServer: true,
-		timeout: 120 * 1000
+		timeout: 120 * 1000,
+		env: env
 	}
 });

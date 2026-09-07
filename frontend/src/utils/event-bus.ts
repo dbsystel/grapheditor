@@ -5,7 +5,7 @@ export class EventBusClass<TEvents> {
 	listeners: ListenerMap<TEvents>;
 
 	constructor() {
-		this.listeners = {} as ListenerMap<TEvents>;
+		this.listeners = {};
 	}
 
 	public subscribe<EventName extends keyof TEvents>(
@@ -60,7 +60,7 @@ export class EventBusClass<TEvents> {
 	}
 
 	public reset() {
-		this.listeners = {} as ListenerMap<TEvents>;
+		this.listeners = {};
 	}
 }
 

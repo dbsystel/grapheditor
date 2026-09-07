@@ -77,7 +77,7 @@ class RelationsBulkFetch(MethodView):
 
         Return a dictionary mapping node IDs to the corresponding nodes.
         """
-        base_rels = current_app.graph_db.get_relations_by_ids(ids)
+        base_rels = dict(current_app.graph_db.get_relations_by_ids(ids))
         relations = {
             k: GraphEditorRelation.from_base_relation(base_rel)
             for k, base_rel in base_rels.items()
@@ -322,7 +322,7 @@ class RelationTypes(MethodView):
             compute_semantic_id(rel_type, GraphEditorLabel.MetaRelation)
             for rel_type in current_app.graph_db.get_all_types()
         ]
-        return dict(types=types)
+        return dict(types=sorted(types))
 
 
 @blp.route("/types/default")

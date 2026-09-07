@@ -13,7 +13,7 @@ import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 
 export const NetworkGraphNodeRelationMouseover = () => {
-	const { sigma } = useGraphStore((store) => store);
+	const sigma = useGraphStore((store) => store.sigma);
 	const [selectedGraphItem, setSelectedGraphItem] = useState<null | {
 		x: number;
 		y: number;

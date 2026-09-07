@@ -2,18 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.9.1
+
+- Local development switched to Node.js v24.18.0
+- Global loading indicator (progress dot) added next to the database info in header
+- Node position scaling
+- When suggesting relation types while creating/editing a relation, show in the first
+  place those inferred by the selected source and/or target nodes and any corresponding
+  restrictions available in the metamodel.
+- When suggesting source/target nodes while creating/editing a relation, show in the first
+  place those inferred by the selected opposite node and/or relation type and any corresponding
+  restrictions available in the metamodel.
+- Stoppable requests (enables canceling requests on both client and server side)
+
+
 ## 2026.6.1
 
+- Context menu - node horizontal/vertical spread/center, top/right/bottom/left alignment
 - Basic documentation for the meta model
 - Graph scaling
 - Automated node arrangement
-- Context menu - node horizontal/vertical spread/center, top/right/bottom/left alignment 
 
 ## 2026.5.1
 
 - Version info is available in the debug menu
 - New graph node/relation is now focused in graph and open in detail window
-- Persistent user preferences for initially expanded sections in item detail views (items 
+- Persistent user preferences for initially expanded sections in item detail views (items
   drawer and mouseover)
 - Relations can be selected by clicking on the label
 - Perspective for dummy data
@@ -54,7 +68,6 @@ All notable changes to this project will be documented in this file.
 - Default theme styling improvement
 - Bug fixes around expired sessions
 
-
 ## 2025.11.3
 
 - dropped neo4j 4.x support
@@ -70,7 +83,6 @@ All notable changes to this project will be documented in this file.
 - fulltext search can now support lucene syntax
 - centering of nodes and relations in graph view
 - Bugfixing
-
 
 ## 2025.11.1
 
@@ -96,11 +108,9 @@ All notable changes to this project will be documented in this file.
 - Better connection handling
 - Improved CONTRIBUTORS.md
 
-
 ## 20250820_0
 
 - History for cypher queries
-
 
 ## August 2025
 
@@ -111,7 +121,3 @@ Initial release
 - Graph display, WebGL, HTML Nodes
 - Semantic support
 - Usable result tables
-
-
-
-

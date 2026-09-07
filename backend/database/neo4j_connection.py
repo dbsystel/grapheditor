@@ -2,9 +2,10 @@ from time import sleep
 from threading import Lock
 import neo4j
 from flask import current_app, g, request, session
+from cryptography.fernet import InvalidToken
 
 from blueprints.display.style_support import select_style, get_selected_style
-from database.auth import ensure_valid_token
+from database.auth import ensure_valid_token, decrypt_password, LoginRequired, get_usernames
 from database.settings import config
 from database.utils import abort_with_json, split_statements
 
@@ -17,31 +18,76 @@ connections = dict()
 drivers = dict()
 db_versions = dict()
 
-
 # We use abort and abort_with_json to break out from a function, so
 # the inconsistent-return-statements warning is a false positive
 # pylint: disable=inconsistent-return-statements
+
+
+class Neo4jResultWrapper:
+    """Wraps a Neo4j Result, handling errors while consuming its contents.
+    """
+    def __init__(self, result):
+        self.neo_result = result
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self._call_func(lambda : next(self.neo_result))
+
+    def single(self):
+        return self._call_func(self.neo_result.single)
+
+    def data(self):
+        return self._call_func(self.neo_result.data)
+
+    def graph(self):
+        return self._call_func(self.neo_result.graph)
+
+    def _call_func(self, func):
+        try:
+            return func()
+        except (neo4j.exceptions.TransientError, neo4j.exceptions.TransactionError):
+            current_app.logger.warning("Transaction cancelled")
+            abort_with_json(499, "Transaction was cancelled.")
+        except neo4j.exceptions.ClientError as e:
+            if e.code == "Neo.ClientError.Transaction.Terminated":
+                abort_with_json(499, "Query was cancelled.")
+            raise
+
 
 class Neo4jConnection:
     """Proxy for Neo4j connection supporting transaction-based operations."""
 
     # pylint: disable=too-many-positional-arguments,too-many-arguments
-    def __init__(self, host, username=None, password=None, database=None, token=None):
+    def __init__(self, host, username=None, password=None, database=None, token=None,
+                 use_token=None):
         self.host = host
         self.username = username
         self.database = database
         self.password = password
         self.token = token
+        self.use_token = use_token
         self._driver = self._setup_driver()
 
 
     @classmethod
     def from_login_data(cls, login_data: dict):
+        password = login_data.get("password")
+        enc_key_str = request.cookies.get("enc_key")
+        if not enc_key_str:
+            raise LoginRequired("Missing enc_key.")
+        try:
+            decrypted_password = decrypt_password(
+                password, enc_key_str.encode()
+            ) if password else None
+        except InvalidToken:
+            abort_with_json(401, "Session expired, please log in again.")
         conn = cls(
             host=login_data["host"], # mandatory
             username=login_data.get("username"),
-            password=login_data.get("password"),
-            token=session.get("oidc_auth_token"),
+            password=decrypted_password,
+            token=session.get("oidc_auth_token") if not password else None,
             database=login_data.get("selected_database"),
         )
         return conn
@@ -79,19 +125,18 @@ class Neo4jConnection:
         # on another database, leading to has_ft returning true before the
         # function/procedure is available on the current database.
 
-        # A robust way of checking would be to execute some function and catch
-        # any exception. Unfortunately that conflicts with our
-        # neo4j_exception_handler (see main.py), which is fired up as soon an
-        # exception is thrown. Sacrificing it only for test/dev purposes would
-        # be a bad idea, so we live with the restrictions of has_ft and avoid
-        # using it for driving our GUI.
-        custom_list_result = self.run("""
-            CALL apoc.custom.list() YIELD name
-            RETURN 'setNodeFt' in collect(name)
-        """)
-        val = custom_list_result.single().value()
-
-        return bool(val)
+        try:
+            verify_result = self.run("RETURN custom.lowercase('TEST') AS result")
+            val = verify_result.single().value()
+            return val == 'test'
+        except neo4j.exceptions.Neo4jError:
+            # after crashing, we need a new transaction.
+            try:
+                g.neo4j_transaction.rollback()
+                del g.neo4j_transaction
+            except neo4j.exceptions.Neo4jError:
+                pass
+            return False
 
     def has_nft_index(self):
         query_result = self.run("""
@@ -145,12 +190,21 @@ class Neo4jConnection:
         """We work transaction based"""
         if not hasattr(g, "neo4j_transaction"):
             g.neo4j_session = self._driver.session(database=self.database)
-            g.neo4j_transaction = g.neo4j_session.begin_transaction()
+            metadata = {}
+            if hasattr(g, "request_id") and g.request_id:
+                metadata["__request_id"] = g.request_id
+
+            g.neo4j_transaction = g.neo4j_session.begin_transaction(
+                metadata=metadata or None
+            )
         return g.neo4j_transaction
 
     @property
     def _admin_tx(self):
-        """This transaction is NOT comitted"""
+        """
+        This transaction is NOT comitted
+
+        """
         if not hasattr(g, "neo4j_admin_transaction"):
             g.neo4j_admin_session = self._driver.session(
                 database=self.database
@@ -182,7 +236,7 @@ class Neo4jConnection:
         while retry_count < MAX_RETRIES:
             try:
                 tx = self._admin_tx if _as_admin else self._tx
-                return tx.run(statement, **params)
+                return Neo4jResultWrapper(tx.run(statement, **params))
             except neo4j.exceptions.TokenExpired as e:
                 msg = f"Token expired error: {repr(e)}"
                 current_app.logger.error(msg)
@@ -241,6 +295,28 @@ class Neo4jConnection:
 
         return result
 
+    def stop(self, request_id:str) -> int:
+        names = get_usernames()
+        # Depending on how neo4j is configured, username can be many things,
+        # like claim from a token (sub, email, etc.) or a local username.
+        # We test if any of them match.
+        result = self.run(
+            """
+            SHOW TRANSACTIONS YIELD transactionId, metaData, username
+            WHERE metaData.__request_id = $request_id
+              AND username in $names
+            TERMINATE TRANSACTION transactionId
+            YIELD transactionId AS terminated_id
+            RETURN count(*) AS terminated
+            """,
+            request_id=request_id,
+            names=names
+        )
+        terminated = result.single()["terminated"]
+        if not terminated:
+            abort_with_json(299, f"No running query with request_id '{request_id}'")
+        return terminated
+
 
     def commit(self):
         """
@@ -273,18 +349,31 @@ class Neo4jConnection:
         if hasattr(g, "neo4j_transaction"):
             if getattr(g, "doom_transaction", False) or exception:
                 current_app.logger.info("rolling back doomed transaction")
-                g.neo4j_transaction.rollback()
+                try:
+                    g.neo4j_transaction.rollback()
+                except neo4j.exceptions.ClientError as e:
+                    # If the transaction was explicitly terminated (e.g. via
+                    # DELETE /query/cypher/<request_id>), it is already gone —
+                    # there is nothing left to roll back.
+                    if e.code != "Neo.ClientError.Transaction.Terminated":
+                        raise
             else:
                 try:
                     g.neo4j_transaction.commit()
                 # we want to use a rollback on any crash
+                except neo4j.exceptions.ClientError as e:
+                    # If the transaction was explicitly terminated (e.g. via
+                    # DELETE /query/cypher/<request_id>), it is already gone —
+                    # there is nothing left to roll back.
+                    if e.code != "Neo.ClientError.Transaction.Terminated":
+                        raise
                 # pylint: disable=broad-exception-caught
                 except Exception:
                     g.neo4j_transaction.rollback()
             del g.neo4j_transaction
 
     def cache_key(self):
-        id_token = self.token["id_token"] if self.token else None
+        id_token = self.token.get("id_token") if self.token else None
         return (self.host, self.username, self.password, id_token)
 
     def _setup_driver(self) -> neo4j.Driver:
@@ -305,7 +394,7 @@ class Neo4jConnection:
                         self.host, auth=(self.username, self.password)
                     )
                     drivers[key] = driver
-                elif self.token:
+                elif self.token and "id_token" in self.token:
                     current_app.logger.debug(f"connecting to {self.host} using stored token.")
                     driver = neo4j.GraphDatabase.driver(
                         self.host, auth=neo4j.bearer_auth(self.token["id_token"])
@@ -406,6 +495,13 @@ def fetch_connection_by_id(tab_id):
             if "login_data" not in session:
                 session["login_data"] = dict()
             session["login_data"][tab_id] = dict(session["login_data"][last_tab_id])
+
+            # copy default relation type if available.
+            if "default_type" not in session:
+                session["default_type"] = dict()
+            if last_tab_id in session["default_type"]:
+                session["default_type"][tab_id] = session["default_type"][last_tab_id]
+
             select_style(get_selected_style(tab_id=last_tab_id), tab_id=tab_id)
         else:
             abort_with_json(401, "missing last_tab_id in session")

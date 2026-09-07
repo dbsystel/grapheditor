@@ -13,6 +13,7 @@ This is the GUI for the GraphEditor project. It supports users to work with diff
     - [Requirements](#requirements)
     - [Development](#development)
     - [HTTP Requests](#http-requests)
+    - [Stoppable Requests](#stoppable-requests)
     - [Global State Management](#global-state-management)
     - [Working with events](#working-with-events)
     - [Theming](#theming)
@@ -152,7 +153,7 @@ digraph G {
 
 ### Requirements
 
-- Node must be installed (version: >=20.18.0)
+- Node must be installed (version: >=24.18.0)
 - Docker must be installed (recommended version: >= 24.0.0)
 
 ## Development
@@ -164,9 +165,9 @@ In order to start local frontend development, we need to do a couple of things.
 
 2. **run `npm run setup`**:
 
-	To reliably protect our project from supply chain attacks via npm, please always use "npm run setup" instead of "npm install" <br>
-– this ensures that only reviewed and explicitly allowed installation scripts are executed, while all others are automatically blocked. <br>
-This prevents malicious code scripts from being silently installed without restricting normal development.
+    To reliably protect our project from supply chain attacks via npm, please always use "npm run setup" instead of "npm install" <br>
+    – this ensures that only reviewed and explicitly allowed installation scripts are executed, while all others are automatically blocked. <br>
+    This prevents malicious code scripts from being silently installed without restricting normal development.
 
 3. **run Docker (local backend server)**:
     - Go to the root directory and run `docker-compose up backend neo4j-enterprise` to start local backend server. It is possible you are not
@@ -222,6 +223,61 @@ Important Considerations: Direct utilization of API functions from frontend/src/
   communication protocols with the backend
 - **Contextual Consistency**: Uniformly applied methodologies across different contexts enhance code maintainability and readability
 
+### Stoppable Requests
+
+Some backend requests (e.g. full-text/cypher search triggered from the global search bar) can be long-running and may become <br>
+obsolete before they resolve — for example when a user issues a new search while a previous one is still in flight. To handle <br>
+this, we support marking individual Axios requests as "stoppable", which allows them to be aborted on the client and terminated <br>
+on the server.
+
+#### How it works
+
+1. **Model** (`src/models/stoppable-request.ts`): a `StoppableRequest` is an object made up of:
+	- `id` – a unique identifier (UUID) for the request
+	- `tags` – an array of `StoppableRequestTag` strings (e.g. `'global-search'`) used to group/identify related requests
+	- `abortController` – a native `AbortController` used to cancel the underlying HTTP request
+
+2. **Creating a stoppable request**: use `createStoppableRequestConfiguration` from `src/utils/helpers/stoppable-request.ts` <br>
+   to build a `StoppableRequest` object (it fills in sensible defaults for `id`, `tags` and `abortController` if not provided). <br>
+   Please always use this helper instead of constructing a `StoppableRequest` object manually.
+
+3. **Attaching it to a request**: pass the `StoppableRequest` object down through the relevant `fetch`/`api` function (e.g. <br>
+   `getFullTextSearch`, `postCypherQuerySearch`) as a `stoppableRequest` parameter. Internally, this gets set on the Axios request <br>
+   config as `applicationStoppableRequest` (see the augmented `AxiosRequestConfig` type in `src/types/axios.d.ts`).
+
+4. **Request interceptor** (`registerStoppableRequestInterceptors` in `src/utils/api.ts`): when an outgoing request has an <br>
+   `applicationStoppableRequest` set, the interceptor:
+	- assigns the `abortController`'s signal to the request (`request.signal`), enabling client-side cancellation
+	- sets a custom header (`STOPPABLE_REQUEST_HEADER_KEY`, i.e. `x-request-id`, defined in `src/utils/constants.ts`) with the <br>
+	  request's `id`, so the backend can identify/terminate the matching request
+	- registers the request in the requests store (`useRequestsStore`) via `addStoppableRequest`
+
+5. **Response interceptor**: once a stoppable request resolves (success or error), it is removed from the stoppable requests <br>
+   store via `removeStoppableRequest`, using the same `x-request-id` header value to find it. Once a response (success or error) <br>
+   has been received for a request, it is no longer possible to cancel it — cancellation is only effective while the request <br>
+   is still in flight.
+
+6. **Cancelling a request**: call `cancelStoppableRequest` (from `src/utils/helpers/stoppable-request.ts`) with the `StoppableRequest` <br>
+   object. This will:
+	- abort the request client-side via `abortController.abort()`
+	- notify the backend to terminate the matching request via `deleteRequest`, which calls the `DELETE` stop-request endpoint <br>
+	  (`endpoints.getStopRequestPath`)
+
+7. **Stoppable requests store** (`src/stores/stoppable-requests.ts`): keeps track of all currently in-flight stoppable requests <br>
+   (`stoppableRequests`). Besides `addStoppableRequest`/`removeStoppableRequest`, it exposes `getAllStoppableRequestsByTags`, <br>
+   which can be used to look up all currently active stoppable requests matching a given set of tags (e.g. to cancel all pending <br>
+   `'global-search'` requests before starting a new one).
+
+#### When to use it
+
+Use stoppable requests for operations that:
+
+- can be triggered repeatedly in quick succession by the user (e.g. search-as-you-type, or re-submitting a query)
+- are expensive/long-running on the backend, where an early client-side abort should also stop backend processing
+- would otherwise waste bandwidth/backend resources by letting stale/obsolete requests complete
+
+Not every request needs to be stoppable.
+
 ### Global State Management
 
 For managing global state withing the application, we use [Zustand](https://github.com/pmndrs/zustand).
@@ -237,11 +293,55 @@ When working with events, please check the `src/EVENT_SYSTEMS.md` file for more 
 
 ### Theming
 
-`@db-ux/react-core-components` come with a whitelabel theme. If you want to use another theme, you can generate one via <br>
-https://design-system.deutschebahn.com/theme-builder/main/customization or you can manually create one by simply overwriting existing <br>
-CSS variables. Generated css can be placed in <br>
-file (`src/assets/scss/main.scss`)<br>
-No theme builder export support yet.
+The application supports multiple themes, controlled at build time via the `VITE_THEME` environment variable.
+Set it in your local `.env` file (or as an environment variable in CI/CD). If unset, the whitelabel theme is used.
+
+#### Available themes
+
+| Theme                | `VITE_THEME` value | Description                            |
+| -------------------- | ------------------ | -------------------------------------- |
+| Whitelabel (default) | _(empty)_          | Neutral branding, used for open source |
+| Deutsche Bahn        | `db`               | DB corporate branding                  |
+
+Any custom theme is also possible, as long as it follows the setup steps described in [src/assets/themes/README.md](src/assets/themes/README.md).
+
+Once `VITE_THEME` is set, use the normal `npm run dev` / `npm run build` commands.
+
+#### Setting up the DB theme
+
+The DB theme requires a separate package (`@db-ux-inner-source/db-theme`) with encrypted brand assets.
+It must **not** be committed or published — only for internal DB builds.
+
+1. Obtain `ASSET_PASSWORD` and `ASSET_INIT_VECTOR` from the [DB Marketingportal](https://marketingportal.extranet.deutschebahn.com/marketingportal/Design-Anwendungen/db-ux-design-system/resources/db-theme) (login required)
+2. Add them — plus the theme selector — to your local `.env` file (never commit this file):
+    ```
+    VITE_THEME=db
+    ASSET_PASSWORD=your_value
+    ASSET_INIT_VECTOR=your_value
+    ```
+3. Install the package without adding it to `package.json` — the `postinstall` script decrypts the assets automatically:
+    ```bash
+    npm install --no-save @db-ux-inner-source/db-theme
+    ```
+4. Start or build as usual — the DB theme is picked up via `VITE_THEME`:
+    ```bash
+    npm run dev
+    npm run build
+    ```
+
+> **Note:** `@db-ux-inner-source/db-theme` is not in `package.json` intentionally.
+> Re-install it manually (with `--no-save`) after running `npm ci`.
+> See [src/assets/themes/README.md](src/assets/themes/README.md) for adding new themes.
+
+#### CI/CD deployment
+
+For automated DB theme builds, add the following steps to your pipeline:
+
+1. Set `ASSET_PASSWORD`, `ASSET_INIT_VECTOR` and `VITE_THEME=db` as **CI/CD environment variables / secrets** (not in any committed file)
+2. Add a build step before `npm run build`:
+    ```bash
+    npm ci --no-save @db-ux-inner-source/db-theme
+    ```
 
 ### Icon Fonts
 
@@ -342,13 +442,14 @@ To run unit tests, please run `npm run test`. If you want to check unit test cov
 
 ### E2E Tests
 
-We use Playwright for end-to-end testing. The E2E tests run against a real browser (Microsoft Edge, Chromium, Firefox) and require a running backend with a Neo4j database.
+We use Playwright for end-to-end testing. The E2E tests run against a real browser (Microsoft Edge) and require a running backend with a Neo4j database.
 
-E2E tests require a local .env file in the frontend directory with the following variables: NEO4J_HOST, NEO4J_DATABASE, NEO4J_USER, NEO4J_PASSWORD
+E2E tests require a local .env file in the frontend directory. If you are testing against localhost, you will need to set up another
+.env file in the root of the project. The relevant variables in those .env files have an "E2E_" prefix.
 
-These variables are used by the setup project (src/tests/e2e/setup.test.ts) to authenticate against the Neo4j instance before any test suite runs. The authenticated session state is stored in user.json and reused by all test projects.
+These variables are used by the global setup (src/tests/e2e/global-setup.ts) to authenticate against the Neo4j instance before any test suite runs.
 
-Playwright is configured in playwright.config.ts. In local development, it reuses an already running dev server (npm run dev). In CI, it starts the dev server automatically.
+Playwright is configured in playwright.config.ts. In local development, it reuses an already running dev server (npm run dev).
 
 Make sure the backend and Neo4j are running, then:
 
@@ -400,7 +501,7 @@ Team GraphEditor. Responsible frontend developers:
 9. Consider using the `exactOptionalPropertyTypes` TS option (https://devblogs.microsoft.com/typescript/announcing-typescript-4-4/#exact-optional-property-types-(--exactoptionalpropertytypes))
 10. Refactor URL parameters workflow (define how we deal with URL parameters and their changes, create a helper function to create clean URLs and similar)
 11. Add loading states to components when fetching data from backend
-12. Add e2e tests with Playwright
-13. Centralize helpers like with API objects
-14. Isolate regexes into a separate file (check the `src/utils/regex.ts` file)
-15. Improve file naming (singular vs plural, camelCase vs kebab-case)
+12. Centralize helpers like with API objects
+13. Isolate regexes into a separate file (check the `src/utils/regex.ts` file)
+14. Improve file naming (singular vs plural, camelCase vs kebab-case)
+15. Communicate with backend to organize error handling server->client

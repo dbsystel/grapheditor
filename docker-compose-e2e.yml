@@ -1,0 +1,47 @@
+name: infragraphanalytics-e2e
+services:
+  backend-e2e:
+    image: "grapheditor-backend-dev"
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    network_mode: host
+    container_name: "grapheditor-backend-e2e"
+    volumes:
+      - './backend:/opt/grapheditor-backend'
+    environment:
+      - GUI_NEO4J=${E2E_GUI_NEO4J}
+      - GUI_USER=${E2E_GUI_USER}
+      - GUI_PASSWORD=${E2E_GUI_PASSWORD}
+      - GUI_PORT=${E2E_GUI_PORT}
+      - GUI_DEV_MODE=1
+      - GUI_SEND_ERROR_MESSAGES=1
+
+  neo4j-enterprise-e2e:
+    image: "${DOCKER_REGISTRY}neo4j:5.26-enterprise" # change this to use a different version
+    container_name: "neo4j-enterprise-e2e"
+    ports:
+      - "${E2E_NEO4J_BOLT_LISTEN_ADDRESS}:7687"
+      - "${E2E_NEO4J_HTTP_LISTEN_ADDRESS}:7474"
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes # For development purposes
+      - NEO4J_dbms_security_procedures_whitelist=gds.*, apoc.*
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*, apoc.*
+      - NEO4J_AUTH=${E2E_GUI_USER}/${E2E_GUI_PASSWORD}
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_trigger_enabled=true
+      - NEO4J_apoc_trigger_refresh=10000
+
+      - NEO4J_PLUGINS=["apoc", "apoc-extended", "graph-data-science"]
+      - NEO4J_server_memory_heap_initial__size=2g
+      - NEO4J_server_memory_heap_max__size=4g
+      - NEO4J_server_memory_pagecache_size=4g
+      - NEO4J_dbms_usage__report_enabled=false
+
+      - E2E_GUI_USER=${E2E_GUI_USER}
+      - E2E_GUI_PASSWORD=${E2E_GUI_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u $$E2E_GUI_USER -p $$E2E_GUI_PASSWORD 'RETURN 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20

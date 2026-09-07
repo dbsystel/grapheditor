@@ -2,7 +2,7 @@ import './DatabaseMenuSelector.scss';
 import { DBCustomSelect } from '@db-ux/react-core-components';
 import { GeneralEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database } from 'src/models/database';
 import { useDatabaseStore } from 'src/stores/database';
@@ -31,6 +31,9 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 	});
 
 	useGetDatabaseCurrent({
+		onBefore: () => {
+			useDatabaseStore.getState().setIsLoading(true);
+		},
 		onSuccess: (response) => {
 			useDatabaseStore.getState().setCurrentDatabase(response.data);
 			setSelectedDatabase(response.data.name);
@@ -43,6 +46,9 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 
 	const { reFetch, isLoading: isPostDatabaseCurrentLoading } = usePostDatabaseCurrent({
 		name: '',
+		onBefore: () => {
+			useDatabaseStore.getState().setIsLoading(true);
+		},
 		onSuccess: (response) => {
 			resetApplicationStates();
 			useDatabaseStore.getState().setCurrentDatabase(response.data);
@@ -65,13 +71,8 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 		}
 	});
 
-	useEffect(() => {
-		useDatabaseStore.getState().setIsLoading(true);
-	}, []);
-
 	const onDatabaseChange = (values: Array<string>) => {
 		const newlySelectedDatabase = values[0];
-		useDatabaseStore.getState().setIsLoading(true);
 
 		previouslySelectedDatabaseRef.current = selectedDatabase;
 		selectedDatabaseRef.current = newlySelectedDatabase;

@@ -1,6 +1,8 @@
+import os
+
 from neo4j import GraphDatabase
 import msgspec
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 
 """
 !!! IMPORTANT: Update the functions of triggers before you run this script !!!
@@ -67,12 +69,13 @@ def update_perspectives(session):
 
 
 if __name__ == "__main__":
-    db_config = dotenv_values("..\\.env")  # Adjust the path to your .env file if necessary
-
+    #db_config = dotenv_values("..\\.env")  # Adjust the path to your .env file if necessary
+    load_dotenv()
+    env = os.environ
     graph_marker = "#ontology#"
-    db_conf = [db_config['GUI_NEO4J'],
-               db_config['GUI_USER'],
-               db_config['GUI_PASSWORD'],
+    db_conf = [env['GUI_NEO4J'],
+               env['GUI_USER'],
+               env['GUI_PASSWORD'],
                "neo4j"] # Adjust the database name if necessary
 
     driver = GraphDatabase.driver(

@@ -1,4 +1,4 @@
-import { isAxiosError } from 'axios';
+import { isAxiosError, isCancel } from 'axios';
 import { Component } from 'react';
 import { ErrorInfo } from 'react-dom/client';
 import {
@@ -44,6 +44,11 @@ export function onWindowUnhandledRejection(event: PromiseRejectionEvent) {
 
 	if (isReasonAxiosError) {
 		description = processAxiosErrorResponse(reason);
+	}
+
+	// don't show error notifications for canceled requests
+	if (isCancel(event.reason)) {
+		return;
 	}
 
 	if (reason instanceof Error) {

@@ -14,6 +14,8 @@ export type ItemPropertiesTableProps = GlobalComponentProps & {
 	isEditMode?: boolean;
 	// optional prefix to add to property's value widget so it can remount
 	propertyKeyPrefix?: string;
+	// when false, applies position:fixed fix for dropdown menus (needed in context menu)
+	shouldIgnoreMenuPositionFix?: boolean;
 };
 
 export type ItemPropertiesTableEntries = Array<ItemPropertiesTableEntry>;

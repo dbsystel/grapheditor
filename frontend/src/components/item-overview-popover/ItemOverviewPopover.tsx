@@ -9,6 +9,7 @@ import { SingleRelation } from 'src/components/single-relation/SingleRelation';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
+import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { ItemOverviewPopoverProps } from './ItemOverviewPopover.interfaces';
 
 /**
@@ -26,6 +27,7 @@ export const ItemOverviewPopover = ({
 }: ItemOverviewPopoverProps) => {
 	const rootElementClassName = clsx('item-overview-popover', className);
 	const localPopoverRef = useRef<HTMLDivElement | null>(null);
+	const delayedCallback = useDebounce(150);
 
 	useEffect(() => {
 		const popoverElement = localPopoverRef.current;
@@ -70,16 +72,16 @@ export const ItemOverviewPopover = ({
 							const distanceFromBottom = documentHeight - computedPosition.y;
 							const yPosition = distanceFromBottom - popoverElement.offsetHeight;
 
-							window.requestAnimationFrame(() => {
-								popoverElement.style.top = '';
-								popoverElement.style.bottom = yPosition + 'px';
-								popoverElement.style.left = computedPosition.x + 'px';
+							popoverElementPositioningAndEventRegistration(popoverElement, {
+								top: '',
+								bottom: yPosition + 'px',
+								left: computedPosition.x + 'px'
 							});
 						} else {
-							window.requestAnimationFrame(() => {
-								popoverElement.style.bottom = '';
-								popoverElement.style.top = computedPosition.y + 'px';
-								popoverElement.style.left = computedPosition.x + 'px';
+							popoverElementPositioningAndEventRegistration(popoverElement, {
+								top: computedPosition.y + 'px',
+								bottom: '',
+								left: computedPosition.x + 'px'
 							});
 						}
 					});
@@ -98,11 +100,42 @@ export const ItemOverviewPopover = ({
 		};
 	}, []);
 
+	const popoverElementPositioningAndEventRegistration = (
+		popoverElement: HTMLElement,
+		position: { top: string; bottom: string; left: string }
+	) => {
+		window.requestAnimationFrame(() => {
+			popoverElement.style.bottom = position.bottom;
+			popoverElement.style.top = position.top;
+			popoverElement.style.left = position.left;
+
+			// at the moment, there is no reliable way to know once the SingleNode/SingleRelation API calls are done and
+			// everything is rendered inside those components, so we try our luck with this debounced function
+			delayedCallback(() => {
+				useItemOverviewPopoverStore
+					.getState()
+					.registerPopoverElementAndEvents(popoverElement);
+
+				togglePopoverElementVisibility(popoverElement, 'show');
+			});
+		});
+	};
+
+	// prevent flashing content and triggering of events before the element is "ready" (we don't actually know when the element is
+	// is ready, we use debouce and hope for the best)
+	const togglePopoverElementVisibility = (
+		popoverElement: HTMLElement,
+		showOrHide: 'show' | 'hide'
+	) => {
+		popoverElement.style.visibility = showOrHide === 'show' ? '' : 'hidden';
+		popoverElement.style.opacity = showOrHide === 'show' ? '' : '0';
+	};
+
 	const onRefChange = useCallback((element: HTMLDivElement | null) => {
 		localPopoverRef.current = element;
 
 		if (element) {
-			useItemOverviewPopoverStore.getState().registerPopoverElementAndEvents(element);
+			togglePopoverElementVisibility(element, 'hide');
 		}
 	}, []);
 

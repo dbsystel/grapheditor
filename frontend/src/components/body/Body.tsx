@@ -11,8 +11,9 @@ import { useDatabaseStore } from 'src/stores/database';
 export const Body = () => {
 	const isHomepageView = useApplicationStore((store) => store.isHomepageView);
 	const isDatabasesLoading = useDatabaseStore((store) => store.isLoading);
+	const currentDatabase = useDatabaseStore((store) => store.currentDatabase);
 
-	if (isDatabasesLoading) {
+	if (isDatabasesLoading || !currentDatabase) {
 		return null;
 	}
 

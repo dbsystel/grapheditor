@@ -1,0 +1,4 @@
+@use 'sass:meta';
+// Loaded only when VITE_THEME=db
+// Requires: npm install @db-ux-inner-source/db-theme (needs ASSET_PASSWORD + ASSET_INIT_VECTOR)
+@include meta.load-css('@db-ux-inner-source/db-theme/build/styles/rollup.css');

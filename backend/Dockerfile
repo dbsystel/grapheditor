@@ -1,5 +1,5 @@
 ARG DOCKER_REGISTRY
-FROM ${DOCKER_REGISTRY}python:3.12.1-slim-bookworm
+FROM ${DOCKER_REGISTRY}python:3.14-slim-bookworm
 
 COPY backend/ /opt/grapheditor-backend/
 

@@ -99,7 +99,8 @@ class GraphEditorNode(GraphEditorElement):
         # from perspectives.
         prev_style = copy.copy(base_node.style)
         apply_style_rules(base_node)
-        base_node.style.update(prev_style)
+        if base_node.style and prev_style:
+            base_node.style.update(prev_style)
         grapheditor_dict = neoproperties2grapheditor(base_node)
         title = get_node_title(base_node)
         sem_id = get_semantic_id_from_neonode(base_node)
@@ -219,12 +220,12 @@ class GraphEditorRelation(GraphEditorElement):
 
 # ------------------------------- Functions -----------------------------------
 
-def get_node_title(node: BaseNode):
+def get_node_title(node: BaseNode) -> str:
     """Determine the title of a node by trying keys. Defaults to label: id"""
 
     title = find_a_value(node, keys=config.node_title_keys)
     if title:
-        return title
+        return str(title)
 
     label = "???"
     if node.labels:
@@ -236,12 +237,12 @@ def get_node_title(node: BaseNode):
     return f"{label} {node.element_id.split(':')[-1]}"
 
 
-def get_relation_title(relation):
+def get_relation_title(relation) -> str:
     """Determine the title of a relation by trying keys. Defaults to type"""
 
     title = find_a_value(relation, keys=config.relation_title_keys)
     if title:
-        return title
+        return str(title)
 
     return f"{relation.type}"
 

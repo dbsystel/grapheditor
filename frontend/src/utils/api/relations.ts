@@ -28,7 +28,6 @@ export const relationsApi = {
 		getRelationsTypesNodes: getRelationsTypesNodes,
 		patchRelation: patchRelation,
 		patchRelations: patchRelations,
-
 		postRelation: postRelation,
 		postRelations: postRelations,
 		postRelationDefaultTypeNode: postRelationDefaultTypeNode,

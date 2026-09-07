@@ -4,6 +4,7 @@ import { GetDatabasesCurrentResponse } from 'src/utils/fetch/getDatabaseCurrent'
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type GetDatabasesParameters = {
+	onBefore?: () => void;
 	onSuccess: (data: AxiosResponse<GetDatabasesCurrentResponse>) => void;
 	onError?: (error: AxiosError) => void;
 	onFinally?: () => void;
@@ -14,6 +15,7 @@ export type GetDatabasesParameters = {
  * Simple custom hook to fetch current database infos.
  */
 export const useGetDatabaseCurrent = ({
+	onBefore,
 	onSuccess,
 	onError,
 	onFinally,
@@ -21,6 +23,7 @@ export const useGetDatabaseCurrent = ({
 }: GetDatabasesParameters) => {
 	return useApiHook<AxiosResponse<GetDatabasesCurrentResponse>>({
 		executeImmediately: executeImmediately,
+		onBefore: onBefore,
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,

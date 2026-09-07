@@ -16,7 +16,7 @@ class BaseElement():
     element_id: str
     id: str
     properties: dict
-    style: dict
+    style: dict | None
 
 
 @dataclass

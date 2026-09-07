@@ -30,9 +30,9 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 	const [options, setOptions] = useState<Array<CustomSelectOptionType>>([]);
 	const [values, setValues] = useState<Array<NodeId>>([]);
 	const [selectedParaQuery, setSelectedParaQuery] = useState<ParaQuery | null>(null);
-	const [defaultParameterValues, setDefaultParameterValues] = useState<ParaQueryParameterValues>(
-		{}
-	);
+	const [defaultParameterValues, setDefaultParameterValues] = useState<
+		ParaQueryParameterValues | undefined
+	>(undefined);
 	const parametersRef = useRef<ParaQueryParameterValues>({});
 	const shouldPreselectByIdRef = useRef('');
 	const rootElementClassName = clsx('para-queries', className);
@@ -101,7 +101,7 @@ export const ParaQueries = ({ searchFunctionRef, id, className, testId }: ParaQu
 		onError: () => {
 			setValues([]);
 			setSelectedParaQuery(null);
-			setDefaultParameterValues({});
+			setDefaultParameterValues(undefined);
 
 			// remove timeout after https://github.com/db-ux-design-system/core-web/issues/6488 is resolved
 			window.setTimeout(() => {

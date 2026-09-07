@@ -78,16 +78,12 @@ export function processLicenses(): Plugin {
 		name: 'vite-plugin-custom-process-licenses',
 		apply: 'build',
 		writeBundle() {
-			try {
-				execSync(
-					'license-compliance --report=detailed --format=json --direct --allow="MIT;Apache-2.0;BSD-3-Clause;ISC" > dist/license-conflicts.json',
-					{
-						encoding: 'utf-8'
-					}
-				);
-			} catch (error: unknown) {
-				console.warn(parseNodeJsError(error));
-			}
+			execSync(
+				'license-compliance --report=detailed --format=json --direct --allow="MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC" > dist/license-conflicts.json',
+				{
+					encoding: 'utf-8'
+				}
+			);
 		}
 	};
 }

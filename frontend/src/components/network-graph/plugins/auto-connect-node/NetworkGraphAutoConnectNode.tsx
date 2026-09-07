@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Coordinates, MouseCoords, SigmaNodeEventPayload } from 'sigma/types';
 import {
 	calculateNodeGraphSize,
@@ -12,9 +13,10 @@ import { Node } from 'src/models/node';
 import { Relation } from 'src/models/relation';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
+import { useNotificationsStore } from 'src/stores/notifications';
 import { api } from 'src/utils/api/api';
 import { GraphEditorTypeSimplified } from 'src/utils/constants';
-import { generateNode } from 'src/utils/helpers/nodes';
+import { generateNode, getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
 import { generateRelation } from 'src/utils/helpers/relations';
 import { idFormatter } from 'src/utils/id-formatter';
 
@@ -42,6 +44,7 @@ export const NetworkGraphAutoConnectNode = () => {
 		relationConnectionTargetNodeId: string;
 		isModeActive: boolean;
 	}>({ ...defaultData });
+	const { t } = useTranslation();
 	const previousCoordinatesRef = useRef<Coordinates>({ x: 0, y: 0 });
 	const {
 		setIsLoading,
@@ -60,7 +63,6 @@ export const NetworkGraphAutoConnectNode = () => {
 	} = useGraphStore((state) => state);
 	const setNode = useItemsStore((store) => store.setNode);
 	const setRelation = useItemsStore((store) => store.setRelation);
-	const removeRelation = useItemsStore((store) => store.removeRelation);
 
 	useEffect(() => {
 		StateManager.getInstance().subscribe('nodeDown', onNodeDown);
@@ -256,87 +258,101 @@ export const NetworkGraphAutoConnectNode = () => {
 			return;
 		}
 
-		setIsLoading(true);
+		try {
+			setIsLoading(true);
 
-		let targetNodeId = relation.target_id;
-		let newNode: Node | null = null;
-		let newRelationFromServer: Relation | null = null;
-		const newRelationType = defaultRelationType ? defaultRelationType.id : relation.type;
+			let targetNodeId = relation.target_id;
+			let newNode: Node | null = null;
+			let newRelationFromServer: Relation | null = null;
+			const newRelationType = defaultRelationType
+				? getNodeSemanticIdOrId(defaultRelationType)
+				: relation.type;
 
-		// if connected to the moving node
-		if (!relationConnectionTargetNodeId) {
-			const defaultNodeLabelIds = defaultNodeLabels
-				? defaultNodeLabels.map((label) => label.id)
-				: [];
-			// store new node on server
-			const newNodeResponse = await api.nodes.fetch.postNode({
-				labels: defaultNodeLabelIds,
-				properties: {}
+			// if connected to the moving node
+			if (!relationConnectionTargetNodeId) {
+				const defaultNodeLabelIds = defaultNodeLabels
+					? defaultNodeLabels.map((label) => label.id)
+					: [];
+				// store new node on server
+				const newNodeResponse = await api.nodes.fetch.postNode({
+					labels: defaultNodeLabelIds,
+					properties: {}
+				});
+
+				// use the new node id from server when creating a relation
+				targetNodeId = newNodeResponse.data.id;
+
+				newNode = {
+					...newNodeResponse.data,
+					style: {
+						...newNodeResponse.data.style,
+						x: sigma.getGraph().getNodeAttribute(movingNodeId, 'x'),
+						y: sigma.getGraph().getNodeAttribute(movingNodeId, 'y')
+					}
+				};
+			}
+
+			// store new relation on server
+			const newRelationResponse = await api.relations.fetch.postRelation({
+				properties: {},
+				sourceId: relation.source_id,
+				targetId: targetNodeId,
+				type: newRelationType
 			});
 
-			// use the new node id from server when creating a relation
-			targetNodeId = newNodeResponse.data.id;
+			newRelationFromServer = newRelationResponse.data;
 
-			newNode = {
-				...newNodeResponse.data,
-				style: {
-					...newNodeResponse.data.style,
-					x: sigma.getGraph().getNodeAttribute(movingNodeId, 'x'),
-					y: sigma.getGraph().getNodeAttribute(movingNodeId, 'y')
-				}
-			};
-		}
+			setIsLoading(false);
+			temporaryDataRef.current = { ...defaultData };
 
-		// store new relation on server
-		const newRelationResponse = await api.relations.fetch.postRelation({
-			properties: {},
-			sourceId: relation.source_id,
-			targetId: targetNodeId,
-			type: newRelationType
-		});
+			// sync graph with node from server
+			if (newNode) {
+				setNode(newNode);
+				addGraphNode(newNode);
 
-		newRelationFromServer = newRelationResponse.data;
+				// After creating a node in the graph, Sigma won't register we are
+				// hovering the newly created node.That's why click on that node
+				// without moving your mouse won't work.
+				// There are some solutions (leaving for possible later use):
+				// #1
+				// (sigma as any).hoveredNode = newNodeFromServer.node.id;
+				// highlightNode(sigma, newNodeFromServer.node.id);
+				// #2
+				// sigma.refresh();
+				// sigma.getMouseCaptor().emit('mousemove', event);
+				// #3
+				// sigma.refresh();
+				// (sigma as any).activeListeners.handleMove(event);
+			}
 
-		setIsLoading(false);
-		temporaryDataRef.current = { ...defaultData };
+			// sync graph with relation from server
+			if (newRelationFromServer) {
+				setRelation(newRelationFromServer, true);
+				addGraphRelation(newRelationFromServer);
+				highlightGraphItemAndOpenInItemsDrawer(newRelationFromServer);
+			}
 
-		// sync graph with node from server
-		if (newNode) {
-			setNode(newNode);
-			addGraphNode(newNode);
+			sigma.refresh();
 
-			// After creating a node in the graph, Sigma won't register we are
-			// hovering the newly created node.That's why click on that node
-			// without moving your mouse won't work.
-			// There are some solutions (leaving for possible later use):
-			// #1
-			// (sigma as any).hoveredNode = newNodeFromServer.node.id;
-			// highlightNode(sigma, newNodeFromServer.node.id);
-			// #2
-			// sigma.refresh();
-			// sigma.getMouseCaptor().emit('mousemove', event);
-			// #3
-			// sigma.refresh();
-			// (sigma as any).activeListeners.handleMove(event);
-		}
+			removeGraphRelation(relation.id);
+			removeGraphNode(movingNodeId);
 
-		// sync graph with relation from server
-		if (newRelationFromServer) {
-			setRelation(newRelationFromServer, true);
-			addGraphRelation(newRelationFromServer);
-			highlightGraphItemAndOpenInItemsDrawer(newRelationFromServer);
-		}
+			// index only (temporary) relation has been removed
+			if (newRelationFromServer) {
+				indexParallelRelations();
+				adaptRelationTypeAndCurvature(newRelationFromServer.id);
+			}
+		} catch {
+			removeGraphRelation(relation.id);
+			removeGraphNode(movingNodeId);
+			setIsLoading(false);
+			temporaryDataRef.current = { ...defaultData };
 
-		sigma.refresh();
-
-		removeRelation(relation.id, true);
-		removeGraphRelation(relation.id);
-		removeGraphNode(movingNodeId);
-
-		// index only (temporary) relation has been removed
-		if (newRelationFromServer) {
-			indexParallelRelations();
-			adaptRelationTypeAndCurvature(newRelationFromServer.id);
+			useNotificationsStore.getState().addNotification({
+				title: t('notifications_failure_network_graph_autoconnect_title'),
+				description: t('notifications_failure_network_graph_autoconnect_description'),
+				type: 'critical'
+			});
 		}
 	};
 

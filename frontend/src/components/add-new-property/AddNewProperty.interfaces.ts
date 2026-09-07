@@ -1,3 +1,4 @@
+import { RefObject } from 'react';
 import { ItemProperty, ItemPropertyKey, ItemPropertyTypeWithListSubtypes } from 'src/models/item';
 import { Node } from 'src/models/node';
 import { GlobalComponentProps } from 'src/types/components';
@@ -7,7 +8,13 @@ export type AddNewPropertyProps = GlobalComponentProps & {
 	shouldHideKeyField?: boolean;
 	submitButtonText?: string;
 	isEditMode?: boolean;
+	handleRef?: RefObject<AddNewPropertyHandle>;
 };
+
+export type AddNewPropertyHandle = {
+	hasPendingData: () => boolean;
+	submitPendingData: () => Promise<boolean>;
+} | null;
 
 export type AddNewPropertyFormState = {
 	key: ItemPropertyKey;

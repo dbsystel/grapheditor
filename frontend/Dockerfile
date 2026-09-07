@@ -1,5 +1,5 @@
 ARG DOCKER_REGISTRY
-FROM ${DOCKER_REGISTRY}node:20-bookworm
+FROM ${DOCKER_REGISTRY}node:24-bookworm
 
 WORKDIR /opt/grapheditor-frontend
 

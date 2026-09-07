@@ -22,12 +22,7 @@ type StateManagerStateKeys = keyof typeof StateManagerStates;
 type StateManagerStateValues = (typeof StateManagerStates)[StateManagerStateKeys];
 
 type PayloadType<T extends StateManagerStateValues> = T extends
-	| 'nodeDown'
-	| 'nodeEnter'
-	| 'nodeLeave'
-	| 'nodeClick'
-	| 'nodeTooltip'
-	| 'nodeContextMenu'
+	'nodeDown' | 'nodeEnter' | 'nodeLeave' | 'nodeClick' | 'nodeTooltip' | 'nodeContextMenu'
 	? SigmaNodeEventPayload
 	: T extends
 				| 'relationEnter'

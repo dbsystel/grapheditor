@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 type UseApiHookParams<ResponseType, FetchParametersType, FetchErrorType> = {
 	executeImmediately?: boolean;
+	onBefore?: () => void;
 	onSuccess?: (data: ResponseType) => void;
 	onError?: (error: FetchErrorType) => void;
 	onFinally?: () => void;
@@ -19,6 +20,7 @@ type UseApiHookParams<ResponseType, FetchParametersType, FetchErrorType> = {
  */
 export const useApiHook = <ResponseType, FetchParametersType = never, FetchErrorType = AxiosError>({
 	executeImmediately = true,
+	onBefore,
 	onSuccess,
 	onError,
 	onFinally,
@@ -44,6 +46,10 @@ export const useApiHook = <ResponseType, FetchParametersType = never, FetchError
 		setIsLoading(true);
 		setError(null);
 		setResponse(null);
+
+		if (onBefore) {
+			onBefore();
+		}
 
 		// states are updated in .then and .catch methods instead of the .finally in order
 		// to prevent one extra re-render, because the .finally method is executed after the
@@ -83,9 +89,9 @@ export const useApiHook = <ResponseType, FetchParametersType = never, FetchError
 	}, dependencies);
 
 	return {
-		response,
-		error,
-		isLoading,
+		response: response,
+		error: error,
+		isLoading: isLoading,
 		reFetch: fetchData
 	};
 };

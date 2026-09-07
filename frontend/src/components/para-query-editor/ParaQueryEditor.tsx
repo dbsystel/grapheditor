@@ -1,5 +1,5 @@
 import './ParaQueryEditor.scss';
-import { DBInput } from '@db-ux/react-core-components';
+import { DBCustomSelect, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -61,26 +61,55 @@ export const ParaQueryEditor = ({
 
 		const type = parameter.type;
 		const isTypeInteger = type === 'integer';
-
-		const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-			onParameterChange(parameterKey, event.target.value, type);
-		};
-
 		const defaultValue = defaultParameterValues
 			? defaultParameterValues[parameterKey]
 			: parameter.default_value;
 		const inputType = isTypeInteger ? 'number' : 'string';
 
-		return (
-			<DBInput
-				label={parameter.help_text}
-				defaultValue={defaultValue}
-				onChange={onChange}
-				dataList={parameter.suggestions}
-				validation="no-validation"
-				type={inputType}
-			/>
-		);
+		// if parameter "suggestions" property defined, treat it as a dropdown, otherwise as regular input
+		if (parameter.suggestions) {
+			const options = parameter.suggestions
+				? parameter.suggestions.map((suggestion) => {
+						return {
+							label: suggestion,
+							value: suggestion
+						};
+					})
+				: [];
+
+			const onChange = (values: Array<string>) => {
+				onParameterChange(parameterKey, values.at(0) || '', type);
+			};
+
+			const value = defaultValue ? [defaultValue.toString()] : [];
+
+			return (
+				<DBCustomSelect
+					label={parameter.help_text}
+					values={value}
+					options={options}
+					onOptionSelected={onChange}
+					validation="no-validation"
+					dropdownWidth="auto"
+					showNoResults={false}
+				/>
+			);
+		} else {
+			const onChange = (event: ChangeEvent<HTMLInputElement>) => {
+				onParameterChange(parameterKey, event.target.value, type);
+			};
+
+			return (
+				<DBInput
+					label={parameter.help_text}
+					defaultValue={defaultValue}
+					onChange={onChange}
+					dataList={parameter.suggestions}
+					validation="no-validation"
+					type={inputType}
+				/>
+			);
+		}
 	};
 
 	return (

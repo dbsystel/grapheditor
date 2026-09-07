@@ -26,6 +26,7 @@ export const ItemPropertiesTable = ({
 	onPropertyDelete,
 	onPropertyTypeChange,
 	isEditMode,
+	shouldIgnoreMenuPositionFix = true,
 	id,
 	className,
 	testId
@@ -163,7 +164,8 @@ export const ItemPropertiesTable = ({
 										className="item-properties-table__menu-button menu-button--inline-end-fix"
 										optionsPlacement="bottom-start"
 										options={menuOptions}
-										shouldIgnorePositionFix={true}
+										shouldIgnorePositionFix={shouldIgnoreMenuPositionFix}
+										buttonSize="small"
 									/>
 								</TableCell>
 							)}

@@ -753,7 +753,7 @@ export const getEdgeLabelAtPoint = (x: number, y: number): string | null => {
 	return topMostEdge;
 };
 
-export const scaleNodeCoordinates = (scaleX: number, scaleY: number) => {
+export const scaleNodeCoordinates = (axis: { x: number; y: number }) => {
 	const sigma = useGraphStore.getState().sigma;
 	const graph = sigma.getGraph();
 
@@ -765,8 +765,8 @@ export const scaleNodeCoordinates = (scaleX: number, scaleY: number) => {
 		}
 
 		graph.mergeNodeAttributes(nodeId, {
-			x: attributes._originalX * scaleX,
-			y: attributes._originalY * scaleY
+			x: attributes._originalX * axis.x,
+			y: attributes._originalY * axis.y
 		});
 	});
 

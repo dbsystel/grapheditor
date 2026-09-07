@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { I18nType } from 'src/i18n';
+import { _008_stopCypherQuery } from 'src/tests/e2e/suites/008-stop-cypher-query';
 import { extendedTest } from 'src/tests/e2e-setup';
 import { _001_loginAndChangeDatabase } from './001-login-and-change-database';
 import { _002_closeCpuRenderingNotification } from './002-close-cpu-rendering-notification';
@@ -61,6 +62,12 @@ extendedTest.describe('App E2E Flow', () => {
 	extendedTest.describe('Left sidebar - Presentation options', () => {
 		extendedTest('Switch between presentation options', async () => {
 			await _007_switchBetweenPresentationOptions({ page: page, i18n: i18nInstance });
+		});
+	});
+
+	extendedTest.describe('Header - Stop cypher query', () => {
+		extendedTest('stop running cypher query', async () => {
+			await _008_stopCypherQuery({ page: page, i18n: i18nInstance });
 		});
 	});
 });

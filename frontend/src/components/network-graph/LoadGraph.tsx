@@ -9,6 +9,7 @@ import {
 	onNodesUpdate,
 	onRelationsRemove,
 	onRelationsUpdate,
+	scaleNodeCoordinates,
 	showGraphContainer
 } from 'src/components/network-graph/helpers';
 import { useGraphStore } from 'src/stores/graph';
@@ -33,11 +34,12 @@ export const LoadGraph = () => {
 		setIsGraphRendered,
 		sigma
 	} = useGraphStore((store) => store);
+	const { t } = useTranslation();
 	const { getStoreNode, getStoreRelation, nodes, relations } = useItemsStore((store) => store);
 	const algorithm = useSearchStore((store) => store.algorithm);
 	const theme = useSettingsStore((store) => store.theme);
 	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const { t } = useTranslation();
+	const nodeAxisFactor = useGraphStore((store) => store.nodeAxisFactor);
 
 	useEffect(() => {
 		const disableAutoscale = () => {
@@ -116,6 +118,8 @@ export const LoadGraph = () => {
 		indexAndRefreshGraph();
 
 		const needToSubscribeToAfterRender = applySelectedAlgorithm();
+
+		scaleNodeCoordinates(nodeAxisFactor);
 
 		if (needToSubscribeToAfterRender) {
 			sigma.once('afterRender', fitGraph);

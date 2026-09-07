@@ -1,4 +1,5 @@
 Authlib
+cryptography
 flask
 flask_cors
 flask_session
@@ -8,12 +9,11 @@ markdown
 python-dotenv
 pyparsing
 pytest
-pylint==3.3.8
+pylint==3.3.9
 pytz
 git-pylint-commit-hook
 requests
 RestrictedPython
 waitress
 pre-commit
-testcontainers
 gunicorn

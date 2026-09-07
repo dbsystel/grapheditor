@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["npm"],
+  "npmrc": "registry=https://bahnhub.tech.rz.db.de/artifactory/api/npm/npm-remote/",
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "groupName": "npm updates",
+      "branchName": "942_npm_updates",
+      "minimumReleaseAge": "7 days"
+    }
+  ]
+}

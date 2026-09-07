@@ -173,6 +173,7 @@ export const GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP = 0.1;
 export const GRAPH_DEFAULT_LABEL_LIGHT_COLOR = '#ffffff';
 export const GRAPH_DEFAULT_LABEL_DARK_COLOR = '#1c1818ff';
 export const GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD = 0;
+export const GRAPH_DEFAULT_NODE_AXIS_FACTOR = Object.freeze({ x: 1, y: 1 });
 
 export const GRAPH_SELECTED_EDGE_COLOR = DB_COLOR;
 export const GRAPH_HIDE_ALL_LABELS_THRESHOLD = 1000;
@@ -193,3 +194,5 @@ export const NOT_AVAILABLE_SIGN = 'N/A';
 export const APP_LANGUAGES = Object.freeze<['en', 'de', 'cimode']>(['en', 'de', 'cimode']);
 export const APP_STORAGE_KEY_PREFIX = '_app_';
 export const SSO_HOST_STORAGE_KEY = APP_STORAGE_KEY_PREFIX + 'sso-host';
+
+export const STOPPABLE_REQUEST_HEADER_KEY = 'x-request-id';

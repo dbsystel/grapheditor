@@ -1,20 +1,22 @@
 from functools import wraps
-from flask import abort, current_app, g, redirect, request, session
+from flask import abort, current_app, g, make_response, redirect, request, session
 from flask.views import MethodView
 from flask_smorest import Blueprint
 import neo4j
+from cryptography.fernet import Fernet
 from blueprints.maintenance import headers_model
 from blueprints.maintenance import login_model
-from database.auth import oauth, ensure_valid_token
+from database.auth import get_username, ensure_valid_token, encrypt_password, LoginRequired
 from database.neo4j_connection import Neo4jConnection, neo4j_connect
 from database.utils import abort_with_json
+from database.settings import config
 
 blp = Blueprint("Login", __name__, description="Authentication functionality")
 
 def require_tab_id():
     """Simple decorator to mandate 'x-tab-id' in the HTTP header without
     requiring the function to have an extra argument for it. x-tab-id
-    is used in the 'load_metamodels' as a before_request function.
+    is used in the 'prepare_connection' as a before_request function.
     """
 
     def decorator(f):
@@ -38,22 +40,6 @@ def require_tab_id():
     return decorator
 
 
-def _get_username():
-    username = g.conn.username if hasattr(g.conn, "username") else None
-    if not username and g.conn.token:
-        # try several keys
-        userinfo = oauth.oidc.userinfo(token = g.conn.token)
-        if not userinfo:
-            abort_with_json(401, "Missing userinfo")
-        # starting with email helps to distinguish from a regular
-        # login using username/password.
-        for key in ['email', 'name', 'sub']:
-            if val := userinfo.get(key):
-                username = val
-                break
-    return username
-
-
 @blp.route("login")
 class Login(MethodView):
     @blp.response(200, login_model.LoginGetResponseSchema)
@@ -64,7 +50,7 @@ class Login(MethodView):
         if hasattr(g, "conn"):
             return {
                 "host": g.conn.host,
-                "username": _get_username()
+                "username": get_username()
             }
         abort(401)
 
@@ -109,18 +95,28 @@ class Login(MethodView):
         host = login_data.get("host")
         # In order for SSO to work, both the Neo4j-Server and Flask (see OIDC_ vars in
         # .env) must be properly configured.
+
+        use_token = False
         if login_data.get("useToken", False):
             if "oidc_auth_token" not in session:
                 current_app.logger.info("Missing token, redirecting to SSO login.")
                 return redirect("/sso_login")
             # update session token
-            token = ensure_valid_token()
+            try:
+                use_token = True
+                token = ensure_valid_token()
+            except LoginRequired:
+                # Stale or corrupt token — clear it and restart the SSO flow.
+                session.pop("oidc_auth_token", None)
+                current_app.logger.info("Corrupt token cleared, redirecting to SSO login.")
+                return redirect("/sso_login")
         try:
             conn = Neo4jConnection(
                 host=login_data["host"],
                 username=login_data.get("username"),
                 password=login_data.get("password"),
-                token=token)
+                token=token,
+                use_token=use_token)
         except neo4j.exceptions.DriverError as e:
             abort_with_json(401, f"Error connecting to Neo4j: {e}")
         if not conn.is_valid():
@@ -129,14 +125,26 @@ class Login(MethodView):
         session["last_tab_id"] = tab_id
         g.conn = conn
 
-        # login successful, persist connection data into session.
+        # Store login data in session with the password encrypted, so it is
+        # not readable in plaintext from the session file.
         if "login_data" not in session:
             session["login_data"] = dict()
-        session["login_data"][tab_id] = login_data
-        return {
-            "username": _get_username(),
-            "host": host
-        }
+        session_login_data = dict(login_data)
+        enc_key_str = request.cookies.get("enc_key")
+        if not enc_key_str:
+            enc_key_str = Fernet.generate_key().decode()
+        if password := session_login_data.get("password"):
+            session_login_data["password"] = encrypt_password(password, enc_key_str.encode())
+        session["login_data"][tab_id] = session_login_data
+        response = make_response({"username": get_username(), "host": host})
+        response.set_cookie(
+            "enc_key",
+            enc_key_str,
+            httponly=True,
+            samesite="Strict",
+            secure=config.https_enabled
+        )
+        return response
 
 
 @blp.route("logout")

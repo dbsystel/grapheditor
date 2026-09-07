@@ -6,7 +6,8 @@
 // we could use `:param` to define dbName, but then we couldn't
 // install triggers to many databases at once.
 
-UNWIND ['neo4j'] AS dbName
+// :param databases => ["neo4j"]
+UNWIND $databases AS dbName
 CALL apoc.systemdb.execute(
   [
     "CALL apoc.custom.installFunction(

@@ -18,6 +18,7 @@ import {
 } from 'src/components/network-graph/NetworkGraph.interfaces';
 import { Node, NodeId } from 'src/models/node';
 import { Relation, RelationId } from 'src/models/relation';
+import { RequireAtLeastOne } from 'src/types/general';
 import {
 	APP_STORAGE_KEY_PREFIX,
 	GRAPH_DEFAULT_EDGE_LABEL_SIZE,
@@ -26,6 +27,7 @@ import {
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MIN,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_STEP,
 	GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD,
+	GRAPH_DEFAULT_NODE_AXIS_FACTOR,
 	GRAPH_DEFAULT_NODE_LABEL_SIZE,
 	GRAPH_HIDE_ALL_LABELS_THRESHOLD,
 	GRAPH_SELECTED_EDGE_COLOR
@@ -112,6 +114,8 @@ type GraphStore = {
 	setNodeSizeFactor: (newNodeSizeFactor: number) => void;
 	isRenderingCapabilitiesWarningShown: boolean;
 	setIsRenderingCapabilitiesWarningShown: (isRenderingCapabilitiesWarningShown: boolean) => void;
+	nodeAxisFactor: { x: number; y: number };
+	setNodeAxisFactor: (axisFactor: RequireAtLeastOne<{ x: number; y: number }>) => void;
 };
 
 type InitialState = Omit<
@@ -153,6 +157,8 @@ type InitialState = Omit<
 	| 'getNodeSizeFactor'
 	| 'setNodeSizeFactor'
 	| 'setIsRenderingCapabilitiesWarningShown'
+	| 'setNodeAxisFactor'
+	| 'resetNodeAxisFactor'
 >;
 
 const getInitialState: () => InitialState = () => {
@@ -191,10 +197,11 @@ const getInitialState: () => InitialState = () => {
 		zoomFactorMin: 1.1,
 		zoomFactorMax: 3,
 		zoomFactorStep: 0.1,
-		labelFontSizeFactor: 1,
+		labelFontSizeFactor: GRAPH_DEFAULT_FONT_SIZE_FACTOR,
 		labelsRendered: true,
 		nodeSizeFactor: 1,
-		isRenderingCapabilitiesWarningShown: false
+		isRenderingCapabilitiesWarningShown: false,
+		nodeAxisFactor: { ...GRAPH_DEFAULT_NODE_AXIS_FACTOR }
 	};
 };
 
@@ -582,6 +589,14 @@ export const useGraphStore = create<GraphStore>()(
 						(GRAPH_DEFAULT_EDGE_LABEL_SIZE / camera.ratio) * get().labelFontSizeFactor
 					);
 					get().toggleLabelsVisibility();
+				},
+				setNodeAxisFactor: (axisFactor) => {
+					set({
+						nodeAxisFactor: {
+							...get().nodeAxisFactor,
+							...axisFactor
+						}
+					});
 				}
 			};
 		},

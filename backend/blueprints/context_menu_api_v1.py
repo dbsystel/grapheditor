@@ -31,9 +31,7 @@ class ContextMenuAction(MethodView):
         relations."""
         # ignore other kinds of IDs for now
         nodes = list(current_app.graph_db.get_nodes_by_ids(node_ids).values())
-        relations = list(
-            current_app.graph_db.get_relations_by_ids(relation_ids).values()
-        )
+        relations = [r[1] for r in current_app.graph_db.get_relations_by_ids(relation_ids)]
 
         actions = context_menu_model.select_actions(nodes, relations)
 

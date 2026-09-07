@@ -114,8 +114,7 @@ export type SearchStoreType =
 
 // search store search types
 export type SearchStoreSearchType =
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
-	| typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT;
+	typeof GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY | typeof GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT;
 
 /**
  * Store for keeping tracking user search results.
@@ -144,6 +143,7 @@ export const useSearchStore = create<SearchStore>()(
 					[GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY]: [],
 					[GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT]: []
 				},
+				requestId: '',
 				setType: (type) => set({ type: type }),
 				setQuery: (query) => set({ query: query }),
 				setCypherQueryParameters: (parameters) => {

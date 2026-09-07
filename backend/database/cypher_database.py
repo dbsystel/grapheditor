@@ -4,14 +4,14 @@
 # can still subclass it.
 
 from uuid import uuid4
-from typing import Any
+from typing import Any, Generator
 
 import msgspec
 from flask import abort, g, current_app
 import neo4j.exceptions
 
 from database import mapper, id_handling
-from database.graph_database import GraphDatabase
+from database.graph_database import GraphDatabase, RelationEnd
 from database.id_handling import (
     extract_id_metatype,
     get_base_id,
@@ -39,7 +39,9 @@ class CypherDatabase(GraphDatabase):
         return g.conn.run(*args, **kwargs)
 
     # ======================= Node related ====================================
-    def create_nodes(self, node_data_list: list[dict]) -> dict[str, BaseNode]:
+    def create_nodes(
+            self, node_data_list: list[dict], preserve_import_uuid: bool = False
+    ) -> dict[str, BaseNode]:  # 00_ai
         """Create multiple nodes at once.
         Return a dictionary mapping IDs to the generated nodes.
 
@@ -47,17 +49,22 @@ class CypherDatabase(GraphDatabase):
         """
 
         for node_data in node_data_list:
+            imported_uuid = node_data["properties"].get("_uuid__tech_")
             updated_properties = {
                 k: v for k, v in node_data["properties"].items()
-                # we don't want to allow the user to set an UUID. This is
-                # specially important if this method is used for copying
-                # existing nodes.
+                # We normally ignore user-provided UUIDs to avoid accidental
+                # identity collisions during regular creates/copies.
                 if get_base_id(k) != "_uuid__tech_"
             }
-            # we don't leave generation of an UUID for a trigger, since
-            # it's not generated immediately and we want to return
-            # a node containing it.
-            updated_properties.update({'_uuid__tech_': str(uuid4())})
+            # For import overwrite fallback (not found -> create), we may keep
+            # UUIDs from file so the imported identity stays stable.
+            if preserve_import_uuid and imported_uuid:
+                updated_properties.update({'_uuid__tech_': imported_uuid})
+            else:
+                # we don't leave generation of an UUID for a trigger, since
+                # it's not generated immediately and we want to return
+                # a node containing it.
+                updated_properties.update({'_uuid__tech_': str(uuid4())})
             node_data['properties'] = updated_properties
 
         query_text = """
@@ -106,6 +113,23 @@ class CypherDatabase(GraphDatabase):
         if n:
             return n
         return None
+
+    def iter_nodes_by_element_ids(self, ids):  # 00_ai 00_streaming
+        """Yield BaseNode objects for the given IDs.
+
+        Accepts both raw element IDs (``"4:abc:42"``) and prefixed
+        IDs (``"id::4:abc:42"``).  The ``id::`` prefix is stripped
+        automatically via ``parse_db_id``.
+        """
+        raw_ids = [parse_db_id(i) or i for i in ids]
+        result = self._run(
+            "MATCH (n) WHERE elementId(n) IN $eids RETURN n",
+            eids=raw_ids,
+        )
+        for row in result:
+            node = BaseNode.from_neo_node(row["n"])
+            if node:
+                yield node
 
     def get_nodes_by_ids(self, ids:list[str],
                          filters:dict|None=None) -> dict[str, BaseNode]:
@@ -164,7 +188,6 @@ class CypherDatabase(GraphDatabase):
 
     def get_nodes_by_names(self, names: list[str], filters:dict[str, Any] | None = None) -> dict:
         """Fetch multiple nodes by name__tech_.
-        
         Return a map of name to the corresponding node.
         If a name is not found, leave it out of the map.
 
@@ -270,7 +293,7 @@ class CypherDatabase(GraphDatabase):
             result[row["original_id"]] = row["raw_db_id"]
         return result
 
-    def ids_to_raw_db_ids(self, ids):
+    def ids_to_raw_db_ids(self, ids: list[str]) -> dict[str, str]:
         """Convert a list of IDs to a map of them to raw database ID."""
         semantic_ids = list(filter(parse_semantic_id, ids))
         raw_db_ids = list(filter(parse_db_id, ids))
@@ -653,7 +676,7 @@ class CypherDatabase(GraphDatabase):
 
     def get_relations_by_node_ids(
             self, node_ids: list[str], exclude_relation_types: bool = None
-    ) -> list[BaseRelation]:
+    ) -> Generator[BaseRelation]: # 00_streaming
         """Return all relations that have any of the nodes with IDs 'node_ids'
         as source and/or target.
         """
@@ -670,7 +693,7 @@ class CypherDatabase(GraphDatabase):
             node_ids=node_ids,
             exclude_relation_types=exclude_relation_types
         )
-        return [BaseRelation.from_neo_relation(row["r"]) for row in result]
+        return (BaseRelation.from_neo_relation(row["r"]) for row in result)
 
 
     def get_nodes_neighbors(
@@ -770,19 +793,23 @@ class CypherDatabase(GraphDatabase):
          OR (
             {var_name}.`_ft__tech_` IS NULL
             AND ANY(prop in keys({var_name})
-                WHERE (NOT prop STARTS WITH "_")
-                      AND ((toLower(toStringOrNull({var_name}[prop])) STARTS WITH toLower($text))
-                           OR (toLower(prop) STARTS WITH toLower($text))))
+                    WHERE (NOT prop STARTS WITH "_")
+                    AND ((toLower(toStringOrNull({var_name}[prop])) STARTS WITH toLower($text))
+                         OR (toLower(prop) STARTS WITH toLower($text))))
             OR toLower(elementid({var_name})) CONTAINS toLower($text)))
         """
 
-    def _query_nodes_with_nft(self, text: str, labels: list[str]) -> dict[str, BaseNode]:
+    def _query_nodes_with_nft(
+            self, text: str, labels: list[str], limit: int|None = None
+    ) -> dict[str, BaseNode]:
         labels_filter_expr = """
         any(lab IN $labels WHERE lab IN labels(n))
         """ if labels else ""
 
-        query = f"""
-        CALL db.index.fulltext.queryNodes("nft", $text, {{limit: {FT_SEARCH_MAX_RESULTS}}})
+        limit = limit or FT_SEARCH_MAX_RESULTS
+
+        query = """
+        CALL db.index.fulltext.queryNodes("nft", $text, {limit: $limit})
         YIELD node AS n, score
         """
         # Escape colon, otherwise searching for an element ID results in a crash.
@@ -791,7 +818,9 @@ class CypherDatabase(GraphDatabase):
         if labels_filter_expr:
             query += f"WHERE {labels_filter_expr} "
         query += "RETURN n, elementid(n) AS nid, score"
-        result = self._run(query, text=text, labels=labels)
+        if limit:
+            query += " LIMIT $limit"
+        result = self._run(query, text=text, labels=labels, limit=limit)
         # If we allow any score, some things become confusing to the user. For
         # example searching for an ID returns every node/relation in the graph,
         # since a big portion of Neo4j's element IDs are equal.
@@ -803,7 +832,9 @@ class CypherDatabase(GraphDatabase):
         return nodes
 
 
-    def _query_nodes_scan_props(self, text: str, labels: list[str]) -> dict[str, BaseNode]:
+    def _query_nodes_scan_props(
+            self, text: str, labels: list[str], limit: int|None=None
+    ) -> dict[str, BaseNode]:
 
         if labels:
             query = "MATCH (n:$any($labels)) "
@@ -814,8 +845,10 @@ class CypherDatabase(GraphDatabase):
             query += self._property_search_query_str('n')
 
         query += "RETURN n, elementid(n) AS nid"
+        if limit:
+            query += " LIMIT $limit"
 
-        result = self._run(query, text=text, labels=labels)
+        result = self._run(query, text=text, labels=labels, limit=limit)
         nodes = {
             row['nid']: BaseNode.from_neo_node(row["n"])
             for row in result
@@ -823,7 +856,7 @@ class CypherDatabase(GraphDatabase):
         return nodes
 
 
-    def query_nodes(self, text: str, labels: list[str], pseudo: bool) -> list[BaseNode]:
+    def query_nodes(self, text: str, labels: list[str], limit: int|None=None) -> list[BaseNode]:
         """Return nodes which contain text and labels.
 
         If the database has _ft__tech_ support, use it. Otherwise search
@@ -850,9 +883,9 @@ class CypherDatabase(GraphDatabase):
             # even though the ID is in the database and in the _ft__tech_
             # property.  So we do two queries, one with and one without wildcard.
 
-            nodes = self._query_nodes_with_nft(text, labels)
+            nodes = self._query_nodes_with_nft(text, labels, limit)
         else:
-            nodes = self._query_nodes_scan_props(text, labels)
+            nodes = self._query_nodes_scan_props(text, labels, limit)
         return list(nodes.values())
 
     # ======================= Relation related ================================
@@ -866,7 +899,24 @@ class CypherDatabase(GraphDatabase):
             return None
         return self._get_relation_by_raw_db_id(raw_db_id)
 
-    def get_relations_by_ids(self, rids: list[str]) -> dict[str, BaseRelation]:
+    def get_relations_by_uuids(self, uuids: list[str]) -> dict:  # 00_ai
+        """Fetch relations by their _uuid__tech_ property.
+
+        Return a map of uuid value to BaseRelation."""
+        if not uuids:
+            return {}
+        query = """
+        UNWIND $uuids AS uuid
+        MATCH ()-[r]->() WHERE r._uuid__tech_ = uuid
+        RETURN r, r._uuid__tech_ AS uuid_val
+        """
+        res = self._run(query, uuids=uuids)
+        return {
+            row["uuid_val"]: BaseRelation.from_neo_relation(row["r"])
+            for row in res
+        }
+
+    def get_relations_by_ids(self, rids: list[str]) -> Generator[(str, BaseRelation)]:
         """Fetch relations by their IDs. Return a map of IDs to
         Relation objects.  Assume all IDs are in the format
         id::<id> ."""
@@ -879,10 +929,16 @@ class CypherDatabase(GraphDatabase):
         RETURN r, id
         """
         res = self._run(query, ids=list(id_map.keys()))
-        return {
-            id_map[row["id"]]: BaseRelation.from_neo_relation(row["r"])
-            for row in res
-        }
+
+        return (
+            (id_map[row["id"]], BaseRelation.from_neo_relation(row["r"])) for row in res
+        )
+
+        #
+        # return {
+        #     id_map[row["id"]]: BaseRelation.from_neo_relation(row["r"])
+        #     for row in res
+        # }
 
     def _get_relation_by_raw_db_id(self, rid):
         result = self._run(
@@ -965,7 +1021,9 @@ class CypherDatabase(GraphDatabase):
             return BaseRelation.from_neo_relation(new_rel)
         return BaseRelation.from_neo_relation(new_rel)
 
-    def create_relations(self, relation_data_list: list[dict]) -> dict[str, BaseRelation]:
+    def create_relations(
+            self, relation_data_list: list[dict], preserve_import_uuid: bool = False
+    ) -> dict[str, BaseRelation]:  # 00_ai
         """Create multiple nodes at once.
         Return a dictionary mapping IDs to generated relations.
 
@@ -973,15 +1031,19 @@ class CypherDatabase(GraphDatabase):
         """
 
         for relation_data in relation_data_list:
+            imported_uuid = relation_data.get('properties', {}).get("_uuid__tech_")
             updated_properties = {
                 k: v
                 for k, v in relation_data.get('properties', {}).items()
                 if k != "_uuid__tech_"
             }
-            # we don't leave generation of an UUID for a trigger, since
-            # it's not generated immediately and we want to return
-            # a node containing it.
-            updated_properties.update({'_uuid__tech_': str(uuid4())})
+            if preserve_import_uuid and imported_uuid:
+                updated_properties.update({'_uuid__tech_': imported_uuid})
+            else:
+                # we don't leave generation of an UUID for a trigger, since
+                # it's not generated immediately and we want to return
+                # a node containing it.
+                updated_properties.update({'_uuid__tech_': str(uuid4())})
             relation_data['properties'] = updated_properties
 
         query_text = """
@@ -1376,35 +1438,6 @@ class CypherDatabase(GraphDatabase):
 
 
     # ---------------------- General information ------------------------------
-    def _get_metaobjects(self, metalabel):
-        """Get all elements with the given 'metalabel' (MetaLabel, MetaProperty
-        etc.)"""
-        query = f"""MATCH (def: {metalabel})
-                    RETURN def.name__tech_ AS def_name"""
-        query_result = self._run(query)
-        result = {r["def_name"] for r in query_result}
-        return result
-
-    def _get_metalabels(self):
-        g.modelled_labels = self._get_metaobjects("MetaLabel__tech_")
-        return g.modelled_labels
-
-    def _get_metaproperties(self):
-        g.modelled_properties = self._get_metaobjects("MetaProperty__tech_")
-        return g.modelled_properties
-
-    def _get_metarelations(self):
-        g.modelled_relation_types = self._get_metaobjects("MetaRelation__tech_")
-        return g.modelled_relation_types
-
-    def load_metamodels(self):
-        """Load metamodels and set corresponding "globals".
-
-        This is needed in order to correctly build semantic ids.
-        """
-        self._get_metalabels()
-        self._get_metaproperties()
-        self._get_metarelations()
 
     def get_all_labels(self, nids: list[str] | None = None) -> list[str]:
         """Return all labels available in graph.
@@ -1432,23 +1465,33 @@ class CypherDatabase(GraphDatabase):
             labels.add(label)
         return sorted(list(labels))
 
-    def get_all_types(self) -> list[str]:
-        """Return all relation types."""
-        query = """
+    def get_all_types(self, text:str|None=None, limit:int|None=None) -> dict[str, BaseNode | None]:
+        """Return all relation types as a map node ID -> MetaLabel | None."""
+
+        # we add 1 to limit, so that we are able to recognize whether all results were returned.
+        limit_filter = " LIMIT $limit + 1" if limit else ""
+
+        query = f"""
         MATCH ()-[r]->()
-        RETURN DISTINCT type(r) AS type
+        {"WHERE type(r) CONTAINS $text" if text else ""}
+        RETURN DISTINCT type(r) AS type, NULL AS metarelation
         UNION
         MATCH (m:MetaRelation__tech_)
         WHERE m.name__tech_ IS NOT NULL
-        RETURN DISTINCT m.name__tech_ AS type
+        {
+          "AND (m.name__tech_ CONTAINS $text OR m.description__tech_ CONTAINS $text)"
+          if text else ""
+        }
+        RETURN DISTINCT m.name__tech_ AS type, m AS metarelation
+        {limit_filter}
         """
-        result = self._run(query)
-        stringids = set()
+        result = self._run(query, text=text, limit=limit)
+        rel_types = dict()
         for r in result:
             rel_type = r["type"]
-            stringid = rel_type
-            stringids.add(stringid)
-        return sorted(list(stringids))
+            metarel = r["metarelation"]
+            rel_types[rel_type] = BaseNode.from_neo_node(metarel) if metarel else None
+        return rel_types
 
     def _sort_property_names(self, result):
         """Collect and sort property names."""
@@ -1496,7 +1539,149 @@ class CypherDatabase(GraphDatabase):
         result = self._run(query)
         return self._sort_property_names(result)
 
-    def features(self) -> list[DatabaseFeature]:
+    def get_relation_type_suggestions(self, source_id:str|None=None, target_id:str|None=None,
+                                      text: str|None=None, limit:int|None=None
+                                      ) -> dict[str, BaseNode]:
+        """Return a list of suggested MetaRelation nodes for the given source/target node ID.
+        Assume at least a source_id or target_id is provided.
+        """
+        assert source_id or target_id
+        two_ends = False
+
+        if source_id and target_id:
+            two_ends = True
+            dir_rel = "source__tech_|target__tech_"
+        elif source_id:
+            dir_rel = "source__tech_"
+        else:
+            dir_rel = "target__tech_"
+
+        # we add 1 to limit, so that we are able to recognize whether all results were returned.
+        limit_filter = " LIMIT $limit + 1" if limit else ""
+
+        # no point in breaking a MATCH clause
+        # pylint: disable=line-too-long
+
+        if two_ends:
+            query = f"""
+                MATCH (s)
+                WHERE elementid(s) = $source_id
+                WITH labels(s) AS source_metalabels
+                MATCH (t)
+                WHERE elementid(t) = $target_id
+                WITH source_metalabels, labels(t) AS target_metalabels
+                MATCH (a:MetaLabel__tech_)-[s_rel:source__tech_]->(c:Restriction__tech_)<-[t_rel:target__tech_]-(b:MetaLabel__tech_)
+                WHERE a.name__tech_ IN source_metalabels AND b.name__tech_ IN target_metalabels
+                WITH c
+                MATCH (metarel:MetaRelation__tech_)<-[r:restricts__tech_]-(c)
+                {"WHERE metarel.name__tech_ CONTAINS $text OR metarel.description__tech_ CONTAINS $text" if text else ""}
+                RETURN metarel.name__tech_ AS metarel_name, metarel
+                {limit_filter}
+            """
+            result = self._run(query, source_id=source_id, target_id=target_id, text=text, limit=limit)
+        else:
+            query = f"""
+                MATCH (n) WHERE elementid(n) = $node_id
+                WITH labels(n) AS possible_metalabels
+                MATCH (a:MetaLabel__tech_)-[r:{dir_rel}]->(b:Restriction__tech_)-[r2:restricts__tech_]->(metarel:MetaRelation__tech_)
+                WHERE a.name__tech_ IN possible_metalabels
+                {"AND (metarel.name__tech_ CONTAINS $text OR metarel.description__tech_ CONTAINS $text)" if text else ""}
+                RETURN metarel.name__tech_ AS metarel_name, metarel
+                {limit_filter}
+            """
+            result = self._run(query, node_id=source_id or target_id, text=text, limit=limit)
+        return {row["metarel_name"]: BaseNode.from_neo_node(row["metarel"]) for row in result}
+
+    # TODO pylint 4 is ok with this, remove after upgrading it
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def get_relation_end_suggestions(
+            self, end:RelationEnd, neighbor_id=None,
+            relation_type:str|None=None, limit:int|None=None,
+            text: str|None = None
+    ) -> dict[str, BaseNode]:
+        """Return model-derived suggestions for the given relation end (source or target).
+        """
+
+        # This method has many similarities to get_relation_type_suggestions where
+        # one could think about merging them in some form, maybe abstracting away the
+        # common part. I've tried it and got a working version, but honestly the
+        # code was less clear than splitting into two functions.
+
+        if end == RelationEnd.SOURCE:
+            neighbor_dir = "target__tech_"
+            this_dir = "source__tech_"
+        else:
+            neighbor_dir = "source__tech_"
+            this_dir = "target__tech_"
+
+        # first part of query loads metamodel with a matching restriction.
+        # no point in breaking a MATCH clause
+        # pylint: disable=line-too-long
+        if neighbor_id:
+            query = f"""
+            MATCH (neighbor)
+            WHERE elementid(neighbor) = $neighbor_id
+            WITH labels(neighbor) AS neighbor_labels
+            MATCH (neighbor_metalabel:MetaLabel__tech_)-[r0:{neighbor_dir}]->(restriction:Restriction__tech_)-[r1:restricts__tech_]->(metarelation:MetaRelation__tech_)
+            WHERE neighbor_metalabel.name__tech_ IN neighbor_labels
+            { "AND metarelation.name__tech_ = $rel_type" if relation_type else "" }
+            WITH restriction
+            MATCH (this_metalabel:MetaLabel__tech_)-[r0:{this_dir}]->(restriction)
+            WITH this_metalabel
+            """
+
+        else:
+            query = f"""
+            MATCH (this_metalabel:MetaLabel__tech_)-[r0:{this_dir}]->(restriction:Restriction__tech_)-[r1:restricts__tech_]->(metarelation:MetaRelation__tech_)
+            { "WHERE metarelation.name__tech_ = $rel_type" if relation_type else "" }
+            WITH this_metalabel
+            """
+
+        # node matching with optional text filtering
+        if g.conn.has_nft_index() and text:
+            # add wildcards to allow matching incomplete strings, since the ft search
+            # requires that for partial matching. This may lead to several false
+            # positives though, sinch the ft search scans the _ft__tech_ property,
+            # and that contains the text of all properties of a node.
+            text = f"*{text}*"
+            query += """
+            CALL db.index.fulltext.queryNodes("nft", $text, {limit: $limit})
+            YIELD node AS n
+            WHERE this_metalabel.name__tech_ IN labels(n)
+            """
+        else:
+            query += """
+            MATCH (n:$(this_metalabel.name__tech_))
+            """
+            if text:
+                query += self._property_search_query_str('n')
+
+        query += "RETURN elementid(n) AS nid, n"
+        query += " LIMIT $limit + 1" if limit else ""
+        rows = self._run(query, rel_type=relation_type, text=text,
+                         neighbor_id=neighbor_id, limit=limit)
+        return {
+            row['nid']: BaseNode.from_neo_node(row['n'])
+            for row in rows
+        }
+
+
+    def resolve_relation_type_name(self, rel_type: str) -> str:
+        raw_rel_type = parse_semantic_id(rel_type)
+        if raw_rel_type:
+            return raw_rel_type
+        raw_db_id = parse_db_id(rel_type)
+        if raw_db_id:
+            metarel_node = self._get_node_by_raw_db_id(raw_db_id)
+            if metarel_node:
+                name = metarel_node.properties["name__tech_"]
+                if name:
+                    return name
+            abort_with_json(400, f"invalid metarelation node for relation type {rel_type}")
+        return rel_type
+
+
+    def features(self) -> list[str]:
         if g.conn.has_uuids():
             return [DatabaseFeature.PERSPECTIVES.value]
         return []

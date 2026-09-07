@@ -6,8 +6,11 @@
 # No reason to restrict size of API tests file
 # pylint: disable=too-many-lines
 
+import io
+import json
 import time
 import uuid
+from urllib.parse import urlparse
 
 import pytest
 from flask import g
@@ -27,14 +30,14 @@ from helpers import (
     create_empty_node,
 )
 
-# pylint falsely thinks find_db_or_start_testcontainer and logged_in
+# pylint falsely thinks find_database_connection and logged_in
 # are not used, but they are passed as fixture to tests.
 # pylint: disable=unused-import, import-error
 from setup import (
     login,
     BASE_URL,
     HEADERS,
-    find_db_or_start_testcontainer,
+    find_database_connection,
     logged_in,
     client_with_transaction,
 )
@@ -58,10 +61,11 @@ def reset_db(logged_in):
     # client as a global to use in remaining tests is fine.
     # pylint: disable=global-statement
     global client
-    client = logged_in
+    client, connection_url = logged_in
+    url_parts = urlparse(connection_url)
 
     response = client.get(
-        BASE_URL + "/api/v1/dev/reset",
+        BASE_URL + f"/api/v1/dev/reset?host={url_parts.scheme}%3A%2F%2F{url_parts.hostname}%3A{url_parts.port}&database=neo4j",
         headers=HEADERS,
     )
     assert response.status_code == 200
@@ -1962,8 +1966,8 @@ def test_style_delete():
     assert len(response.json["filenames"]) == 0
 
 
-def test_style_pro_tab(find_db_or_start_testcontainer):
-    connection_url = find_db_or_start_testcontainer
+def test_style_pro_tab(find_database_connection):
+    connection_url = find_database_connection
 
     # Each tab can set a different style.
     upload_style_file(client, "dummy.grass")
@@ -3017,6 +3021,864 @@ def test_multi_statement_queries_with_error():
         headers=HEADERS,
     )
     assert not response.json
+
+
+def test_relation_type_suggestions():
+    alice = fetch_sample_node(client, text="alice")
+    dummy_car = fetch_sample_node(client, text="abc123")
+    bob = fetch_sample_node(client, text="bob")
+
+    # providing both source and targets should show the metarelation corresponding
+    # to the restriction connecting.
+    # Here person-owns-car:
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "target_id": dummy_car["id"]
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    metarel = response.json["modelDerived"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "owns__dummy_"
+
+    # Same for bob, even though he doesn't own a car in reality. I.o.w. suggestions only
+    # consider the metamodel, not existing relations between instances.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": bob["id"],
+            "target_id": dummy_car["id"]
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    metarel = response.json["modelDerived"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "owns__dummy_"
+
+    # Here person-likes-person:
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "target_id": bob["id"]
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    metarel = response.json["modelDerived"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "likes__dummy_"
+
+
+    # Providing only source. Since Alice is a Person, both relation types "likes__dummy_"
+    # and "owns__dummy_" are fine according to the correspondig restrictions. So we should
+    # get both sorted by their names.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"]
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    metarels = response.json["modelDerived"]
+    assert metarels[0]["properties"]["MetaProperty::name__tech_"]["value"] == "likes__dummy_"
+    assert metarels[1]["properties"]["MetaProperty::name__tech_"]["value"] == "owns__dummy_"
+
+    # Providing only a target also works:
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "target_id": dummy_car["id"]
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    metarel = response.json["modelDerived"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "owns__dummy_"
+
+    # also check the that no limits were applied.
+    assert not response.json["hasMore"]
+    assert len(response.json["others"]) > 1
+
+    # Limit output
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"], "limit": 1
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    assert response.json["hasMore"]
+
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"], "limit": 3
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 2
+    assert len(response.json["others"]) == 1
+
+
+def test_relation_type_suggestions_filtering():
+    alice = fetch_sample_node(client, text="alice")
+
+    # Filter relation type suggestions that came from the model. Text matches anywhere
+    # inside relation type name.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "text": "wns"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    metarel = response.json["modelDerived"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "owns__dummy_"
+
+    # description__tech_ is also searched when filtering.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "text": "someone"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    metarel = response.json["modelDerived"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "likes__dummy_"
+
+    # Filter "others" relation type suggestions. Text matches anywhere
+    # inside relation type name.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "text": "ource__tech_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["others"]) == 1
+    metarel = response.json["others"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "source__tech_"
+
+    # Filter also applies to description__tech_ in "others".
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "text": "where"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["others"]) == 1
+    metarel = response.json["others"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "prop__tech_"
+
+    # white space as text means no filter (i.e. everything passes through)
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "source_id": alice["id"],
+            "text": " "
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 2
+    assert response.json["modelDerived"][0]["title"] == "likes__dummy_"
+    assert response.json["modelDerived"][1]["title"] == "owns__dummy_"
+
+    # Filter relation type without source/target.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_type_suggestions",
+        query_string={
+            "text": "target__tech_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["others"]) == 1
+    metarel = response.json["others"][0]
+    assert metarel["properties"]["MetaProperty::name__tech_"]["value"] == "target__tech_"
+
+
+def test_relation_end_suggestions():
+    alice_id = fetch_sample_node_id(client, text="Alice")
+    owns_metarel = fetch_sample_node_id(client, text="owns__dummy_")
+
+    # add new person without likes__dummy_ relations
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=HEADERS,
+        json={
+            "querytext": (
+                "create (n:Person__dummy_ {name__dummy_: 'charles'}) return n"
+            )
+        }
+    )
+    assert response.status_code == 200
+    charles_id = dict(response.json["result"][0])["n"]["id"]
+
+    # if neither relationType nor neighborId are set, suggest everything.
+    # TODO Do we want this? It then works like a regular ft search.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) > 10
+    assert not response.json["hasMore"]
+
+    # end is either source or target...
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "invalid"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 422
+
+    # ... and must be set
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 422
+
+    # getting suggestions based only on relationType
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "relationType": "owns__dummy_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 3
+    # all suggestions are persons, since only persons like cars.
+    assert all("MetaLabel::Person__dummy_" in suggestion["labels"]
+               for suggestion in response.json["modelDerived"])
+
+    assert len(response.json["others"]) > 1
+    # suggestion can't appear both in modelDerived and others
+    for suggestion in response.json["modelDerived"]:
+        assert all(others["id"] != suggestion["id"] for others in response.json["others"])
+
+    # using semantic ID also works...
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "relationType": "MetaRelation::owns__dummy_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 3
+
+    # ... as well as the DB id of the corresponding MetaRelation.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "relationType": owns_metarel
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 3
+
+    # limit works correctly with "others"
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "relationType": "owns__dummy_",
+            "limit": 2
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 2
+    assert not response.json["others"]
+    assert response.json["hasMore"]
+
+    # suggestions based on neighbor id
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "neighborId": alice_id,
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    # alice may like persons...
+    assert len(response.json["modelDerived"]) == 3
+    # ... including herself
+    assert any(suggestion["id"] == alice_id for suggestion in response.json["modelDerived"])
+    assert len(response.json["others"]) > 1
+
+    # suggestions based on neighbor id with text filter
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "target",
+            "neighborId": charles_id,
+            "text": "alice"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    assert response.json["modelDerived"][0]["id"] == alice_id
+    assert not response.json["others"]
+
+    # suggestions based on neighbor id with text filter, with partial match
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "target",
+            "neighborId": charles_id,
+            "text": "ice"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+    assert response.json["modelDerived"][0]["id"] == alice_id
+    assert not response.json["others"]
+
+    # Filtering of model derived nodes also scans description__tech_
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "target",
+            "relationType": "MetaRelation::owns__dummy_",
+            "text": "beetle"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+
+    # Filtering of other nodes also scans description__tech_
+    # Motor belongs to the description of the MetaLabel Car__dummy_,
+    # but not to it's instances, so it goes into "others".
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "target",
+            "neighborId": charles_id,
+            "text": "motor"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["others"]) == 1
+    assert response.json["others"][0]["title"] == "Car__dummy_"
+
+    # white space as text means no filter (i.e. everything passes though )
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "neighborId": alice_id,
+            "text": " "
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 3
+
+    # filter with both neighborId and relationType
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "neighborId": alice_id,
+            "relationType": "likes__dummy_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 3
+    assert len(response.json["others"]) > 1
+
+    # No model-derived source suggestion when target of owns__dummy_ is a person.
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "neighborId": alice_id,
+            "relationType": "owns__dummy_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 0
+
+    # only cars can be target of owns_dummy
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "target",
+            "neighborId": alice_id,
+            "relationType": "owns__dummy_"
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 1
+
+
+    # filter with both neighborId and relationType and limit
+    response = client.get(
+        BASE_URL + "/api/v1/meta/relation_end_suggestions",
+        query_string={
+            "end": "source",
+            "neighborId": alice_id,
+            "relationType": "likes__dummy_",
+            "limit": 2
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 200
+    assert len(response.json["modelDerived"]) == 2
+    assert not response.json["others"]
+
+
+def test_transfer_export_returns_ndjson_with_nodes_and_relations():  # 00_ai
+    response = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=HEADERS,
+        json={
+            "mode": "explicit",
+            "selection": {
+                "nodes": {"mode": "all"},
+                "edges": {"mode": "between_exported"},
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.mimetype == "application/x-ndjson"
+
+    lines = [line for line in response.data.decode("utf-8").splitlines() if line.strip()]
+    assert lines
+
+    parsed = [json.loads(line) for line in lines]
+    assert any(item.get("_grapheditor_type") == "node" for item in parsed)
+
+    seen_relation = False
+    for item in parsed:
+        item_type = item.get("_grapheditor_type")
+        if item_type == "relation":
+            seen_relation = True
+        if seen_relation:
+            assert item_type != "node"
+
+
+def test_transfer_import_returns_400_without_file():  # 00_ai
+    response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "create_new", "batch_size": 2},
+        data={},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    assert response.json["error"] == "No file provided"
+
+
+def test_transfer_import_accepts_jsonl_upload_create_new():  # 00_ai
+    unique_suffix = uuid.uuid4().hex
+    import_lines = [
+        {
+            "_grapheditor_type": "node",
+            "_export_id": 1,
+            "labels": ["MetaLabel::Person__dummy_"],
+            "properties": {
+                "MetaProperty::name__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": f"Import-A-{unique_suffix}",
+                }
+            },
+            "title": "Import A",
+            "description": "Imported node A",
+        },
+        {
+            "_grapheditor_type": "node",
+            "_export_id": 2,
+            "labels": ["MetaLabel::Person__dummy_"],
+            "properties": {
+                "MetaProperty::name__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": f"Import-B-{unique_suffix}",
+                }
+            },
+            "title": "Import B",
+            "description": "Imported node B",
+        },
+        {
+            "_grapheditor_type": "relation",
+            "type": "MetaRelation::likes__dummy_",
+            "source_export_id": 1,
+            "target_export_id": 2,
+            "properties": {
+                "MetaProperty::years": {
+                    "edit": True,
+                    "type": "integer",
+                    "value": 1,
+                }
+            },
+            "title": "likes",
+            "description": "Imported relation",
+        },
+    ]
+    payload = "\n".join(json.dumps(item) for item in import_lines) + "\n"
+
+    response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "create_new", "batch_size": 2},
+        data={"file": (io.BytesIO(payload.encode("utf-8")), "import.jsonl")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert response.json["nodes_imported"] == 2
+    assert response.json["relations_imported"] == 1
+
+
+def test_transfer_import_overwrite_updates_existing_node_by_uuid():  # 00_ai
+    original = create_sample_node(client, "BeforeImport")
+    uuid_value = original["properties"]["MetaProperty::_uuid__tech_"]["value"]
+    updated_name = f"AfterImport-{uuid.uuid4().hex}"
+
+    import_line = {
+        "_grapheditor_type": "node",
+        "_export_id": 1,
+        "labels": ["MetaLabel::Person__dummy_"],
+        "properties": {
+            "MetaProperty::name__dummy_": {
+                "edit": True,
+                "type": "string",
+                "value": updated_name,
+            },
+            "MetaProperty::_uuid__tech_": {
+                "edit": True,
+                "type": "string",
+                "value": uuid_value,
+            },
+        },
+        "title": "Updated node",
+        "description": "updated via import",
+    }
+    payload = json.dumps(import_line) + "\n"
+
+    response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "overwrite", "batch_size": 1},
+        data={"file": (io.BytesIO(payload.encode("utf-8")), "overwrite.jsonl")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 200
+    assert response.json["nodes_imported"] == 1
+    assert response.json["relations_imported"] == 0
+
+
+def test_transfer_import_overwrite_keeps_uuid_for_new_node():  # 00_ai
+    imported_uuid = str(uuid.uuid4())
+    imported_name = f"Import-Overwrite-New-{uuid.uuid4().hex}"
+
+    import_line = {
+        "_grapheditor_type": "node",
+        "_export_id": 1,
+        "labels": ["MetaLabel::Person__dummy_"],
+        "properties": {
+            "MetaProperty::name__dummy_": {
+                "edit": True,
+                "type": "string",
+                "value": imported_name,
+            },
+            "MetaProperty::_uuid__tech_": {
+                "edit": True,
+                "type": "string",
+                "value": imported_uuid,
+            },
+        },
+    }
+    payload = json.dumps(import_line) + "\n"
+
+    import_response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "overwrite", "batch_size": 1},
+        data={"file": (io.BytesIO(payload.encode("utf-8")), "overwrite_new_uuid.jsonl")},
+        content_type="multipart/form-data",
+    )
+
+    assert import_response.status_code == 200
+    assert import_response.json["nodes_imported"] == 1
+
+    export_response = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=HEADERS,
+        json={
+            "mode": "explicit",
+            "selection": {
+                "nodes": {"mode": "all"},
+                "edges": {"mode": "between_exported"},
+            },
+        },
+    )
+    assert export_response.status_code == 200
+
+    export_lines = [
+        json.loads(line)
+        for line in export_response.data.decode("utf-8").splitlines()
+        if line.strip()
+    ]
+    exported_nodes = [
+        item for item in export_lines if item.get("_grapheditor_type") == "node"
+    ]
+
+    imported_node = find_by_property(
+        exported_nodes,
+        "MetaProperty::name__dummy_",
+        imported_name,
+    )
+    assert imported_node is not None
+    assert imported_node["properties"]["MetaProperty::_uuid__tech_"]["value"] == imported_uuid
+
+
+def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
+    rel_uuid = str(uuid.uuid4())
+    rel_marker = f"rel-import-marker-{uuid.uuid4().hex}"
+    source_name = f"Import-Rel-Source-{uuid.uuid4().hex}"
+    target_name = f"Import-Rel-Target-{uuid.uuid4().hex}"
+
+    import_lines = [
+        {
+            "_grapheditor_type": "node",
+            "_export_id": 101,
+            "labels": ["MetaLabel::Person__dummy_"],
+            "properties": {
+                "MetaProperty::name__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": source_name,
+                }
+            },
+        },
+        {
+            "_grapheditor_type": "node",
+            "_export_id": 102,
+            "labels": ["MetaLabel::Person__dummy_"],
+            "properties": {
+                "MetaProperty::name__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": target_name,
+                }
+            },
+        },
+        {
+            "_grapheditor_type": "relation",
+            "source_export_id": 101,
+            "target_export_id": 102,
+            "type": "MetaRelation::likes__dummy_",
+            "properties": {
+                "MetaProperty::_uuid__tech_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": rel_uuid,
+                },
+                "MetaProperty::import_marker__dummy_": {
+                    "edit": True,
+                    "type": "string",
+                    "value": rel_marker,
+                },
+            },
+        },
+    ]
+    payload = "\n".join(json.dumps(item) for item in import_lines) + "\n"
+
+    import_response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "overwrite", "batch_size": 10},
+        data={"file": (io.BytesIO(payload.encode("utf-8")), "overwrite_new_relation_uuid.jsonl")},
+        content_type="multipart/form-data",
+    )
+
+    assert import_response.status_code == 200
+    assert import_response.json["nodes_imported"] == 2
+    assert import_response.json["relations_imported"] == 1
+
+    export_response = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=HEADERS,
+        json={
+            "mode": "explicit",
+            "selection": {
+                "nodes": {"mode": "all"},
+                "edges": {"mode": "between_exported"},
+            },
+        },
+    )
+    assert export_response.status_code == 200
+
+    export_lines = [
+        json.loads(line)
+        for line in export_response.data.decode("utf-8").splitlines()
+        if line.strip()
+    ]
+    exported_relations = [
+        item for item in export_lines if item.get("_grapheditor_type") == "relation"
+    ]
+
+    imported_rel = find_by_property(
+        exported_relations,
+        "MetaProperty::import_marker__dummy_",
+        rel_marker,
+    )
+    assert imported_rel is not None
+    assert imported_rel["properties"]["MetaProperty::_uuid__tech_"]["value"] == rel_uuid
+
+
+def test_transfer_export_import_roundtrip():  # 00_ai
+    """Export all nodes+relations, import as create_new, check counts match."""
+    # --- Export ---
+    export_response = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=HEADERS,
+        json={
+            "mode": "explicit",
+            "selection": {
+                "nodes": {"mode": "all"},
+                "edges": {"mode": "between_exported"},
+            },
+        },
+    )
+    assert export_response.status_code == 200
+
+    raw_jsonl = export_response.data
+    lines = [l for l in raw_jsonl.decode("utf-8").splitlines() if l.strip()]
+    assert lines, "Export produced no output"
+
+    exported_nodes = sum(
+        1 for l in lines if json.loads(l).get("_grapheditor_type") == "node"
+    )
+    exported_relations = sum(
+        1 for l in lines if json.loads(l).get("_grapheditor_type") == "relation"
+    )
+
+    # --- Import ---
+    import_response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "create_new", "batch_size": 1000},
+        data={"file": (io.BytesIO(raw_jsonl), "roundtrip.jsonl")},
+        content_type="multipart/form-data",
+    )
+    assert import_response.status_code == 200
+    stats = import_response.json
+
+    assert stats["nodes_imported"] == exported_nodes
+    assert stats["relations_imported"] == exported_relations
+
+
+def test_transfer_import_overwrite_roundtrip_no_duplicates():  # 00_ai
+    """Export all, re-import with overwrite: relations must not be duplicated."""
+    # --- Export once ---
+    export_response = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=HEADERS,
+        json={
+            "mode": "explicit",
+            "selection": {
+                "nodes": {"mode": "all"},
+                "edges": {"mode": "between_exported"},
+            },
+        },
+    )
+    assert export_response.status_code == 200
+    raw_jsonl = export_response.data
+    lines = [l for l in raw_jsonl.decode("utf-8").splitlines() if l.strip()]
+    original_node_count = sum(
+        1 for l in lines if json.loads(l).get("_grapheditor_type") == "node"
+    )
+    original_rel_count = sum(
+        1 for l in lines if json.loads(l).get("_grapheditor_type") == "relation"
+    )
+
+    # --- Import with overwrite ---
+    import_response = client.post(
+        BASE_URL + "/api/v1/transfer/import",
+        headers=HEADERS,
+        query_string={"strategy": "overwrite", "batch_size": 1000},
+        data={"file": (io.BytesIO(raw_jsonl), "overwrite_roundtrip.jsonl")},
+        content_type="multipart/form-data",
+    )
+    assert import_response.status_code == 200
+    stats = import_response.json
+    assert stats["nodes_imported"] == original_node_count
+    assert stats["relations_imported"] == original_rel_count
+
+    # --- Export again and verify no duplicates ---
+    export_response2 = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=HEADERS,
+        json={
+            "mode": "explicit",
+            "selection": {
+                "nodes": {"mode": "all"},
+                "edges": {"mode": "between_exported"},
+            },
+        },
+    )
+    assert export_response2.status_code == 200
+    lines2 = [l for l in export_response2.data.decode("utf-8").splitlines() if l.strip()]
+    after_node_count = sum(
+        1 for l in lines2 if json.loads(l).get("_grapheditor_type") == "node"
+    )
+    after_rel_count = sum(
+        1 for l in lines2 if json.loads(l).get("_grapheditor_type") == "relation"
+    )
+
+    assert after_node_count == original_node_count, \
+        f"Node count changed: {original_node_count} -> {after_node_count}"
+    assert after_rel_count == original_rel_count, \
+        f"Relation count changed (duplicates?): {original_rel_count} -> {after_rel_count}"
 
 
 if __name__ == "__main__":

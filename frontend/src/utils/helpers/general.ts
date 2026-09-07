@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios';
+import { Primitive } from 'src/types/general';
 import {
 	dateRegex,
 	html5DateRegex,
@@ -403,6 +404,10 @@ export const swapArrayIndexes = (array: Array<unknown>, index1: number, index2: 
 	array[index1] = array[index2];
 
 	array[index2] = temp;
+};
+
+export const arrayContainsAllPrimitives = (array1: Array<Primitive>, array2: Array<Primitive>) => {
+	return array2.every((element) => array1.includes(element));
 };
 
 export const getDeepestHoveredElement = () => {

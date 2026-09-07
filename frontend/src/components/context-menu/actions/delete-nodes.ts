@@ -15,7 +15,9 @@ export const deleteNodesAction = (nodeIds: Array<NodeId>) => {
 	useConfirmationModalStore.getState().open({
 		title: i18n.t('confirm_delete_node_title'),
 		description,
-		onCancelClick: () => useConfirmationModalStore.getState().close(),
+		onCancelClick: () => {
+			useConfirmationModalStore.getState().close();
+		},
 		onConfirmClick: () => {
 			api.nodes.actions.deleteNodesAndUpdateApplication(nodeIds).then(() => {
 				useConfirmationModalStore.getState().close();

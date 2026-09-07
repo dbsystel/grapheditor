@@ -59,3 +59,16 @@ export const preventCursorJumptToEnd = async (event: ChangeEvent<HTMLInputElemen
 
 	event.target.setSelectionRange(targetSelectionStart - 1, targetSelectionEnd - 1);
 };
+
+/**
+ * Schedules a callback to run after the browser has completed painting.
+ * Uses requestAnimationFrame + MessageChannel to reliably execute code after layout and paint are done.
+ * This is a polyfill pattern for the proposed `requestPostAnimationFrame` API.
+ */
+export const requestPostAnimationFrame = (callback: () => void): void => {
+	requestAnimationFrame(() => {
+		const mc = new MessageChannel();
+		mc.port1.onmessage = callback;
+		mc.port2.postMessage(undefined);
+	});
+};

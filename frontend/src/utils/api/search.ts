@@ -1,4 +1,5 @@
 import { isAxiosError } from 'axios';
+import { StoppableRequest } from 'src/models/stoppable-request';
 import { useDrawerStore } from 'src/stores/drawer';
 import { SearchResultType, SearchStoreType, useSearchStore } from 'src/stores/search';
 import { CypherQuerySearchResult } from 'src/types/cypherQuerySearchResult';
@@ -23,15 +24,19 @@ export const searchApi = {
 	}
 };
 
+let searchId = window.crypto.randomUUID();
+
 async function executeSearch(parameters?: {
 	query?: string;
 	type?: SearchStoreType;
 	cypherQueryParameters?: Record<string, string>;
+	stoppableRequest?: StoppableRequest;
 }) {
 	const query = parameters?.query || useSearchStore.getState().query;
 	const cypherQueryParameters =
 		parameters?.cypherQueryParameters || useSearchStore.getState().cypherQueryParameters;
 	const type = parameters?.type || useSearchStore.getState().type;
+	const stoppableRequest = parameters?.stoppableRequest;
 	let searchResultType: SearchResultType = '';
 
 	if (!query.trim()) {
@@ -44,6 +49,8 @@ async function executeSearch(parameters?: {
 	useDrawerStore.getState().reset();
 
 	let responseResult: CypherQuerySearchResult = [];
+	searchId = window.crypto.randomUUID();
+	const localSearchId = searchId;
 
 	try {
 		// if cypher query search or para-query
@@ -53,7 +60,8 @@ async function executeSearch(parameters?: {
 		) {
 			const response = await api.search.fetch.postCypherQuerySearch({
 				queryText: query || '',
-				parameters: cypherQueryParameters
+				parameters: cypherQueryParameters,
+				stoppableRequest: stoppableRequest
 			});
 
 			responseResult = response.data.result;
@@ -62,7 +70,8 @@ async function executeSearch(parameters?: {
 		// if regular, full-text search
 		else if (type === GLOBAL_SEARCH_TYPE_VALUE_FULL_TEXT) {
 			const responses = await api.search.fetch.getFullTextSearch({
-				searchTerm: query || ''
+				searchTerm: query || '',
+				stoppableRequest: stoppableRequest
 			});
 			// make full-text search results format consistent with the cypher query
 			// results format, so we can reuse existing components
@@ -73,12 +82,18 @@ async function executeSearch(parameters?: {
 		}
 	} catch (error) {
 		if (isAxiosError(error)) {
-			Promise.reject(error);
+			return Promise.reject(error);
 		} else {
 			throw new Error(parseError(error));
 		}
 	} finally {
-		useSearchStore.getState().setIsLoading(false);
-		useSearchStore.getState().setResult({ data: responseResult, type: searchResultType });
+		// Multiple searches can technically run concurrently (e.g. the user switches away and triggers another search
+		// before the previous one resolves). Since only the most recent search result is relevant to the user, we guard
+		// against stale responses overwriting newer ones by only updating searchStore if this request is still the latest
+		// one issued.
+		if (localSearchId === searchId) {
+			useSearchStore.getState().setIsLoading(false);
+			useSearchStore.getState().setResult({ data: responseResult, type: searchResultType });
+		}
 	}
 }

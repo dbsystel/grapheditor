@@ -7,6 +7,7 @@ import {
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UsePostDatabaseCurrentParameters = {
+	onBefore?: () => void;
 	onSuccess: (data: AxiosResponse<PostDatabaseCurrentResponse>) => void;
 	onError?: (error: AxiosError) => void;
 	onFinally?: () => void;
@@ -17,6 +18,7 @@ export type UsePostDatabaseCurrentParameters = {
  * Simple custom hook to store user's currently used database.
  */
 export const usePostDatabaseCurrent = ({
+	onBefore,
 	onSuccess,
 	onError,
 	onFinally,
@@ -25,6 +27,7 @@ export const usePostDatabaseCurrent = ({
 }: UsePostDatabaseCurrentParameters) => {
 	return useApiHook<AxiosResponse<PostDatabaseCurrentResponse>, PostDatabaseCurrentParameters>({
 		executeImmediately: executeImmediately,
+		onBefore: onBefore,
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,

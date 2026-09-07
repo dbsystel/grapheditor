@@ -16,6 +16,7 @@ import {
 } from 'src/utils/constants';
 import { clone } from 'src/utils/helpers/general';
 import { isCypherQueryOrFullText } from 'src/utils/helpers/search';
+import { createStoppableRequestConfiguration } from 'src/utils/helpers/stoppable-request';
 import { GlobalSearchProps } from './GlobalSearch.interfaces';
 
 /**
@@ -87,7 +88,13 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 		// update search store
 		setQuery(searchQuery);
 		addHistoryEntry(type, searchQuery);
-		api.search.actions.executeSearch();
+
+		api.search.actions.executeSearch({
+			stoppableRequest: createStoppableRequestConfiguration({
+				tags: ['global-search'],
+				shouldRenderNotificationOnSuccess: true
+			})
+		});
 
 		setSearchParameters({
 			...Object.fromEntries(searchParams),

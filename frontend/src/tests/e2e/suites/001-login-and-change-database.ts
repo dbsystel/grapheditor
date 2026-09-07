@@ -4,7 +4,8 @@ import { E2ETestFunctionProps } from '../E2E.interfaces';
 const E2E_NEO4J_HOST = process.env.E2E_NEO4J_HOST;
 const E2E_NEO4J_USER = process.env.E2E_NEO4J_USER;
 const E2E_NEO4J_PASSWORD = process.env.E2E_NEO4J_PASSWORD;
-const E2E_NEO4J_DATABASE = process.env.E2E_NEO4J_DATABASE || '__please_provide_a_database__';
+const E2E_NEO4J_SWITCH_TO_DATABASE =
+	process.env.E2E_NEO4J_SWITCH_TO_DATABASE || '__please_provide_a_database__';
 
 export const _001_loginAndChangeDatabase = async ({ page, i18n }: E2ETestFunctionProps) => {
 	if (!E2E_NEO4J_HOST || !E2E_NEO4J_USER || !E2E_NEO4J_PASSWORD) {
@@ -25,7 +26,7 @@ export const _001_loginAndChangeDatabase = async ({ page, i18n }: E2ETestFunctio
 	// wait for login success
 	await expect(page.getByText(i18n.t('notifications_success_login'))).toBeVisible();
 
-	// select "E2E_NEO4J_DATABASE" database for testing purposes
+	// select "E2E_NEO4J_SWITCH_TO_DATABASE" database for testing purposes
 	const customSelect = page.locator('.database-menu__selector');
 	await customSelect.waitFor({ state: 'visible', timeout: 15000 });
 	await customSelect.click();
@@ -37,10 +38,10 @@ export const _001_loginAndChangeDatabase = async ({ page, i18n }: E2ETestFunctio
 		.first();
 
 	await searchBox.waitFor({ state: 'visible', timeout: 15000 });
-	await searchBox.fill(E2E_NEO4J_DATABASE);
+	await searchBox.fill(E2E_NEO4J_SWITCH_TO_DATABASE);
 
 	// click list item by text (label/li is usually visible)
-	const dbListItem = page.locator(`li:has-text('${E2E_NEO4J_DATABASE}')`);
+	const dbListItem = page.locator(`li:has-text('${E2E_NEO4J_SWITCH_TO_DATABASE}')`);
 	await dbListItem.click();
 
 	const notification = page.locator('.notifications__notification', {

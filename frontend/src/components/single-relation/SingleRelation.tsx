@@ -139,7 +139,7 @@ export const SingleRelation = ({
 	const getMetaForMeta = () => {
 		setIsTypeMetaLoading(true);
 
-		api.metaForMeta.fetch
+		api.meta.fetch
 			.postMetaForMeta({
 				ids: [relation.type],
 				resultType: GraphEditorType.META_PROPERTY
@@ -257,7 +257,8 @@ export const SingleRelation = ({
 							{
 								title: t('confirm_delete_relation_button'),
 								onClick: onDeleteRelationClick,
-								icon: 'bin'
+								icon: 'bin',
+								closeMenuOnClick: true
 							}
 						]}
 					/>

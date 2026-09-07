@@ -238,7 +238,7 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 	registerPopoverElementAndEvents: (popoverElement) => {
 		const lastOverview = get().overviews.at(get().overviews.length - 1);
 
-		if (lastOverview) {
+		if (lastOverview && !lastOverview.popoverElement) {
 			popoverElement.dataset[popoverElementDatasetId] = '';
 			lastOverview.popoverElement = popoverElement;
 

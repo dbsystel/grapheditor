@@ -55,9 +55,9 @@ export const isArrayOfNodes = (data: unknown): data is Array<Node> => {
  * Helper function to check if two nodes have at least one type of ID that are equal.
  */
 export const areNodesSameById = (nodeA: Node, nodeB: Node) => {
-	if (nodeA.semanticId === nodeB.semanticId) {
+	if (nodeA.semanticId && nodeB.semanticId && nodeA.semanticId === nodeB.semanticId) {
 		return true;
-	} else if (nodeA.dbId === nodeB.dbId) {
+	} else if (nodeA.dbId && nodeB.dbId && nodeA.dbId === nodeB.dbId) {
 		return true;
 	} else if (nodeA.id === nodeB.id) {
 		return true;

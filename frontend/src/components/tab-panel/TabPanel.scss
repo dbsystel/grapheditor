@@ -23,9 +23,9 @@
 	&__close {
 		cursor: pointer;
 		align-self: flex-start;
-	}
-}
 
-.db-tabs > .db-tab-panel {
-	padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-md);
+		&:before {
+			margin-inline-end: 0;
+		}
+	}
 }

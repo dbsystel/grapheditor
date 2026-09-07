@@ -24,7 +24,9 @@ export const deleteRelationsAction = (relationIds: Array<RelationId>) => {
 	useConfirmationModalStore.getState().open({
 		title,
 		description,
-		onCancelClick: () => useConfirmationModalStore.getState().close(),
+		onCancelClick: () => {
+			useConfirmationModalStore.getState().close();
+		},
 		onConfirmClick: () => {
 			api.relations.actions.deleteRelationsAndUpdateApplication(relationIds).then(() => {
 				useConfirmationModalStore.getState().close();

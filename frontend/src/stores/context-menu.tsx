@@ -15,12 +15,7 @@ import { RelationId } from 'src/models/relation';
 import { create } from 'zustand';
 
 type ContextMenuType =
-	| 'node'
-	| 'graph-node'
-	| 'graph-relation'
-	| 'graph-multiselect'
-	| 'graph-canvas'
-	| '';
+	'node' | 'graph-node' | 'graph-relation' | 'graph-multiselect' | 'graph-canvas' | '';
 
 type ContextMenuEventType<T = ContextMenuType> = T extends 'node'
 	? MouseEvent
@@ -132,17 +127,7 @@ export const useContextMenuStore = create<ContextMenuStore>()((set, get) => {
 			set({ ...data, isOpen: true, nodeIds: nodeIds, relationIds: relationIds });
 		},
 		close: () => {
-			set({
-				isOpen: false,
-				type: '',
-				event: null,
-				nodeIds: [],
-				relationIds: [],
-				x: 0,
-				y: 0,
-				onClose: null,
-				isActionLoading: false
-			});
+			set(getInitialState());
 		},
 		setIsActionLoading: (isActionLoading) => {
 			set({

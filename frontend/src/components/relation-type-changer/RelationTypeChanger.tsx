@@ -66,7 +66,7 @@ export const RelationTypeChanger = ({
 		if (selectedType) {
 			const patchObject = {
 				id: relation.id,
-				type: selectedType.id
+				type: getNodeSemanticIdOrId(selectedType)
 			};
 
 			await api.relations.actions.patchRelationsAndUpdateApplication([patchObject]);
@@ -102,6 +102,8 @@ export const RelationTypeChanger = ({
 							value={selectedType}
 							onChange={onTypeChange}
 							onEnterKey={onEnterKey}
+							sourceId={relation.source_id}
+							targetId={relation.target_id}
 						/>
 					</div>
 				</div>

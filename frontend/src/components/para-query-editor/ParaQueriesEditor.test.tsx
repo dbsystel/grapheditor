@@ -10,6 +10,8 @@ describe('Components - ParaQueriesEditor', () => {
 		const paraQuery = Object.values(paraQueries).at(0);
 		const onParameterChange = vi.fn();
 
+		//console.log('paraQuery', paraQuery);
+
 		if (!paraQuery) {
 			throw new Error('No test para-queries');
 		}
@@ -17,11 +19,14 @@ describe('Components - ParaQueriesEditor', () => {
 			<ParaQueryEditor paraQuery={paraQuery} onParameterChange={onParameterChange} />
 		);
 
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
 		const paraQueryEditorChildren = Array.from(screen.container.firstChild?.childNodes || []);
 		const textNodes = paraQueryEditorChildren.filter((node) => {
 			return node.nodeType === node.TEXT_NODE;
 		});
-		const inputsWithSuggestions = screen.getByRole('combobox').elements();
+		// "group" matches the "details" HTML element of DBCustomSelect component
+		const inputsWithSuggestions = screen.getByRole('group').elements();
 		const inputsWithoutSuggestions = screen.getByRole('textbox').elements();
 
 		const parameters = Array.from(paraQuery.user_text.match(/\$\w+/gim) || []).map((name) => {
@@ -38,10 +43,10 @@ describe('Components - ParaQueriesEditor', () => {
 		expect(inputsWithoutSuggestions).toHaveLength(1);
 		expect(textNodes).toHaveLength(4);
 
-		expect(inputsWithSuggestions[0]).toHaveValue(
+		expect(inputsWithSuggestions[0].parentNode?.querySelector('select')).toHaveValue(
 			paraQuery.parameters[firstParameterName].default_value || ''
 		);
-		expect(inputsWithSuggestions[1]).toHaveValue(
+		expect(inputsWithSuggestions[1].parentNode?.querySelector('select')).toHaveValue(
 			paraQuery.parameters[secondParameterName].default_value || ''
 		);
 		expect(inputsWithoutSuggestions[0]).toHaveValue(

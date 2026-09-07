@@ -7,15 +7,34 @@ import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { RelationTypeItemFinder } from 'src/components/relation-type-item-finder/RelationTypeItemFinder';
 import { Node } from 'src/models/node';
-import { RelationType } from 'src/models/relation';
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { api } from 'src/utils/api/api';
-import { getNodeByIdFromArrayOfNodes } from 'src/utils/helpers/nodes';
-import { AddRelationFormProps } from './AddRelationForm.interfaces';
+import { getNodeByIdFromArrayOfNodes, getNodeSemanticIdOrId } from 'src/utils/helpers/nodes';
+import {
+	AddRelationFormNodesState,
+	AddRelationFormNodeState,
+	AddRelationFormProps
+} from './AddRelationForm.interfaces';
 
+const defaultNodeState: AddRelationFormNodeState = {
+	nodes: [],
+	hasMore: false,
+	optionDelimiterAfterIndexes: []
+};
+
+/**
+ * A form for creating a relation between two nodes.
+ * The form is pre-populated with a reference node ("refNode") as either the source or target, and lets the user pick the
+ * other end plus the relation type. Source/target node suggestions are fetched from the backend (filtered by the chosen
+ * relation type and the reference node), while relation-type suggestions are provided by the "RelationTypeItemFinder".
+ * The direction can be swapped with the change direction button, and on submit the relation is persisted via backend and
+ * reflected in the graph and item stores.
+ * Because the available relation types are provided by the backend API as suggestions, creating brand-new options by pressing
+ * Enter is disabled via the "shouldPreventAddingOptionOnEnter" prop.
+ */
 export const AddRelationForm = ({
 	id,
 	className,
@@ -23,9 +42,11 @@ export const AddRelationForm = ({
 	refNode,
 	onSave
 }: AddRelationFormProps) => {
-	const [fromNodes, setFromNodes] = useState<Array<Node>>([]);
-	const [toNodes, setToNodes] = useState<Array<Node>>([]);
 	const { t } = useTranslation();
+	const [nodesState, setNodesState] = useState<AddRelationFormNodesState>({
+		from: { ...defaultNodeState },
+		to: { ...defaultNodeState }
+	});
 	const { addNotification } = useNotificationsStore((state) => state);
 	const { addRelation: addGraphRelation, addNode: addGraphNode } = useGraphStore(
 		(store) => store
@@ -35,7 +56,7 @@ export const AddRelationForm = ({
 	const form = useForm<{
 		sourceNode: Node | null;
 		targetNode: Node | null;
-		type: RelationType | null;
+		type: Node | null;
 	}>({
 		defaultValues: {
 			sourceNode: refNode,
@@ -51,7 +72,8 @@ export const AddRelationForm = ({
 		setValue,
 		getValues,
 		formState: { errors },
-		resetField
+		resetField,
+		watch
 	} = form;
 
 	// observe node changes, and update the form
@@ -66,18 +88,35 @@ export const AddRelationForm = ({
 	}, [refNode]);
 
 	const fetchNodes = (type: 'from' | 'to', searchTerm: string) => {
-		api.nodes.fetch.getNodes({ searchTerm: searchTerm }).then((data) => {
-			if (type === 'from') {
-				setFromNodes(data.data);
-			} else if (type === 'to') {
-				setToNodes(data.data);
-			}
-		});
+		const typeNode = getValues('type');
+
+		api.meta.fetch
+			.getRelationEndSuggestions({
+				end: type === 'from' ? 'source' : 'target',
+				neighborId: getNodeSemanticIdOrId(refNode),
+				relationType: typeNode ? getNodeSemanticIdOrId(typeNode) : '',
+				text: searchTerm
+			})
+			.then((response) => {
+				const numberOfModerDerivedTypes = response.data.modelDerived.length;
+				const nodes = [...response.data.modelDerived, ...response.data.others];
+				const hasMore = response.data.hasMore;
+
+				setNodesState((prevState) => {
+					return {
+						...prevState,
+						[type]: {
+							nodes: nodes,
+							hasMore: hasMore,
+							optionDelimiterAfterIndexes: [numberOfModerDerivedTypes - 1]
+						}
+					};
+				});
+			});
 	};
 
 	const onNodeItemClick = (type: 'from' | 'to', item: Node) => {
-		setValue(type == 'from' ? 'sourceNode' : 'targetNode', item);
-		trigger(type == 'from' ? 'sourceNode' : 'targetNode');
+		setValue(type == 'from' ? 'sourceNode' : 'targetNode', item, { shouldValidate: true });
 	};
 
 	const switchNodes = () => {
@@ -102,7 +141,7 @@ export const AddRelationForm = ({
 					properties: {},
 					sourceId: sourceNodeId,
 					targetId: targetNodeId,
-					type: type
+					type: getNodeSemanticIdOrId(type)
 				})
 				.then(async (data) => {
 					const relation = data.data;
@@ -137,6 +176,8 @@ export const AddRelationForm = ({
 						resetField('sourceNode');
 					}
 
+					resetField('type');
+
 					addNotification({
 						title: t('notifications_success_relation_create'),
 						type: 'successful'
@@ -152,7 +193,13 @@ export const AddRelationForm = ({
 	};
 
 	const onRelationTypeChange = (type: Node) => {
-		setValue('type', type.id);
+		setValue('type', type, { shouldValidate: true });
+	};
+
+	const onRelationTypeReset = () => {
+		// left this without "shouldValidate" intentionally — validating on reset would immediately surface the "required" error
+		// the moment the user clears the field, which is usually undesirable UX
+		setValue('type', null);
 	};
 
 	const validationRules = {
@@ -167,21 +214,32 @@ export const AddRelationForm = ({
 				control={control}
 				name="sourceNode"
 				rules={validationRules}
-				render={() => {
+				render={({ field: { value } }) => {
 					return (
 						<ItemFinder
 							label={t('create_relation_source_node')}
 							inputValue={getValues('sourceNode')?.title || ''}
-							options={fromNodes}
+							options={nodesState.from.nodes}
+							value={value}
 							onInput={(searchTerm) => {
 								fetchNodes('from', searchTerm);
 							}}
-							value={getValues('sourceNode') || null}
+							onInputFocus={(event) => {
+								fetchNodes('from', event.target.value);
+							}}
 							onChange={(item) => onNodeItemClick('from', item)}
 							semantic={errors?.sourceNode ? 'critical' : 'adaptive'}
 							invalidMessage={errors?.sourceNode?.message}
 							validMessage=""
 							isDisabled={isSourceNodeDisabled}
+							hasMoreOptions={nodesState.from.hasMore}
+							optionDelimiterAfterIndexes={
+								nodesState.from.optionDelimiterAfterIndexes
+							}
+							allowReset={!isSourceNodeDisabled}
+							onReset={() => {
+								setValue('sourceNode', null);
+							}}
 						/>
 					);
 				}}
@@ -206,10 +264,17 @@ export const AddRelationForm = ({
 				render={() => {
 					return (
 						<RelationTypeItemFinder
+							value={getValues('type')}
 							label={t('create_relation_connection')}
 							onChange={onRelationTypeChange}
+							onReset={onRelationTypeReset}
 							semantic={errors?.type ? 'critical' : 'adaptive'}
 							invalidMessage={errors?.type?.message}
+							sourceId={getValues('sourceNode.id')}
+							targetId={getValues('targetNode.id')}
+							allowReset={true}
+							shouldPreventAddingOptionOnEnter={true}
+							shouldShowNoInputMatchTooltip={false}
 						/>
 					);
 				}}
@@ -226,16 +291,25 @@ export const AddRelationForm = ({
 						<ItemFinder
 							label={t('create_relation_target_node')}
 							inputValue={getValues('targetNode')?.title || ''}
-							options={toNodes}
+							options={nodesState.to.nodes}
 							onInput={(searchTerm) => {
 								fetchNodes('to', searchTerm);
 							}}
+							onInputFocus={(event) => {
+								fetchNodes('to', event.target.value);
+							}}
 							onChange={(item) => onNodeItemClick('to', item)}
-							value={getValues('targetNode') || null}
+							value={watch('targetNode')}
 							semantic={errors?.targetNode ? 'critical' : 'adaptive'}
 							invalidMessage={errors?.targetNode?.message}
 							validMessage=""
 							isDisabled={!isSourceNodeDisabled}
+							hasMoreOptions={nodesState.to.hasMore}
+							optionDelimiterAfterIndexes={nodesState.to.optionDelimiterAfterIndexes}
+							allowReset={isSourceNodeDisabled}
+							onReset={() => {
+								setValue('targetNode', null);
+							}}
 						/>
 					);
 				}}

@@ -4,6 +4,7 @@ import { GetPerspectiveParameters, GetPerspectiveResponse } from 'src/utils/fetc
 import { useApiHook } from 'src/utils/hooks/useApiHook';
 
 export type UseGetPerspectiveParameters = {
+	onBefore?: () => void;
 	onSuccess: (data: AxiosResponse<GetPerspectiveResponse>) => void;
 	onError?: (error: AxiosError) => void;
 	onFinally?: () => void;
@@ -16,6 +17,7 @@ export type UseGetPerspectiveParameters = {
 export const useGetPerspective = (
 	{
 		perspectiveId,
+		onBefore,
 		onSuccess,
 		onError,
 		onFinally,
@@ -25,6 +27,7 @@ export const useGetPerspective = (
 ) => {
 	return useApiHook<AxiosResponse<GetPerspectiveResponse>>({
 		executeImmediately: executeImmediately,
+		onBefore: onBefore,
 		onSuccess: onSuccess,
 		onError: onError,
 		onFinally: onFinally,

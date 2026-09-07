@@ -41,6 +41,8 @@ def execute_query(query_text:str, parameters:dict|None=None):
         # places too)
         current_app.logger.error(f"{e.message}\n{traceback.format_exc()}")
         abort_with_json(400, e.message)
+    except (neo4j.exceptions.TransientError, neo4j.exceptions.TransactionError):
+        abort_with_json(499, "Query was cancelled.")
 
 
 @blp.route("cypher")
@@ -55,7 +57,7 @@ class Cypherquery(MethodView):
         example=query_model.cypher_result_example,
     )
     @require_tab_id()
-    def post(self, querytext, parameters:dict=None):
+    def post(self, querytext, parameters:dict|None=None):
         """
         Query with arbitary cypher
         """

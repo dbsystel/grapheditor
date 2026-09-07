@@ -1,7 +1,7 @@
 import './AddNewProperty.scss';
 import { DBButton } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ItemFinder } from 'src/components/item-finder/ItemFinder';
@@ -32,6 +32,7 @@ export const AddNewProperty = ({
 	shouldHideKeyField,
 	submitButtonText,
 	isEditMode = true,
+	handleRef,
 	id,
 	className,
 	testId
@@ -57,6 +58,14 @@ export const AddNewProperty = ({
 	const [newProperty, setNewProperty] = useState<ItemProperty>(localDefaultPropertyRef.current);
 	const rootElementClassName = clsx('add-new-property', className);
 
+	useImperativeHandle(handleRef, () => ({
+		hasPendingData: () => {
+			const { key } = getValues();
+			return key.trim().length > 0;
+		},
+		submitPendingData: onPropertyCreateLocal
+	}));
+
 	const { isLoading: isNodesPropertiesLoading } = useGetNodesPropertiesNodes({
 		executeImmediately: !shouldHideKeyField,
 		onSuccess: (response) => {
@@ -74,10 +83,8 @@ export const AddNewProperty = ({
 	 * TODO check if we need to inherit property type from selected property
 	 */
 	const onKeyChange = (property: Node) => {
-		setValue('key', property.id);
-
+		setValue('key', property.id, { shouldValidate: true });
 		setSelectedProperty(property);
-		triggerKeyFieldValidation();
 	};
 
 	const onTypeChange = (
@@ -85,7 +92,7 @@ export const AddNewProperty = ({
 		newType: ItemPropertyType,
 		subType?: ItemPropertyTypeNonList
 	) => {
-		setValue('type', value);
+		setValue('type', value, { shouldValidate: true });
 
 		const newTypeProperty = getDefaultItemPropertyForItemPropertyType(newType);
 
@@ -96,11 +103,6 @@ export const AddNewProperty = ({
 		}
 
 		setNewProperty(newTypeProperty);
-
-		// reset form field error on change (the default way is not working :/)
-		if (errors['type']) {
-			trigger('type');
-		}
 	};
 
 	const onValueChange = (value: ItemProperty) => {
@@ -111,7 +113,7 @@ export const AddNewProperty = ({
 	/**
 	 * Function responsible for creating new properties in the backend.
 	 */
-	const onPropertyCreateLocal = async () => {
+	const onPropertyCreateLocal = async (): Promise<boolean> => {
 		// note: it looks like form validation is not considering the non-rendered controls
 		const propertyValidationOk = await trigger();
 
@@ -131,7 +133,11 @@ export const AddNewProperty = ({
 
 			setNewProperty(getDefaultItemPropertyForItemPropertyType(newProperty.type));
 			setSelectedProperty(null);
+
+			return true;
 		}
+
+		return false;
 	};
 
 	/**
@@ -144,10 +150,8 @@ export const AddNewProperty = ({
 			return nodeContainsSearchTerm(property, searchTerm);
 		});
 
-		setValue('key', searchTerm);
-
+		setValue('key', searchTerm, { shouldValidate: true });
 		setPropertyOptions(matchingProperties);
-		triggerKeyFieldValidation();
 	};
 
 	/**

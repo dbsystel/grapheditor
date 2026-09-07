@@ -9,6 +9,7 @@ import { Queries } from 'src/components/queries/Queries';
 import { HomepageData, HomepageQuery } from 'src/models/general';
 import { useItemsStore } from 'src/stores/items';
 import { useSearchStore } from 'src/stores/search';
+import { useStoppableRequestsStore } from 'src/stores/stoppable-requests';
 import { api } from 'src/utils/api/api';
 import {
 	GLOBAL_SEARCH_NODE_ID_KEY,
@@ -23,6 +24,10 @@ import { getHomepageData } from 'src/utils/fetch/getHomepageData';
 import { goToApplicationView } from 'src/utils/helpers/application';
 import { isString } from 'src/utils/helpers/general';
 import { isValidSearchType } from 'src/utils/helpers/search';
+import {
+	cancelStoppableRequest,
+	createStoppableRequestConfiguration
+} from 'src/utils/helpers/stoppable-request';
 import { idFormatter } from 'src/utils/id-formatter';
 import { HomepageBodyProps } from './HomepageBody.interfaces';
 
@@ -52,14 +57,24 @@ export const HomepageBody = ({ id, className, testId }: HomepageBodyProps) => {
 
 		getHomepageData().then((response) => {
 			setHomepageData(response.data);
-
 			executeQuery(response.data.graphQuery, true);
 		});
 
 		return () => {
 			unSubscribe();
+			cancelRequestsInProgress();
 		};
 	}, []);
+
+	const cancelRequestsInProgress = () => {
+		const stoppableRequests = useStoppableRequestsStore
+			.getState()
+			.getAllStoppableRequestsByTags(['homepage-graph']);
+
+		stoppableRequests.forEach((stoppableRequest) => {
+			cancelStoppableRequest(stoppableRequest);
+		});
+	};
 
 	const executeQuery = (query: HomepageQuery, isPreview?: boolean) => {
 		// TODO refactor, very similar to frontend/src/components/global-search/GlobalSearch.tsx
@@ -135,7 +150,10 @@ export const HomepageBody = ({ id, className, testId }: HomepageBodyProps) => {
 				api.search.actions.executeSearch({
 					type: queryType,
 					query: queryQuery,
-					cypherQueryParameters: queryParameters
+					cypherQueryParameters: queryParameters,
+					stoppableRequest: createStoppableRequestConfiguration({
+						tags: ['homepage-graph']
+					})
 				});
 			}
 		}

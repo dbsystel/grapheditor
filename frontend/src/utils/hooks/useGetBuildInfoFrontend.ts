@@ -21,6 +21,6 @@ export const useGetBuildInfoFrontend = ({
 		onSuccess,
 		onError,
 		onFinally,
-		fetchFunction: api.buildInfoFrontend.fetch.getBuildInfoFrontend
+		fetchFunction: api.build.fetch.getBuildInfoFrontend
 	});
 };

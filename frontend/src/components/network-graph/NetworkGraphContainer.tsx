@@ -102,7 +102,7 @@ export const NetworkGraphContainer = ({ children }: PropsWithChildren) => {
 
 				// cleanups
 				// exclude persisted keys
-				useGraphStore.getState().resetButExclude(['zoomFactor']);
+				useGraphStore.getState().resetButExclude(['zoomFactor', 'nodeAxisFactor']);
 				useExpandNodeStore.getState().reset();
 			}
 		};

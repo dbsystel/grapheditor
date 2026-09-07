@@ -3,8 +3,10 @@
         create
           (alice:Person__dummy_ {name__dummy_:"Alice", _uuid__tech_:"alice"}),
           (bob:Person__dummy_ {name__dummy_:"Bob", _uuid__tech_:"bob"}),
+          (alices_car:Car__dummy_ {plate__dummy_:"abc123", brand:"VW", description__dummy_: "Lovely yellow beetle."}),
 
           (alice)-[:likes__dummy_ {since__dummy_:1998, _uuid__tech_:"alice-likes-bob"}]->(bob),
+          (alice)-[:owns__dummy_]->(alices_car),
 
 
           (person:MetaLabel__tech_ {name__tech_:"Person__dummy_",description__tech_:"A living human", _uuid__tech_:"person"}),
@@ -13,12 +15,23 @@
           (likes:MetaRelation__tech_ {name__tech_:"likes__dummy_",description__tech_:"Someone takes a liking in something or someone", _uuid__tech_:"likes"}),
           (since:MetaProperty__tech_ {name__tech_:"since__dummy_",description__tech_:"since when some relation holds",type__tech_:"integer", _uuid__tech_:"since"}),
 
+          (car:MetaLabel__tech_ {name__tech_:"Car__dummy_",description__tech_:"A motor vehicle with four wheels"}),
+          (carplate:MetaProperty__tech_ {name__tech_:"plate__dummy_",description__tech_:"A unique plate number"}),
+          (carbrand:MetaProperty__tech_ {name__tech_:"brand__dummy_",description__tech_:"A car manufactor"}),
+          (carplate)-[:prop__tech_ {_uuid__tech_:"carplate-prop-car"}]->(car),
+          (carbrand)-[:prop__tech_ {_uuid__tech_:"carbrand-prop-car"}]->(car),
+          (owns:MetaRelation__tech_ {name__tech_:"owns__dummy_",description__tech_:"Someone owns something else", _uuid__tech_:"owns"}),
+
           (person_likes_person:Restriction__tech_ {description__tech_:"Person likes Person", _uuid__tech_:"person_likes_person"}),
           (person)-[:source__tech_ {_uuid__tech_:"person-source-person_likes_person"}]->(person_likes_person),
           (person)-[:target__tech_ {_uuid__tech_:"person-target_person_likes_person"}]->(person_likes_person),
           (person_likes_person)-[:restricts__tech_ {_uuid__tech_:"person_likes_person-restricts-likes"}]->(likes),
           (since)-[:prop__tech_ {_uuid__tech_:"since-prop-likes"}]->(likes),
 
+          (person_owns_car:Restriction__tech_ {description__tech_:"Person owns a car", _uuid__tech_:"person_owns_a_car"}),
+          (person)-[:source__tech_ {_uuid__tech_:"person-source-person_owns_car"}]->(person_owns_car),
+          (car)-[:target__tech_ {_uuid__tech_:"car-target-person_owns_car"}]->(person_owns_car),
+          (person_owns_car)-[:restricts__tech_ {_uuid__tech_:"person_owns_car-restricts-owns"}]->(owns),
 
           (metaname:MetaProperty__tech_ {name__tech_:"name__tech_",description__tech_:"the name of some MetaInfo", type__tech_:"string", _uuid__tech_:"metaname"}),
           (type:MetaProperty__tech_ {name__tech_:"type__tech_",description__tech_:"The type of the value of a property", type__tech_:"string", _uuid__tech_:"type"}),

@@ -17,11 +17,16 @@ class DatabaseFeature(Enum):
     PERSPECTIVES = "Perspectives"
 
 
+class RelationEnd(Enum):
+    SOURCE = "source"
+    TARGET = "target"
+
+
 class GraphDatabase(ABC):
     # ====================== Node related =====================================
 
     @abstractmethod
-    def create_nodes(self, node_data_list):
+    def create_nodes(self, node_data_list, preserve_import_uuid: bool = False):  # 00_ai
         """Create multiple nodes at once.
         For now this method transforms node data contained in its input.
         """
@@ -43,6 +48,13 @@ class GraphDatabase(ABC):
         mapped to a pseudo-node. Otherwise map it to None.
         """
         pass
+
+    def iter_nodes_by_element_ids(self, ids):  # 00_ai
+        """Yield BaseNode objects for the given IDs.
+
+        Accepts both raw element IDs and ``id::``-prefixed IDs.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def get_nodes_by_names(self, names, filters=None):
@@ -130,7 +142,7 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def query_nodes(self, text, labels, pseudo):
+    def query_nodes(self, text, labels, limit: int|None):
         """Return nodes which contain text and labels.
 
         If the database has _ft__tech_ support, use it. Otherwise search
@@ -156,6 +168,13 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
+    def get_relations_by_uuids(self, uuids: list[str]) -> dict[str, "BaseRelation"]:  # 00_ai
+        """Fetch relations by their _uuid__tech_ property.
+
+        Return a map of uuid value to BaseRelation."""
+        pass
+
+    @abstractmethod
     def update_relation_by_id(
         self, rid, relation_data, existing_relation=None
     ):
@@ -163,7 +182,9 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def create_relations(self, relation_data_list: list[dict]) -> dict[str, BaseRelation]:
+    def create_relations(
+            self, relation_data_list: list[dict], preserve_import_uuid: bool = False
+    ) -> dict[str, BaseRelation]:  # 00_ai
         """Create multiple nodes at once.
         For now this method transforms node data contained in its input.
         """
@@ -172,6 +193,23 @@ class GraphDatabase(ABC):
     @abstractmethod
     def delete_relations_by_ids(self, ids):
         """Delete multiple relations by ids"""
+        pass
+
+    @abstractmethod
+    def get_relation_type_suggestions(
+            self, source_id:str|None=None, target_id:str|None=None,
+            text: str|None=None, limit:int|None=None
+    ) -> dict[str, BaseNode]:
+        pass
+
+    # TODO pylint 4 is ok with this, remove after upgrading it
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    @abstractmethod
+    def get_relation_end_suggestions(
+            self, end:RelationEnd, neighbor_id=None,
+            relation_type:str|None=None, limit:int|None=None,
+            text: str|None = None
+    ) -> dict[str, BaseNode]:
         pass
 
     # ====================== Perspective related ==============================
@@ -210,8 +248,8 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_all_types(self) -> list[str]:
-        """Return all relation types as GraphEditorIDs."""
+    def get_all_types(self) -> dict[str, BaseNode | None]:
+        """Return all relation types as a map node ID -> MetaLabel | None."""
         pass
 
     @abstractmethod
@@ -227,11 +265,11 @@ class GraphDatabase(ABC):
         pass
 
     @abstractmethod
-    def ids_to_raw_db_ids(self, ids):
+    def ids_to_raw_db_ids(self, ids: list[str]) -> dict[str, str]:
         """Convert a list of IDs to a map of them to raw database ID."""
         pass
 
     @abstractmethod
-    def features(self) -> list[DatabaseFeature]:
+    def features(self) -> list[str]:
         """Return a list of supported features"""
         pass

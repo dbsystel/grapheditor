@@ -4,6 +4,8 @@
  * were used in order to improve readability.
  */
 import { NodeId } from 'src/models/node';
+import { GetRelationEndSuggestionsParameters } from 'src/utils/fetch/getRelationEndSuggestions';
+import { GetRelationTypeSuggestionsParameters } from 'src/utils/fetch/getRelationTypeSuggestions';
 
 export const endpoints = {
 	getDatabasesPath: () => {
@@ -142,5 +144,44 @@ export const endpoints = {
 	},
 	getBuildFrontendInfoPath: () => {
 		return 'build-info-frontend.json';
+	},
+	getRelationTypeSuggestionsPath: ({
+		sourceId,
+		targetId,
+		text,
+		limit
+	}: GetRelationTypeSuggestionsParameters) => {
+		const parameters = [
+			sourceId ? `source_id=${encodeURIComponent(sourceId)}` : '',
+			targetId ? `target_id=${encodeURIComponent(targetId)}` : '',
+			text ? `text=${encodeURIComponent(text)}` : '',
+			limit ? `limit=${limit}` : ''
+		]
+			.filter((parameter) => !!parameter)
+			.join('&');
+
+		return '/v1/meta/relation_type_suggestions' + (parameters.length ? `?${parameters}` : '');
+	},
+	getRelationEndSuggestionsPath: ({
+		end,
+		neighborId,
+		relationType,
+		text,
+		limit
+	}: GetRelationEndSuggestionsParameters) => {
+		const parameters = [
+			`end=${encodeURIComponent(end)}`,
+			neighborId ? `neighborId=${encodeURIComponent(neighborId)}` : '',
+			relationType ? `relationType=${encodeURIComponent(relationType)}` : '',
+			text ? `text=${encodeURIComponent(text)}` : '',
+			limit ? `limit=${limit}` : ''
+		]
+			.filter((parameter) => !!parameter)
+			.join('&');
+
+		return `/v1/meta/relation_end_suggestions?${parameters}`;
+	},
+	getStopRequestPath: ({ requestId }: { requestId: string }) => {
+		return `/v1/requests/${requestId}`;
 	}
 } as const;

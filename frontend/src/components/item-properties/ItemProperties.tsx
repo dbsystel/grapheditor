@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AddNewProperty } from 'src/components/add-new-property/AddNewProperty';
+import { AddNewPropertyHandle } from 'src/components/add-new-property/AddNewProperty.interfaces';
 import {
 	processItemPropertiesEntries,
 	PropertiesStorageClass,
@@ -70,6 +71,7 @@ export const ItemProperties = ({
 		itemProperties: clone(item.properties)
 	});
 	const rootElementClassName = clsx('item-properties', className);
+	const addNewPropertyRef = useRef<AddNewPropertyHandle>(null);
 
 	if (handleRef) {
 		handleRef.current.handleSave = handleSave;
@@ -152,6 +154,14 @@ export const ItemProperties = ({
 
 	async function handleSave() {
 		if (!isLoading) {
+			if (addNewPropertyRef.current?.hasPendingData()) {
+				const submitted = await addNewPropertyRef.current.submitPendingData();
+
+				if (!submitted) {
+					return;
+				}
+			}
+
 			const itemPropertiesValidation = areItemPropertiesValid(propertiesStorage.properties);
 
 			if (!itemPropertiesValidation.isValid) {
@@ -192,7 +202,10 @@ export const ItemProperties = ({
 	}
 
 	function checkIfHasUnsavedChanges() {
-		return !twoObjectValuesAreEqual(item.properties, propertiesStorage.properties);
+		return (
+			!twoObjectValuesAreEqual(item.properties, propertiesStorage.properties) ||
+			!!addNewPropertyRef.current?.hasPendingData()
+		);
 	}
 
 	const refreshPropertyKeyPrefix = () => {
@@ -285,7 +298,10 @@ export const ItemProperties = ({
 						)}
 					</TabList>
 					<TabPanel onTabClose={sortTopEntriesMap}>
-						<AddNewProperty onPropertyCreate={onPropertyCreate} />
+						<AddNewProperty
+							onPropertyCreate={onPropertyCreate}
+							handleRef={addNewPropertyRef}
+						/>
 					</TabPanel>
 				</Tabs>
 			)}
