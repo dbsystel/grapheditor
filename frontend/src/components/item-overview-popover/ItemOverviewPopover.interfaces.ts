@@ -1,10 +1,9 @@
 import { Placement } from '@floating-ui/react';
-import { Node } from 'src/models/node';
-import { Relation } from 'src/models/relation';
+import { Item } from 'src/models/item';
 import { GlobalComponentProps } from 'src/types/components';
 
 export type ItemOverviewPopoverProps = GlobalComponentProps & {
-	item: Relation | Node;
+	item: Item;
 	popoverRef: HTMLElement | null;
 	popoverOffset?: number;
 	popoverPlacement?: Placement;

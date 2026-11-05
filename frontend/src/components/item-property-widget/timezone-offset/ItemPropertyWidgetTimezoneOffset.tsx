@@ -1,9 +1,10 @@
 import './ItemPropertyWidgetTimezoneOffset.scss';
-import { DBIcon, DBInput, DBSelect, DBTooltip } from '@db-ux/react-core-components';
+import { DBIcon, DBInfotext, DBInput, DBSelect, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getDigitsFromString } from 'src/utils/helpers/general';
+import { html5TimeHourMinuteRegex } from 'src/utils/helpers/regex';
 import {
 	ItemPropertyWidgetTimezoneOffsetProps,
 	ItemPropertyWidgetTimezoneOffsetState
@@ -58,9 +59,7 @@ export const ItemPropertyWidgetTimezoneOffset = ({
 	};
 
 	const triggerStateUpdateAndOnChange = (newState: ItemPropertyWidgetTimezoneOffsetState) => {
-		if (!isControlled) {
-			setLocalValue(newState);
-		}
+		setLocalValue(newState);
 
 		const isTimeValid = timeElementRef.current?.validity.valid;
 
@@ -72,10 +71,16 @@ export const ItemPropertyWidgetTimezoneOffset = ({
 	// maximum positive offset: UTC+14:00 (e.g., Line Islands in Kiribati)
 	// maximum negative offset: UTC−12:00 (e.g., Baker/Howland Islands time)
 	const timezoneOffsetMaximum = displayValue.sign === '+' ? '14:00' : '12:00';
+	const isValid =
+		html5TimeHourMinuteRegex.test(displayValue.time) &&
+		displayValue.time >= '00:00' &&
+		displayValue.time <= timezoneOffsetMaximum;
 
 	const idRef = useRef(window.crypto.randomUUID());
 	const offsetOptionsToRender =
 		displayValue.sign === '+' ? offsetOptions : offsetOptions.slice(0, 49);
+	// same source as the view-mode display below, so the message always matches what's shown
+	const timezoneOffsetString = displayValue.sign + displayValue.time;
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -132,6 +137,17 @@ export const ItemPropertyWidgetTimezoneOffset = ({
 						</datalist>
 					</div>
 				</>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_timezone_offset_invalid_message', {
+						// only show the value in view mode; while editing, the native time
+						// input can transiently report '' for partial/invalid entries
+						context: timezoneOffsetString ? 'with_value' : undefined,
+						value: timezoneOffsetString
+					})}
+				/>
 			)}
 		</div>
 	);

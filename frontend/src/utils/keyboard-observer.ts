@@ -1,6 +1,10 @@
 type PressedKey = 'Control' | 'Alt' | 'Shift' | string;
 
+// only these modifier keys are tracked; everything else is ignored
+const MODIFIER_KEYS: Array<PressedKey> = ['Control', 'Shift', 'Alt'];
+
 // for key values: https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values
+// only currently held modifier keys are present (removed on release)
 export let pressedKeys: Record<PressedKey, boolean> = {};
 
 /**
@@ -29,13 +33,14 @@ const resetPressedKeysState = () => {
 };
 
 const onKeyDown = (event: KeyboardEvent) => {
-	if (!pressedKeys[event.key]) {
+	if (MODIFIER_KEYS.includes(event.key)) {
 		pressedKeys[event.key] = true;
 	}
 };
 
 const onKeyUp = (event: KeyboardEvent) => {
-	pressedKeys[event.key] = false;
+	// remove the key so pressedKeys only ever holds currently pressed modifiers
+	delete pressedKeys[event.key];
 
 	// prevent browser menu focus on Alt blur (the application looses focus)
 	if (event.key === 'Alt') {
@@ -44,13 +49,32 @@ const onKeyUp = (event: KeyboardEvent) => {
 };
 
 export const isControlKeyPressed = () => {
-	return pressedKeys['Control'];
+	return Boolean(pressedKeys['Control']);
 };
 
 export const isShiftKeyPressed = () => {
-	return pressedKeys['Shift'];
+	return Boolean(pressedKeys['Shift']);
 };
 
-export const isAltKeyPressed = () => {
-	return pressedKeys['Alt'];
+export const isAlternateKeyPressed = () => {
+	return Boolean(pressedKeys['Alt']);
+};
+
+/**
+ * Return true only when none of the modifier keys (Control, Shift, Alt) are
+ * currently pressed. Useful to guard "plain" interactions that must not overlap
+ * with any modifier-based gesture.
+ */
+export const areNoModifiersPressed = () => {
+	return Object.keys(pressedKeys).length === 0;
+};
+
+/**
+ * Return true only when EXACTLY the given modifier keys are pressed and no other
+ * modifier is. For example, areExactModifiersPressed('Control', 'Shift') is true
+ * when Control and Shift are held, but false when only Control is held or when
+ * Control + Shift + Alt are held. This makes key combinations unambiguous.
+ */
+export const areExactModifiersPressed = (...keys: Array<PressedKey>) => {
+	return Object.keys(pressedKeys).length === keys.length && keys.every((key) => pressedKeys[key]);
 };

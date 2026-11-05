@@ -1,7 +1,12 @@
 .database-menu {
+	&__selector {
+		display: flex;
+		align-items: center;
+		margin: 0 var(--db-spacing-fixed-sm);
+	}
+
 	.db-custom-select {
 		width: 200px;
-		margin: 0 var(--db-spacing-fixed-xs);
 
 		.db-custom-select-dropdown {
 			z-index: 9999 !important;

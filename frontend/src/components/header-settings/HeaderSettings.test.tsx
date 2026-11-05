@@ -18,10 +18,16 @@ describe('Components - HeaderSettings', () => {
 
 		await userEvent.click(button);
 
-		const settingsArticle = screen.getByRole('article').element();
+		const settingsArticleLocator = screen.getByRole('article');
+
+		// the popover content is present in the DOM right away, but it's only exposed via the
+		// "article" role once the popover has actually finished opening (positioning/animation
+		// can take a tick) - wait for that instead of asserting synchronously right after the click
+		await expect.element(settingsArticleLocator).toBeInTheDocument();
+
+		const settingsArticle = settingsArticleLocator.element();
 		const settings = settingsArticle.children[0].children;
 
-		expect(settingsArticle).toBeInTheDocument();
 		expect(settings?.length).toBe(7);
 		expect(settings[0].querySelector('input[type="checkbox"]')).toBeInTheDocument();
 		expect(settings[0]?.querySelector('label')?.childNodes[1].textContent).toBe(

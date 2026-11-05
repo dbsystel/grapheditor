@@ -7,13 +7,14 @@ import { ItemFinder } from 'src/components/item-finder/ItemFinder';
 import { Node } from 'src/models/node';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
 import { api } from 'src/utils/api/api';
-import { GraphEditorTypeSimplified } from 'src/utils/constants';
+import { GraphEditorTypeSimplified, NON_REMOVABLE_NODE_IDS } from 'src/utils/constants';
 import { compareTwoStringsForSorting, twoObjectValuesAreEqual } from 'src/utils/helpers/general';
 import {
 	generateNode,
 	getNodeSemanticIdOrId,
 	nodeContainsSearchTerm
 } from 'src/utils/helpers/nodes';
+import { useDatabaseFeatures } from 'src/utils/hooks/useDatabaseFeatures';
 import { useGetNodesLabelsNodes } from 'src/utils/hooks/useGetNodesLabelsNodes';
 import { idFormatter } from 'src/utils/id-formatter';
 import {
@@ -63,6 +64,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	const isEditMode = props.mode === 'edit';
 	const editLabels = isEditMode && !!props.isEditMode;
 	const isEditModeActive = props.mode === 'edit' && editLabels;
+	const { hasFunctions, hasTriggers } = useDatabaseFeatures();
 
 	const patchObject = {
 		id: isEditMode ? props.node.id : '',
@@ -123,7 +125,7 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 	function checkIfHasUnsavedChanges() {
 		const ids = getNodesSemanticIdOrId(value || []);
 
-		return !twoObjectValuesAreEqual((defaultLabels || []).sort(), ids.sort());
+		return !twoObjectValuesAreEqual([...(defaultLabels || [])].sort(), ids.sort());
 	}
 
 	/**
@@ -247,6 +249,10 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 										isHighlighted={isHighlighted}
 										shouldRenderWarningIcon={shouldRenderWarningIcon}
 										onLabelChange={onLabelChange}
+										isRemovable={
+											!NON_REMOVABLE_NODE_IDS.includes(label.id) ||
+											!(hasFunctions && hasTriggers)
+										}
 										value={value}
 										onTagSelect={handleTagSelect}
 										tooltipLabel={label}
@@ -271,8 +277,8 @@ export const NodeLabelsItemFinder = (props: NodeLabelsItemFinderProps) => {
 							className="db-tooltip-fix db-tooltip-fix--bottom-end"
 						>
 							{isCheckboxChecked
-								? t('node-labels-item-finder-checkbox-uncheck_all_labels')
-								: t('node-labels-item-finder-checkbox-select_all_labels')}
+								? t('node_labels_item_finder_checkbox_uncheck_all_labels')
+								: t('node_labels_item_finder_checkbox_select_all_labels')}
 						</DBTooltip>
 					</div>
 				)}
@@ -315,6 +321,7 @@ const Tag = ({
 	onTagSelect,
 	tooltipLabel,
 	shouldRenderWarningIcon,
+	isRemovable,
 	showTooltipOnHover
 }: NodeLabelsItemFinderTagProps) => {
 	const rootElementClassName = clsx(
@@ -327,13 +334,16 @@ const Tag = ({
 		}
 	);
 
-	const onRefChange = useCallback((element: HTMLDivElement | null) => {
-		if (element && tooltipLabel && showTooltipOnHover) {
-			useItemOverviewPopoverStore
-				.getState()
-				.registerTriggerElement({ triggerElement: element, item: tooltipLabel });
-		}
-	}, []);
+	const onRefChange = useCallback(
+		(element: HTMLDivElement | null) => {
+			if (element && showTooltipOnHover) {
+				useItemOverviewPopoverStore
+					.getState()
+					.registerTriggerElement({ triggerElement: element, item: tooltipLabel });
+			}
+		},
+		[tooltipLabel]
+	);
 
 	const onRemove = () => {
 		if (editLabels) {
@@ -355,7 +365,7 @@ const Tag = ({
 			showCheckState={false}
 			data-density="functional"
 			ref={onRefChange}
-			behavior={editLabels ? 'removable' : undefined}
+			behavior={editLabels && isRemovable ? 'removable' : undefined}
 			onRemove={onRemove}
 			emphasis={isSelected ? 'strong' : undefined}
 		>

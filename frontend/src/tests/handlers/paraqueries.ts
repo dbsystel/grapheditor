@@ -17,6 +17,18 @@ export const successfulParaQueriesHandlers = [
 			throw new Error('Test: ParaQuery not found.');
 		}
 	}),
+	http.post(TEST_HOST + endpoints.getParaQueriesPath() + '/:paraQueryId', ({ params }) => {
+		const paraQueryId = params['paraQueryId'];
+		const testParaQuery = testParaQueries[isString(paraQueryId) ? paraQueryId : ''];
+
+		if (testParaQuery) {
+			return HttpResponse.json({
+				paraquery: testParaQuery
+			});
+		} else {
+			throw new Error('Test: ParaQuery not found.');
+		}
+	}),
 	http.get(TEST_HOST + endpoints.getParaQueriesPath(), () => {
 		return HttpResponse.json(testParaQueriesResponse);
 	})

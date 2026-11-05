@@ -1,8 +1,9 @@
 import './ItemPropertyWidgetBoolean.scss';
-import { DBCheckbox, DBTooltip } from '@db-ux/react-core-components';
+import { DBCheckbox, DBInfotext, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isBoolean } from 'src/utils/helpers/general';
 import { itemPropertyDefaults } from 'src/utils/helpers/items';
 import { ItemPropertyWidgetBooleanProps } from './ItemPropertyWidgetBoolean.interfaces';
 
@@ -26,14 +27,14 @@ export const ItemPropertyWidgetBoolean = ({
 	const localOnChange = (event: ChangeEvent<HTMLInputElement>) => {
 		const newValue = event.target.value === 'true';
 
-		if (!isControlled) {
-			setLocalValue(newValue);
-		}
+		setLocalValue(newValue);
 
 		if (onChange) {
 			onChange(newValue);
 		}
 	};
+
+	const isValid = isBoolean(displayValue);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -46,6 +47,7 @@ export const ItemPropertyWidgetBoolean = ({
 					size="small"
 					onChange={localOnChange}
 					disabled={!isEditMode}
+					validation="no-validation"
 				/>
 				<DBTooltip
 					className="item-properties-table__warning-tooltip db-tooltip-fix db-tooltip-fix--top-start"
@@ -53,6 +55,11 @@ export const ItemPropertyWidgetBoolean = ({
 				>
 					{t('item_property_widget_boolean_tooltip')}
 				</DBTooltip>
+				{!isValid && (
+					<DBInfotext semantic="warning">
+						{t('item_property_widget_boolean_invalid_message')}
+					</DBInfotext>
+				)}
 			</div>
 		</div>
 	);

@@ -1,4 +1,5 @@
 .database-menu {
 	display: flex;
 	align-items: center;
+	column-gap: var(--db-spacing-fixed-xs);
 }

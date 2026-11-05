@@ -1,13 +1,14 @@
 .left-widget {
-	.sidebar {
+	.sidebar__content {
 		> .db-accordion {
 			> .db-accordion-item {
 				> details[open] {
 					> div {
-						display: flex;
-						flex-direction: column;
-						gap: var(--db-spacing-fixed-md);
-						overflow: visible !important;
+						> *:first-child {
+							display: flex;
+							flex-direction: column;
+							gap: var(--db-spacing-fixed-md);
+						}
 					}
 				}
 			}

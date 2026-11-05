@@ -36,11 +36,12 @@ export default defineConfig({
 	workers: 1,
 	/* Reporter to use. See https://playwright.dev/docs/test-reporters */
 	reporter: 'html',
-
 	// 	/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
 	// 	trace: 'on-first-retry'
 	// },
-
+	expect: {
+		timeout: 15000
+	},
 	use: {
 		baseURL: process.env.BASE_URL || 'http://localhost:8080',
 		trace: 'on-first-retry',
@@ -49,6 +50,9 @@ export default defineConfig({
 		viewport: {
 			width: 1920,
 			height: 1080
+		},
+		launchOptions: {
+			slowMo: 500 // ms delay before every Playwright action (click, fill, etc.), should help with random 401 error until the real cause is fixed
 		}
 	},
 

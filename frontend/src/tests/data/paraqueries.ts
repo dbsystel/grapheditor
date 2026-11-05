@@ -14,6 +14,7 @@ testParaQueries[testParaQuery1Id] = {
 	user_text: 'I want all nodes with $label and $propertyName=$propertyValue.',
 	cypher: 'match (a:$($label)) where a[$propertyName] = $propertyValue return a',
 	uuid: uuid1,
+	db_id: uuid1,
 	name: 'ParaQuery 1',
 	parameters: {
 		label: {
@@ -62,6 +63,7 @@ testParaQueries[testParaQuery2Id] = {
 	cypher: 'match (a:$($label)) return a',
 	name: 'ParaQuery 2',
 	uuid: uuid2,
+	db_id: uuid2,
 	parameters: {
 		label: {
 			help_text: 'Selection of available node types.',

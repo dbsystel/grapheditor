@@ -1,4 +1,4 @@
-import { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Primitive } from 'src/types/general';
 import {
 	dateRegex,
@@ -15,6 +15,27 @@ export const adjustElementHeight = (element: HTMLElement) => {
 
 export const isString = (data: unknown): data is string => {
 	return typeof data === 'string';
+};
+
+/**
+ * Safely converts any value to a string for display purposes (e.g. error messages),
+ * without risking a runtime crash on unexpected/corrupted data (e.g. BigInt, circular
+ * references, symbols, undefined).
+ */
+export const safeStringify = (value: unknown): string => {
+	try {
+		const stringified = JSON.stringify(value);
+
+		// JSON.stringify returns undefined for certain values (e.g. undefined, functions, symbols)
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#return_value
+		return stringified === undefined ? String(value) : stringified;
+	} catch {
+		try {
+			return String(value);
+		} catch {
+			return '';
+		}
+	}
 };
 
 export const isBoolean = (data: unknown): data is boolean => {
@@ -42,7 +63,7 @@ export const isTime = (input: unknown) => {
 };
 
 export const isDate = (input: unknown) => {
-	if (!(isString(input) || isNumber(input))) {
+	if (!isString(input) || !html5DateRegex.test(input)) {
 		return false;
 	}
 
@@ -55,7 +76,7 @@ export const isDate = (input: unknown) => {
 };
 
 export const isDatetime = (input: unknown) => {
-	if (!isString(input) && !isNumber(input)) {
+	if (!isString(input) || !html5DatetimeRegex.test(input)) {
 		return false;
 	}
 
@@ -141,7 +162,11 @@ export const getDigitsFromString = (input: string) => {
 	return undefined;
 };
 
-export const getDateFromString = (input: string) => {
+export const getDateFromString = (input: unknown) => {
+	if (!isString(input)) {
+		return undefined;
+	}
+
 	const matches = input.match(dateRegex);
 	const groups = matches?.groups;
 
@@ -152,7 +177,11 @@ export const getDateFromString = (input: string) => {
 	return undefined;
 };
 
-export const getTimeFromString = (input: string) => {
+export const getTimeFromString = (input: unknown) => {
+	if (!isString(input)) {
+		return undefined;
+	}
+
 	const matches = input.match(html5TimeRegex);
 
 	if (!matches) {
@@ -160,16 +189,23 @@ export const getTimeFromString = (input: string) => {
 	}
 
 	const fractionOfSecond = stripTrailingZerosFromString(matches.at(2) || '');
+	// "Z" (Zulu/UTC) is equivalent to a "+00:00" offset, which is the representation used by
+	// the rest of the UI (e.g. the timezone offset sub-widget), so normalize it accordingly
+	const isUtcZ = input.endsWith('Z');
 
 	return {
 		time: matches.at(1),
 		fractionOfSecond: fractionOfSecond,
-		timezoneOffsetSign: matches.at(3),
-		timezoneOffset: matches.at(4)
+		timezoneOffsetSign: isUtcZ ? '+' : matches.at(3),
+		timezoneOffset: isUtcZ ? '00:00' : matches.at(4)
 	};
 };
 
-export const getDatetimeFromString = (datetimeString: string) => {
+export const getDatetimeFromString = (datetimeString: unknown) => {
+	if (!isString(datetimeString)) {
+		return undefined;
+	}
+
 	const matches = datetimeString.match(html5DatetimeRegex);
 
 	if (!matches) {
@@ -177,12 +213,15 @@ export const getDatetimeFromString = (datetimeString: string) => {
 	}
 
 	const fractionOfSecond = stripTrailingZerosFromString(matches.at(2) || '');
+	// "Z" (Zulu/UTC) is equivalent to a "+00:00" offset, which is the representation used by
+	// the rest of the UI (e.g. the timezone offset sub-widget), so normalize it accordingly
+	const isUtcZ = datetimeString.endsWith('Z');
 
 	return {
 		datetime: matches.at(1),
 		fractionOfSecond: fractionOfSecond,
-		timezoneOffsetSign: matches.at(3),
-		timezoneOffset: matches.at(4)
+		timezoneOffsetSign: isUtcZ ? '+' : matches.at(3),
+		timezoneOffset: isUtcZ ? '00:00' : matches.at(4)
 	};
 };
 
@@ -220,6 +259,12 @@ export const parseError = (error: unknown) => {
 	} else {
 		return JSON.stringify(error);
 	}
+};
+
+export const isCancelError = (error: unknown) => {
+	return (
+		axios.isCancel(error) || (error instanceof Error ? error.name === 'CanceledError' : false)
+	);
 };
 
 export const copyTextToClipboard = (text: string) => {
@@ -309,6 +354,19 @@ export const stripTrailingZerosFromString = (string: string) => {
 	return sign + trimmedString;
 };
 
+const dateFormatOptions: Intl.DateTimeFormatOptions = {
+	year: 'numeric',
+	month: '2-digit',
+	day: '2-digit'
+};
+
+const dateTimeFormatOptions: Intl.DateTimeFormatOptions = {
+	...dateFormatOptions,
+	hour: '2-digit',
+	minute: '2-digit',
+	second: '2-digit'
+};
+
 export const getFormattedLocaleDatetimeString = (datetime: string) => {
 	const datetimeObject = getDatetimeFromString(datetime);
 	const date = new Date(datetime);
@@ -317,7 +375,7 @@ export const getFormattedLocaleDatetimeString = (datetime: string) => {
 
 	// if datetime, try and return locale datetime and other information if possible
 	if (datetimeObject) {
-		dateToReturn = date.toLocaleString();
+		dateToReturn = date.toLocaleString(undefined, dateTimeFormatOptions);
 
 		if (datetimeObject.fractionOfSecond) {
 			datetimeSuffix += `.${datetimeObject.fractionOfSecond}`;
@@ -334,7 +392,7 @@ export const getFormattedLocaleDatetimeString = (datetime: string) => {
 	}
 	// else if only date, return locale date only
 	else if (html5DateRegex.test(datetime)) {
-		dateToReturn = date.toLocaleDateString();
+		dateToReturn = date.toLocaleDateString(undefined, dateFormatOptions);
 	}
 
 	return dateToReturn + datetimeSuffix;
@@ -358,23 +416,42 @@ type DownloadFileOptions =
 			name: string;
 			content: string; // ObjectUrl
 			mimeType: string;
+	  }
+	| {
+			name?: string;
+			url: string;
 	  };
 
 export const downloadFile = (options: DownloadFileOptions) => {
 	const anchorElement = document.createElement('a');
+	let url = 'url' in options ? options.url : '';
+	const download = options.name;
+
 	let file;
 
-	if (options.content instanceof Blob) {
+	if ('content' in options && options.content instanceof Blob) {
 		file = options.content;
 	} else if ('mimeType' in options) {
 		file = new Blob([options.content], { type: options.mimeType });
 	}
 
 	if (file) {
-		anchorElement.href = URL.createObjectURL(file);
-		anchorElement.download = options.name;
+		url = URL.createObjectURL(file);
+	}
+
+	if (url) {
+		anchorElement.href = url;
+
+		if (download) {
+			anchorElement.download = download;
+		}
+
 		anchorElement.click();
 		anchorElement.remove();
+
+		if (file) {
+			URL.revokeObjectURL(url);
+		}
 	}
 };
 

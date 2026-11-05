@@ -11,7 +11,6 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_PARA_QUERY,
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE
 } from 'src/utils/constants';
-import { databaseSupportsPerspectives } from 'src/utils/helpers/database';
 import { SearchOptionsProps } from './SearchOptions.interfaces';
 
 export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => {
@@ -19,6 +18,9 @@ export const SearchOptions = ({ id, className, testId }: SearchOptionsProps) => 
 	const { type, setType, setSearchValue, getUrlSearchParameter, getDefaultSearchValue } =
 		useSearchStore((store) => store);
 	const currentDatabase = useDatabaseStore((store) => store.currentDatabase);
+	const databaseSupportsPerspectives = useDatabaseStore(
+		(store) => store.databaseSupportsPerspectives
+	);
 	const isPerspectivesSupported = currentDatabase
 		? databaseSupportsPerspectives(currentDatabase)
 		: false;

@@ -1,4 +1,3 @@
-import { Perspective } from 'src/models/perspective';
 import { usePerspectiveStore } from 'src/stores/perspective';
 import { generateTestPerspective } from 'src/tests/helpers';
 import { describe, expect, it } from 'vitest';

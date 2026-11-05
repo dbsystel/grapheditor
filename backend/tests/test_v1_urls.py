@@ -9,8 +9,8 @@
 import io
 import json
 import time
-import uuid
 from urllib.parse import urlparse
+import uuid
 
 import pytest
 from flask import g
@@ -28,6 +28,7 @@ from helpers import (
     upload_style_file,
     create_perspective,
     create_empty_node,
+    perform_export,
 )
 
 # pylint falsely thinks find_database_connection and logged_in
@@ -36,7 +37,7 @@ from helpers import (
 from setup import (
     login,
     BASE_URL,
-    HEADERS,
+    get_headers,
     find_database_connection,
     logged_in,
     client_with_transaction,
@@ -66,7 +67,7 @@ def reset_db(logged_in):
 
     response = client.get(
         BASE_URL + f"/api/v1/dev/reset?host={url_parts.scheme}%3A%2F%2F{url_parts.hostname}%3A{url_parts.port}&database=neo4j",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     yield client
@@ -100,7 +101,7 @@ def test_all_labels():
     # add defined, but unused label
     post_response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::MetaLabel__tech_"],
             "properties": {
@@ -117,7 +118,7 @@ def test_all_labels():
 
     response = client.get(
         BASE_URL + "/api/v1/nodes/labels",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
@@ -134,7 +135,7 @@ def test_all_labels():
 
     delete_response = client.delete(
         BASE_URL + f"/api/v1/nodes/{post_response.json['semanticId']}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert delete_response.status_code == 200
 
@@ -150,7 +151,7 @@ def test_post_node_without_namespace():
     # pylint: disable=duplicate-code
     response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
@@ -178,7 +179,7 @@ def test_post_relation():
     )["id"]
     client.delete(
         BASE_URL + f"/api/v1/relations/{rid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -187,7 +188,7 @@ def test_post_relation_invalid_nodes():
     bob_id = fetch_sample_node_id(client, "bob")
     response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "source_id": "i_dont_exist",
             "target_id": bob_id,
@@ -198,7 +199,7 @@ def test_post_relation_invalid_nodes():
 
     response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "source_id": bob_id,
             "target_id": "i_dont_exist",
@@ -213,7 +214,7 @@ def test_post_relation_type_only():
     target_id = create_sample_node(client, "xena")["id"]
     response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {},
             "source_id": source_id,
@@ -231,7 +232,7 @@ def test_post_relation_type_only_unknown():
     target_id = create_sample_node(client, "xena")["id"]
     response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {},
             "source_id": source_id,
@@ -261,7 +262,7 @@ def test_get_node_with_datetime():
     "Test if datetime is serialized correctly."
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": (
                 "create (n {name: 'Homer', birth: datetime('1956-05-12T20:00:00.142')}) return n"
@@ -283,7 +284,7 @@ def test_put_node():
     nid = fetch_sample_node_id(client, text="alice")
     response = client.put(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::Human"],
             "properties": {
@@ -308,7 +309,7 @@ def test_put_node():
 def test_put_pseudo_node():
     response = client.put(
         BASE_URL + "/api/v1/nodes/MetaLabel::foo",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": ["MetaLabel::Human"], "properties": {}},
     )
     # PUT on a pseudo node doesn't work
@@ -321,7 +322,7 @@ def test_patch_node():
     assert "MetaProperty::name__dummy_" in bob["properties"]
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": ["MetaLabel::Human", "MetaLabel::Person__dummy_"]},
     )
     assert response.status_code == 200
@@ -337,7 +338,7 @@ def test_patch_node():
     # Now we do patch the properties...
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::age__dummy_": {
@@ -361,7 +362,7 @@ def test_patch_node_with_invalid_id():
     nid = "id::i_dont_exist"
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": ["MetaLabel::Human", "MetaLabel::Person__dummy_"]},
     )
     assert response.status_code == 404
@@ -372,7 +373,7 @@ def test_patch_node_properties():
     nid = fetch_sample_node_id(client)
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::name__dummy_": {
@@ -395,7 +396,7 @@ def test_patch_node_properties():
 def test_patch_pseudo_node():
     response = client.patch(
         BASE_URL + "/api/v1/nodes/MetaLabel::foo",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": ["MetaLabel::Human", "MetaLabel::Person__dummy_"]},
     )
     assert response.status_code == 405
@@ -405,7 +406,7 @@ def test_patch_new_node_with_label():
     nid = create_empty_node(client)["id"]
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": ["MetaLabel::Person__dummy_"]},
     )
     assert response.status_code == 200
@@ -416,7 +417,7 @@ def test_patch_new_node_with_label_metaproperty():
     nid = create_empty_node(client)["id"]
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": ["MetaLabel::MetaProperty__tech_"]},
     )
     assert response.status_code == 200
@@ -434,19 +435,19 @@ def test_get_pseudo_node():
 
     response = client.get(
         BASE_URL + "/api/v1/nodes/id::123",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
 
     response = client.get(
         BASE_URL + "/api/v1/nodes/invalid_id",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 400
 
     response = client.get(
         BASE_URL + "/api/v1/nodes/MetaLabel::foo::bar",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
@@ -456,7 +457,7 @@ def test_fulltext_node():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="bob"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     props = response.json[0]["properties"]
@@ -468,7 +469,7 @@ def test_fulltext_node_with_labels():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="bob", labels=["Person__dummy_"]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     props = response.json[0]["properties"]
@@ -478,7 +479,7 @@ def test_fulltext_node_with_labels():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="bob", labels=["Person__dummy_", "Human"]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) == 1
@@ -486,7 +487,7 @@ def test_fulltext_node_with_labels():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="bob", labels=["Animal"]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) == 0
@@ -495,7 +496,7 @@ def test_fulltext_node_with_labels():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="bob", labels=["MetaLabel::Person__dummy_"]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) == 1
@@ -506,7 +507,7 @@ def test_fulltext_node_upper():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="Bob"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     props = response.json[0]["properties"]
@@ -519,7 +520,7 @@ def test_fulltext_node_id():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text=nid),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     props = response.json[0]["properties"]
@@ -530,7 +531,7 @@ def test_fulltext_node_empty():
     """An empty fulltext is invalid."""
     response = client.get(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) > 20
@@ -542,7 +543,7 @@ def test_fulltext_boolean_operators():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="alice OR bob"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
@@ -552,7 +553,7 @@ def test_fulltext_boolean_operators():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="'name__dummy_=alice' OR 'name__tech_=MetaLabel__tech_'"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
     assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
@@ -562,7 +563,7 @@ def test_fulltext_boolean_operators():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="alice AND person__dummy_"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
     assert not find_by_property(response.json, 'MetaProperty::name__dummy_', 'Bob')
@@ -572,7 +573,7 @@ def test_fulltext_boolean_operators():
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="alice AND person__dummy_",
                           labels="MetaLabel::Person__dummy_"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert find_by_property(response.json, 'MetaProperty::name__dummy_', 'Alice')
     assert not find_by_property(response.json, 'MetaProperty::name__dummy_', 'Bob')
@@ -582,7 +583,7 @@ def test_get_relation():
     rid = fetch_sample_relation_id(client)
     response = client.get(
         BASE_URL + f"/api/v1/relations/{rid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert response.json["type"] == "MetaRelation::likes__dummy_"
@@ -594,7 +595,7 @@ def test_put_relation_missing_fields():
     rid = fetch_sample_relation_id(client)
     response = client.put(
         BASE_URL + f"/api/v1/relations/{rid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::years__dummy_": {
@@ -614,7 +615,7 @@ def test_put_relation():
     rid = fetch_sample_relation_id(client, text="likes__dummy_")
     response = client.put(
         BASE_URL + f"/api/v1/relations/{rid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::years__dummy_": {
@@ -636,7 +637,7 @@ def test_put_relation():
     # restore
     response = client.put(
         BASE_URL + f"/api/v1/relations/{new_id}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::years__dummy_": {
@@ -656,7 +657,7 @@ def test_patch_relation():
     rid = fetch_sample_relation_id(client)
     response = client.patch(
         BASE_URL + f"/api/v1/relations/{rid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::years": {
@@ -676,7 +677,7 @@ def test_bulk_fetch_nodes():
     person_id = "MetaLabel::Person__dummy_"
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [alice_id, person_id]},
     )
     assert response.status_code == 200
@@ -690,7 +691,7 @@ def test_bulk_fetch_nodes():
     # no crash if ids empty
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": []},
     )
     assert response.status_code == 200
@@ -699,7 +700,7 @@ def test_bulk_fetch_nodes():
     # suppress ID from output if it doesn't exist
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": ['id::abc123', 'MetaLabel::Person__dummy_']},
     )
     assert response.status_code == 200
@@ -709,7 +710,7 @@ def test_bulk_fetch_nodes():
     # Semantic ID contains ', no crash
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [
             "MetaProperty::_community_id_Report - EQUI's SuS mit allen D",
             'MetaLabel::Person__dummy_'
@@ -725,7 +726,7 @@ def test_bulk_patch_nodes():
     new_likes_desc = "Someone takes a liking in someone"
     response = client.patch(
         BASE_URL + "/api/v1/nodes/bulk_patch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "patches": [
                 {
@@ -869,7 +870,7 @@ def test_bulk_post_nodes():
     ]
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_post",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodes": nodes_list
         }
@@ -890,7 +891,7 @@ def test_bulk_post_nodes():
     # empty list doesn't crash
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_post",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodes": []
         }
@@ -911,7 +912,7 @@ def test_bulk_delete_nodes():
     )["id"]
     response = client.delete(
         BASE_URL + "/api/v1/nodes/bulk_delete",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [homer, montgomery]},
     )
     assert response.status_code == 200
@@ -919,17 +920,17 @@ def test_bulk_delete_nodes():
     fetch_sample_node_id(client, text="alice")
     response = client.get(
         BASE_URL + f"/api/v1/nodes/{homer}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
     response = client.get(
         BASE_URL + f"/api/v1/nodes/{montgomery}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
     response = client.get(
         BASE_URL + f"/api/v1/nodes/{knows_rel}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
 
@@ -948,7 +949,7 @@ def test_bulk_patch_relations():
     )["id"]
     response = client.patch(
         BASE_URL + "/api/v1/relations/bulk_patch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "patches": [
                 {
@@ -981,26 +982,26 @@ def test_bulk_patch_relations():
 
     response = client.get(
         BASE_URL + f"/api/v1/relations/{likes_rel}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json["properties"]["MetaProperty::years"]["value"] == 5
 
     response = client.get(
         BASE_URL + f"/api/v1/relations/{is_neighbour_rel}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json["properties"]["MetaProperty::years"]["value"] == 6
 
     # cleanup
     response = client.patch(
         BASE_URL + f"/api/v1/relations/{likes_rel}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"properties": {}},
     )
     assert response.status_code == 200
     client.delete(
         BASE_URL + f"/api/v1/relations/{is_neighbour_rel}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -1009,7 +1010,7 @@ def test_bulk_fetch_relations():
     restricts_id = fetch_sample_relation_id(client, text="restricts")
     response = client.post(
         BASE_URL + "/api/v1/relations/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [likes_id, restricts_id]},
     )
     assert response.status_code == 200
@@ -1022,7 +1023,7 @@ def test_bulk_fetch_relations():
     # no crash if ids empty
     response = client.post(
         BASE_URL + "/api/v1/nodes/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": []},
     )
     assert response.status_code == 200
@@ -1031,7 +1032,7 @@ def test_bulk_fetch_relations():
     # missing ID doesn't lead to a crash
     response = client.post(
         BASE_URL + "/api/v1/relations/bulk_fetch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [likes_id, "id::123"]},
     )
     assert response.status_code == 200
@@ -1063,7 +1064,7 @@ def test_bulk_delete_relations():
     )["id"]
     response = client.delete(
         BASE_URL + "/api/v1/relations/bulk_delete",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [rel1, rel2, rel3]},
     )
 
@@ -1072,17 +1073,17 @@ def test_bulk_delete_relations():
     fetch_sample_node_id(client, text="alice")
     response = client.get(
         BASE_URL + f"/api/v1/relations/{rel1}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
     response = client.get(
         BASE_URL + f"/api/v1/relations/{rel2}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
     response = client.get(
         BASE_URL + f"/api/v1/relations/{rel3}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
 
@@ -1118,7 +1119,7 @@ def test_bulk_post_relations():
     ]
     response = client.post(
         BASE_URL + "/api/v1/relations/bulk_post",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "relations": rel_list
         }
@@ -1141,7 +1142,7 @@ def test_bulk_post_relations():
     # empty list doesn't crash
     response = client.post(
         BASE_URL + "/api/v1/relations/bulk_post",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "relations": []
         }
@@ -1155,7 +1156,7 @@ def test_bulk_post_relations():
     rel_list[1]["source_id"] = "invalid:id"
     response = client.post(
         BASE_URL + "/api/v1/relations/bulk_post",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "relations": rel_list
         }
@@ -1168,13 +1169,13 @@ def test_default_labels():
     response = client.post(
         BASE_URL + "/api/v1/nodes/labels/default",
         json=dict(label_ids=[]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
     response = client.get(
         BASE_URL + "/api/v1/nodes/labels/default",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert len(response.json["nodes"]) == 0
 
@@ -1184,13 +1185,13 @@ def test_default_labels():
     response = client.post(
         BASE_URL + "/api/v1/nodes/labels/default",
         json=dict(label_ids=[person_id, "MetaLabel::human"]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
     response = client.get(
         BASE_URL + "/api/v1/nodes/labels/default",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     nodes = response.json["nodes"]
     assert len(nodes) == 2
@@ -1199,7 +1200,7 @@ def test_default_labels():
     client.post(
         BASE_URL + "/api/v1/nodes/labels/default",
         json=dict(label_ids=[]),
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -1208,14 +1209,15 @@ def test_default_relation_type():
     response = client.post(
         BASE_URL + "/api/v1/relations/types/default",
         json=dict(type_id=""),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
     response = client.get(
         BASE_URL + "/api/v1/relations/types/default",
-        headers=HEADERS,
+        headers=get_headers(),
     )
+    assert response.status_code == 200
     assert "FIX_ME" in response.json["node"]["id"]
 
     nid = fetch_sample_node_id(
@@ -1224,13 +1226,13 @@ def test_default_relation_type():
     response = client.post(
         BASE_URL + "/api/v1/relations/types/default",
         json=dict(type_id=nid),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
     response = client.get(
         BASE_URL + "/api/v1/relations/types/default",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
@@ -1240,7 +1242,7 @@ def test_default_relation_type():
     response = client.post(
         BASE_URL + "/api/v1/relations/types/default",
         json=dict(type_id=""),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
 
@@ -1249,7 +1251,7 @@ def test_fulltext_relation():
     response = client.get(
         BASE_URL + "/api/v1/relations",
         query_string=dict(text="likes__dummy_"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) == 1
@@ -1260,7 +1262,7 @@ def test_fulltext_relation_upper():
     response = client.get(
         BASE_URL + "/api/v1/relations",
         query_string=dict(text="Likes__dummy_"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) == 1
@@ -1271,7 +1273,7 @@ def test_fulltext_relation_id():
     response = client.get(
         BASE_URL + "/api/v1/relations",
         query_string=dict(text=rid),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert response.json[0]["id"] == rid
@@ -1281,7 +1283,7 @@ def test_fulltext_relation_empty():
     """An empty fulltext is invalid."""
     response = client.get(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json) > 20
@@ -1290,7 +1292,7 @@ def test_fulltext_relation_empty():
 def test_all_relation_properties():
     response = client.get(
         BASE_URL + "/api/v1/relations/properties",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert set([
@@ -1303,7 +1305,7 @@ def test_all_relation_properties():
 def test_all_types():
     response = client.get(
         BASE_URL + "/api/v1/relations/types",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert set([
@@ -1318,7 +1320,7 @@ def test_all_types():
 def test_post_query():
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": (
                 "match (a)-[r]->(b)" "return a,r,[a, b],23,{x: a},keys(a)"
@@ -1340,7 +1342,7 @@ def test_post_query():
 def test_post_query_with_parameters():
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": "match (a) where $label in labels(a) and a.name__dummy_=$name return a",
             "parameters": {
@@ -1356,11 +1358,28 @@ def test_post_query_with_parameters():
     assert alice_node["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
 
 
+def test_post_query_with_null_parameter():
+    response = client.post(
+        BASE_URL + "/api/v1/query/cypher",
+        headers=get_headers(),
+        json={
+            "querytext": "return coalesce($value, $fallback) as value",
+            "parameters": {
+                "value": None,
+                "fallback": 23
+            }
+        },
+    )
+    assert response.status_code == 200
+    row = dict(response.json["result"][0])
+    assert row["value"] == {"type": "integer", "value": 23}
+
+
 def test_post_query_with_syntax_error():
     """Check if web server catches cypher syntax errors."""
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"querytext": "(+ 1 2)"},
     )
     assert response.status_code == 400
@@ -1371,7 +1390,7 @@ def test_post_query_with_runtime_error():
     """Check if web server catches neo4j runtime errors."""
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"querytext": "return 1 / 0"},
     )
     assert response.status_code == 400
@@ -1381,7 +1400,7 @@ def test_post_query_with_runtime_error():
 def test_path_query():
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json=dict(
             querytext="match p=(a{name__dummy_:'Alice'})-[r]->(b) return p"
         ),
@@ -1399,7 +1418,7 @@ def test_path_query():
 def test_path_query_undirected():
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json=dict(
             querytext=(
                 "match p = (a)-[*1..2]-()"
@@ -1426,7 +1445,7 @@ def test_get_relation_between_two_nodes():
 
     response = client.post(
         BASE_URL + "/api/v1/relations/by_node_ids",
-        headers=HEADERS,
+        headers=get_headers(),
         json=dict(node_ids=[bobs_id, alice_id])
     )
 
@@ -1442,7 +1461,7 @@ def test_exclude_relation_type_excludes_relation_type():
 
     response = client.post(
         BASE_URL + "/api/v1/relations/by_node_ids",
-        headers=HEADERS,
+        headers=get_headers(),
         json=dict(
             node_ids=[bobs_id, alice_id],
             exclude_relation_types=["likes__dummy_"],
@@ -1457,7 +1476,7 @@ def test_no_relation_between_one_node():
     bobs_id = fetch_sample_node_id(client, "bob")
     response = client.post(
         BASE_URL + "/api/v1/relations/by_node_ids",
-        headers=HEADERS,
+        headers=get_headers(),
         json=dict(node_ids=[bobs_id]),
     )
 
@@ -1478,7 +1497,7 @@ def test_get_relations_between_three_nodes():
 
     response = client.post(
         BASE_URL + "/api/v1/relations/by_node_ids",
-        headers=HEADERS,
+        headers=get_headers(),
         json=dict(node_ids=[bobs_id, alice_id, walthers_id]),
     )
 
@@ -1504,7 +1523,7 @@ def test_post_node_relations():
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
         json=body,
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     rels = response.json["relations"]
@@ -1528,7 +1547,7 @@ def test_post_node_relations_invalid_id():
     response = client.post(
         BASE_URL + "/api/v1/nodes/id::123/relations",
         json=body,
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 404
 
@@ -1540,7 +1559,7 @@ def test_post_node_relations_with_neighbor_properties():
     nid = fetch_sample_node_id(client, text="alice")
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"neighbor_properties": {"MetaProperty::name__dummy_": "Bob"}},
     )
     assert response.status_code == 200
@@ -1555,7 +1574,7 @@ def test_post_node_relations_with_relation_type():
     nid = "MetaLabel::Person__dummy_"
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"relation_type": "MetaRelation::prop__tech_"},
     )
     assert response.status_code == 200
@@ -1564,7 +1583,7 @@ def test_post_node_relations_with_relation_type():
     # given relation type doesn't exist
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"relation_type": "MetaRelation::non_existent__tech_"},
     )
     assert response.status_code == 200
@@ -1579,7 +1598,7 @@ def test_post_node_relations_with_relation_properties():
 
     response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::years": {
@@ -1603,7 +1622,7 @@ def test_post_node_relations_with_relation_properties():
     # property given matches
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{alice}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"relation_properties": {"MetaProperty::years": 2}},
     )
     assert response.status_code == 200
@@ -1612,7 +1631,7 @@ def test_post_node_relations_with_relation_properties():
     # both properties match
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{alice}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "relation_properties": {
                 "MetaProperty::years": 2,
@@ -1626,7 +1645,7 @@ def test_post_node_relations_with_relation_properties():
     # one property doesn't match, return nothing
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{alice}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "relation_properties": {
                 "MetaProperty::years": 3,
@@ -1640,7 +1659,7 @@ def test_post_node_relations_with_relation_properties():
     # cleanup
     client.delete(
         BASE_URL + f"/api/v1/relations/{works_with_rel}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -1648,7 +1667,7 @@ def test_post_node_relations_of_semantic_id():
     """Get relations of nodes addressed by their semantic id."""
     response = client.post(
         BASE_URL + "/api/v1/nodes/MetaLabel::Person__dummy_/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "neighbor_properties": {"MetaProperty::name__tech_": "name__dummy_"}
         },
@@ -1662,7 +1681,7 @@ def test_post_perspectives():
     pid = create_perspective(client)
     client.delete(
         BASE_URL + f"/api/v1/nodes/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -1673,7 +1692,7 @@ def test_patch_relation_updates_perspectives():
     likes_id = fetch_sample_relation_id(client, "likes__dummy_")
     first_patch_response = client.patch(
         BASE_URL + f"/api/v1/relations/{likes_id}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"type": "MetaProperty::knows"},
     )
     assert first_patch_response.status_code == 200
@@ -1683,7 +1702,7 @@ def test_patch_relation_updates_perspectives():
 
     query_response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": """
             MATCH (a {name__tech_:'Sample_Perspective'})
@@ -1699,7 +1718,7 @@ def test_patch_relation_updates_perspectives():
     # switch back to "likes"
     second_patch_response = client.patch(
         BASE_URL + f"/api/v1/relations/{knows_id}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"type": "MetaProperty::likes__dummy_"},
     )
     second_likes_id = fetch_sample_relation_id(client, "likes__dummy_")
@@ -1708,7 +1727,7 @@ def test_patch_relation_updates_perspectives():
 
     delete_response = client.delete(
         BASE_URL + f"/api/v1/nodes/{perspective_id}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert delete_response.status_code == 200
     del g.skip_ft
@@ -1720,7 +1739,7 @@ def test_get_perspectives():
     likes_id = fetch_sample_relation_id(client, text="likes__dummy_")
     response = client.get(
         BASE_URL + f"/api/v1/perspectives/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     json = response.json
@@ -1732,7 +1751,7 @@ def test_get_perspectives():
     alice = likes_id in response.json["relations"]
     client.delete(
         BASE_URL + f"/api/v1/nodes/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -1748,7 +1767,7 @@ def test_put_perspectives():
 
     put_response = client.put(
         BASE_URL + f"/api/v1/perspectives/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json=json,
     )
     assert put_response.status_code == 200
@@ -1757,7 +1776,7 @@ def test_put_perspectives():
 
     get_response = client.get(
         BASE_URL + f"/api/v1/perspectives/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     alice = get_response.json["nodes"][alice_id]
     assert alice["style"]["x"] == 10
@@ -1765,7 +1784,7 @@ def test_put_perspectives():
     assert len(get_response.json["relations"]) == 0
     client.delete(
         BASE_URL + f"/api/v1/nodes/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert json["description"] == "A different perspective"
 
@@ -1773,12 +1792,12 @@ def test_put_perspectives():
 def test_style_current_empty():
     response = client.get(
         BASE_URL + "/api/v1/styles/reset",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     response = client.get(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert response.json["filename"] == ""
@@ -1786,12 +1805,12 @@ def test_style_current_empty():
 def test_style_default():
     response = client.get(
         BASE_URL + "/api/v1/styles/reset",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
     response = client.get(
         BASE_URL + "/api/v1/nodes?text=bob",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
     color = response.json[0]["style"]["color"]
@@ -1801,7 +1820,7 @@ def test_style_default():
 def test_style_upload():
     response = client.get(
         BASE_URL + "/api/v1/styles/reset",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     file_name = "dummy.grass"
     upload_style_file(client, file_name)
@@ -1809,7 +1828,7 @@ def test_style_upload():
 
     response = client.get(
         BASE_URL + "/api/v1/nodes?text=bob",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert "diameter" not in response.json[0]["style"]["diameter"]
     assert response.json[0]["style"]["font-size"] == "35"
@@ -1817,13 +1836,13 @@ def test_style_upload():
 
     response = client.get(
         BASE_URL + "/api/v1/nodes?text=alice",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert "diameter" not in response.json[0]["style"]
 
     response = client.get(
         BASE_URL + "/api/v1/styles",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     filenames = response.json["filenames"]
@@ -1831,17 +1850,17 @@ def test_style_upload():
 
     response = client.get(
         BASE_URL + "/api/v1/relations?text=likes__dummy_",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json[0]["style"]["color"] == "green"
 
     client.get(
         BASE_URL + "/api/v1/styles/reset",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     response = client.get(
         BASE_URL + "/api/v1/nodes?text=bob",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert 'color' not in response.json[0]["style"]["color"]
 
@@ -1849,7 +1868,7 @@ def test_style_upload():
 def test_style_upload_with_utf8():
     response = client.get(
         BASE_URL + "/api/v1/styles/reset",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
     upload_style_file(client, "dummy_utf8_bom.grass")
@@ -1857,7 +1876,7 @@ def test_style_upload_with_utf8():
 
     response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::Ger\u00e4t"],
             "properties": {
@@ -1875,11 +1894,11 @@ def test_style_upload_with_utf8():
 
     client.delete(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     client.get(
         BASE_URL + "/api/v1/generate_ft",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     time.sleep(0.5)
 
@@ -1887,82 +1906,104 @@ def test_style_upload_with_utf8():
 def test_multi_style_upload():
     client.get(
         BASE_URL + "/api/v1/styles/reset",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     for grassfile in ["dummy.grass", "dummy2.grass"]:
         upload_style_file(client, grassfile)
 
     response = client.get(
         BASE_URL + "/api/v1/styles",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     filenames = response.json["filenames"]
     assert "dummy.grass" in filenames
     assert "dummy2.grass" in filenames
     response = client.get(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json["filename"] == "dummy2.grass"
 
     response = client.get(
         BASE_URL + "/api/v1/nodes?text=bob",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json[0]["style"]["diameter"] == "80"
 
     response = client.post(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"filename": "dummy.grass"},
     )
     response = client.get(
         BASE_URL + "/api/v1/nodes?text=bob",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json[0]["style"]["diameter"] == "70"
 
     response = client.post(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"filename": "non-existent.grass"},
     )
     assert response.status_code == 400
 
     response = client.post(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"filename": ""},
     )
     assert response.status_code == 200
     response = client.get(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.json["filename"] == ""
 
 
-def test_copy_style_on_new_tabs():
-    # New tabs get the same selected style as the previously selected one.
-    client.get(BASE_URL + "/api/v1/styles/reset", headers=HEADERS)
+def test_copy_style_on_new_tabs(find_database_connection):
+    # A new tab only inherits the selected style (and credentials) of
+    # another tab if it explicitly names it via "x-template-tab-id".
+    client.get(BASE_URL + "/api/v1/styles/reset", headers=get_headers())
     upload_style_file(client, "dummy.grass")
-    new_headers = {"x-tab-id": str(uuid.uuid4())}
+
+    connection_url = find_database_connection
+    old_headers = dict(get_headers())
+    new_headers = {"x-template-tab-id": get_headers()["x-tab-id"]}
+    login(client, connection_url, headers=new_headers)
     response = client.get(
         BASE_URL + "/api/v1/styles/current",
         headers=new_headers
     )
     assert response.json["filename"] == "dummy.grass"
+    login(client, connection_url, headers=old_headers)
+
+
+def test_no_implicit_style_or_credentials_copy_on_new_tabs(find_database_connection):
+    # Without an explicit "x-template-tab-id" header, an unknown tab_id
+    # must not inherit another tab's credentials/style.
+    client.get(BASE_URL + "/api/v1/styles/reset", headers=get_headers())
+    upload_style_file(client, "dummy.grass")
+
+    connection_url = find_database_connection
+    new_headers = {"x-tab-id": "abc123"}
+    login(client, connection_url, headers=new_headers)
+    response = client.get(
+        BASE_URL + "/api/v1/styles/current",
+        headers=new_headers
+    )
+    assert response.status_code == 401
 
 
 def test_style_delete():
-    client.get(BASE_URL + "/api/v1/styles/reset", headers=HEADERS)
+    client.get(BASE_URL + "/api/v1/styles/reset", headers=get_headers())
     upload_style_file(client, "dummy.grass")
 
-    response = client.get(BASE_URL + "/api/v1/styles", headers=HEADERS)
+    response = client.get(BASE_URL + "/api/v1/styles", headers=get_headers())
     assert response.status_code == 200
     assert len(response.json["filenames"]) == 1
-    client.delete(BASE_URL + "/api/v1/styles/dummy.grass", headers=HEADERS)
-    response = client.get(BASE_URL + "/api/v1/styles", headers=HEADERS)
+    client.delete(BASE_URL + "/api/v1/styles/dummy.grass", headers=get_headers())
+    response = client.get(BASE_URL + "/api/v1/styles", headers=get_headers())
     assert len(response.json["filenames"]) == 0
 
 
@@ -1972,12 +2013,15 @@ def test_style_pro_tab(find_database_connection):
     # Each tab can set a different style.
     upload_style_file(client, "dummy.grass")
 
-    new_headers = {"x-tab-id": str(uuid.uuid4())}
-
-    login(client, connection_url, headers=new_headers)
+    old_headers = dict(get_headers())
+    login_resp = login(
+        client, connection_url,
+        headers={"x-template-tab-id": old_headers["x-tab-id"]}
+    )
+    new_headers = {"x-tab-id": login_resp.json["tabId"]}
     upload_style_file(client, "dummy2.grass", new_headers)
 
-    response = client.get(BASE_URL + "/api/v1/styles/current", headers=HEADERS)
+    response = client.get(BASE_URL + "/api/v1/styles/current", headers=old_headers)
     assert response.json["filename"] == "dummy.grass"
     response = client.get(
         BASE_URL + "/api/v1/styles/current", headers=new_headers
@@ -1986,16 +2030,16 @@ def test_style_pro_tab(find_database_connection):
 
     client.post(
         BASE_URL + "/api/v1/styles/current",
-        headers=HEADERS,
+        headers=old_headers,
         json={"filename": "dummy2.grass"},
     )
-    response = client.get(BASE_URL + "/api/v1/styles/current", headers=HEADERS)
+    response = client.get(BASE_URL + "/api/v1/styles/current", headers=old_headers)
     assert response.json["filename"] == "dummy2.grass"
     response = client.get(
         BASE_URL + "/api/v1/styles/current", headers=new_headers
     )
     assert response.json["filename"] == "dummy2.grass"
-    login(client, connection_url)
+    login(client, connection_url, headers=old_headers)
 
 
 def test_current_database():
@@ -2003,29 +2047,32 @@ def test_current_database():
 
     post_response = client.post(
         BASE_URL + "/api/v1/databases/current",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"name": "neo4j"},
     )
+    ge_features = {"GraphEditorFunctions", "GraphEditorTriggers", "Perspectives"}
 
     assert post_response.status_code == 200
-    assert {"name": "neo4j", "status": "online", "type": "standard",
-            "features": ["Perspectives"]
-    } == post_response.json
+    assert post_response.json["name"] == "neo4j"
+    assert post_response.json["status"] == "online"
+    assert post_response.json["type"] == "standard"
+    assert ge_features <= set(post_response.json["features"])
 
-    response = client.get(
+    get_response = client.get(
         BASE_URL + "/api/v1/databases/current",
-        headers=HEADERS,
+        headers=get_headers(),
     )
-    assert response.status_code == 200
-    assert {"name": "neo4j", "status": "online", "type": "standard",
-            "features": ["Perspectives"]
-    } == response.json
+    assert get_response.status_code == 200
+    assert get_response.json["name"] == "neo4j"
+    assert get_response.json["status"] == "online"
+    assert get_response.json["type"] == "standard"
+    assert ge_features <= set(get_response.json["features"])
 
 
 def test_all_databases():
     response = client.get(
         BASE_URL + "/api/v1/databases",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert {
@@ -2044,7 +2091,7 @@ def test_context_menu():
 
     response = client.post(
         BASE_URL + "/api/v1/context-menu/actions",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"node_ids": [alice], "relation_ids": []},
     )
     actions = response.json["actions"]
@@ -2053,7 +2100,7 @@ def test_context_menu():
 
     response = client.post(
         BASE_URL + "/api/v1/context-menu/actions",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"node_ids": [persp], "relation_ids": []},
     )
     actions = response.json["actions"]
@@ -2064,7 +2111,7 @@ def test_context_menu():
 
     response = client.post(
         BASE_URL + "/api/v1/context-menu/actions",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"node_ids": [alice], "relation_ids": [likes]},
     )
     actions = response.json["actions"]
@@ -2074,14 +2121,14 @@ def test_context_menu():
 
     response = client.post(
         BASE_URL + "/api/v1/context-menu/actions",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"node_ids": [], "relation_ids": []},
     )
     actions = response.json["actions"]
     assert any(act["action"] == "move_copied" for act in actions)
     client.delete(
         BASE_URL + f"/api/v1/nodes/{persp}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
 
@@ -2101,7 +2148,7 @@ def test_metaproperties_for_metalabels():
 
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": ["MetaLabel::Person__dummy_", "MetaLabel::Namespace__tech_"],
             "result_type": "MetaProperty__tech_",
@@ -2127,7 +2174,7 @@ def test_metaproperties_for_metalabels():
     # an empty ID list doesn't crash
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"ids": [], "result_type": "MetaProperty__tech_"},
     )
     assert response.status_code == 200
@@ -2136,7 +2183,7 @@ def test_metaproperties_for_metalabels():
     # a non-existent ID doesn't crash.
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": ["MetaLabel::Person_tech_"],
             "result_type": "MetaProperty__tech_",
@@ -2149,7 +2196,7 @@ def test_metaproperties_for_metalabels():
     # the remaining (see issue #823) IDs.
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": ["MetaLabel::___tech_", "MetaLabel::Person__dummy_"],
             "result_type": "MetaProperty__tech_",
@@ -2163,7 +2210,7 @@ def test_metaproperties_for_metalabels():
     # It should also work with non meta ids
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": ["id::123:456","MetaLabel::Person__dummy_"],
             "result_type": "MetaProperty__tech_",
@@ -2197,7 +2244,7 @@ def test_metaproperties_for_metarelations():
     # likes__dummy_ has one MetaProperty, source__tech_ none
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": [
                 "MetaRelation::likes__dummy_",
@@ -2237,7 +2284,7 @@ def test_metalabels_for_metaproperties():
 
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": ["MetaProperty::description__tech_"],
             "result_type": "MetaLabel__tech_",
@@ -2255,7 +2302,7 @@ def test_metalabels_for_metaproperties():
     # dummy::since is used by a single metarelation
     response = client.post(
         BASE_URL + "/api/v1/meta/meta_for_meta",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "ids": ["MetaProperty::since__dummy_"],
             "result_type": "MetaRelation__tech_",
@@ -2304,7 +2351,7 @@ def test_post_node_relations_with_neighbor_labels():
     nid = fetch_sample_node_id(client, text="alice")
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"neighbor_labels": ["Person__dummy_", "Human"]},
     )
     assert response.status_code == 200
@@ -2314,7 +2361,7 @@ def test_post_node_relations_with_neighbor_labels():
     # simple labels are supported
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"neighbor_labels": ["Person__dummy_"]},
     )
     assert response.status_code == 200
@@ -2323,7 +2370,7 @@ def test_post_node_relations_with_neighbor_labels():
     # fully qualified labels are also supported
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"neighbor_labels": ["MetaLabel::Person__dummy_"]},
     )
     assert response.status_code == 200
@@ -2332,7 +2379,7 @@ def test_post_node_relations_with_neighbor_labels():
     # Alice is not a Cat
     response = client.post(
         BASE_URL + f"/api/v1/nodes/{nid}/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"neighbor_labels": ["Cat"]},
     )
     assert response.status_code == 200
@@ -2342,7 +2389,7 @@ def test_post_node_relations_with_neighbor_labels():
 def test_all_node_properties():
     response = client.get(
         BASE_URL + "/api/v1/nodes/properties",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert set([
@@ -2360,7 +2407,7 @@ def test_parallax_without_filters():
     restriction_nid = fetch_node_by_id(client, "MetaLabel::Restriction__tech_")['dbId']
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": (
                 f"match (a) where elementid(a) = '{get_base_id(restriction_nid)}' return a"
@@ -2372,7 +2419,7 @@ def test_parallax_without_filters():
 
     response = client.post(
         BASE_URL + "/api/v1/parallax",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodeIds": initial_node_ids,
             "steps": []
@@ -2408,7 +2455,7 @@ def test_parallax_without_filters():
     # Test single step.
     response = client.post(
         BASE_URL + "/api/v1/parallax",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodeIds": initial_node_ids,
             "steps": [
@@ -2434,7 +2481,7 @@ def test_parallax_initial_query_filters():
 
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": "match (a:MetaProperty__tech_) return a"
         },
@@ -2445,7 +2492,7 @@ def test_parallax_initial_query_filters():
     # properties are ANDed, labels can be empty.
     response = client.post(
         BASE_URL + "/api/v1/parallax",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodeIds": initial_node_ids,
             "filters": {
@@ -2466,7 +2513,7 @@ def test_parallax_initial_query_filters():
     # labels are ORed. Properties are ORed with label filters
     response = client.post(
         BASE_URL + "/api/v1/parallax",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodeIds": initial_node_ids,
             "filters": {
@@ -2490,7 +2537,7 @@ def test_parallax_step_filters():
     namespace_nid = fetch_node_by_id(client, "MetaLabel::Namespace__tech_")['dbId']
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": "match (a:MetaProperty__tech_) return a"
         },
@@ -2500,7 +2547,7 @@ def test_parallax_step_filters():
 
     response = client.post(
         BASE_URL + "/api/v1/parallax",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "nodeIds": initial_node_ids,
             "filters": {
@@ -2528,7 +2575,7 @@ def test_parallax_step_filters():
 def test_get_paraqueries():
     """Test listing paraqueries"""
     response = client.get(BASE_URL + "/api/v1/paraqueries",
-                          headers=HEADERS)
+                          headers=get_headers())
     assert response.status_code == 200
 
     paraqueries = response.json["paraqueries"]
@@ -2541,20 +2588,21 @@ def test_get_paraqueries():
 
 
 def test_paraquery():
-    """Test if GET auf paraqueries/<pquery_id> returns info from Paraquery node and
-    corresponding parameters.
+    """Test if POST auf paraqueries/<pquery_id> returns info from Paraquery node and
+    corresponding parameters. POST here has GET semantics, we need it to pass parameters
+    to the paraquery selection algotithms.
     """
     paraquery_id = fetch_sample_node_id(client, "Query by label and property")
     # invalid paraquery ID causes 404
-    response = client.get(
+    response = client.post(
         BASE_URL + "/api/v1/paraqueries/abc",
-        headers=HEADERS
+        headers=get_headers()
     )
     assert response.status_code == 404
 
-    response = client.get(
+    response = client.post(
         BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
-        headers=HEADERS
+        headers=get_headers(),
     )
     assert response.status_code == 200
     paraquery = response.json["paraquery"]
@@ -2580,6 +2628,31 @@ def test_paraquery():
                 "type__tech_",
                 "user_text__tech_"]).issubset(property_name_suggestions)
 
+    # passing parameters works. This paraquery uses the given text as a prefix for possible labels.
+    response = client.post(
+        BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
+        headers=get_headers(),
+        json={
+            "parameters": { "label": "Person" }
+        }
+    )
+
+    # db.labels of neo4j is broken (see https://github.com/neo4j/neo4j/issues/8484), so we can't
+    # rely on the list to _only_ contain labels in the database. Hence we check "in" and not "=="
+
+    assert "Person__dummy_" in response.json["paraquery"]["parameters"]["label"]["suggestions"]
+
+    # null values are valid parameter values and mean "no value given".
+    response = client.post(
+        BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
+        headers=get_headers(),
+        json={
+            "parameters": { "label": None }
+        }
+    )
+    assert response.status_code == 200
+    assert "Person__dummy_" in response.json["paraquery"]["parameters"]["label"]["suggestions"]
+
     parameters =  {
         "label": "Person__dummy_",
         "propertyName": "name__dummy_",
@@ -2589,7 +2662,7 @@ def test_paraquery():
     # Execute using name.
     response = client.post(
         BASE_URL + "/api/v1/paraqueries",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "name": "Query by label and property",
             "parameters": parameters
@@ -2602,7 +2675,7 @@ def test_paraquery():
     # Execute using ID.
     response = client.post(
         BASE_URL + "/api/v1/paraqueries",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "id": paraquery_id,
             "parameters": parameters
@@ -2615,7 +2688,7 @@ def test_paraquery():
     # Execute using UUID.
     response = client.post(
         BASE_URL + "/api/v1/paraqueries",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "uuid": paraquery["uuid"],
             "parameters": parameters
@@ -2624,20 +2697,32 @@ def test_paraquery():
     row = dict(response.json["result"][0])
     assert row["a"]["properties"]["MetaProperty::name__dummy_"]["value"] == "Alice"
 
+    # null parameter values are accepted on execution too.
+    response = client.post(
+        BASE_URL + "/api/v1/paraqueries",
+        headers=get_headers(),
+        json={
+            "id": paraquery_id,
+            "parameters": {**parameters, "propertyValue": None}
+        }
+    )
+    assert response.status_code == 200
+    assert not response.json["result"]
+
 def test_parameterless_paraquery():
     "Fetching and executing paraqueries without parameters should work."
 
     paraquery_id = fetch_sample_node_id(client, "Query persons")
-    response = client.get(
+    response = client.post(
         BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     paraquery = response.json["paraquery"]
 
     response = client.post(
         BASE_URL + "/api/v1/paraqueries",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "uuid": paraquery["uuid"]
         }
@@ -2657,7 +2742,7 @@ def test_parameter_selection():
     parameter_node = fetch_sample_node(client, text="parameter_label")
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{parameter_node['id']}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::selection__tech_": {
@@ -2670,10 +2755,12 @@ def test_parameter_selection():
     )
     assert response.status_code == 200
 
+    # no parameters means load all.
     paraquery_id = fetch_sample_node_id(client, "Query by label")
-    response = client.get(
+    response = client.post(
         BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
-        headers=HEADERS,
+        json={ },
+        headers=get_headers(),
     )
     assert response.status_code == 200
     paraquery = response.json["paraquery"]
@@ -2684,7 +2771,7 @@ def test_parameter_selection():
     # no crash if suggestion list is empty
     response = client.patch(
         BASE_URL + f"/api/v1/nodes/{parameter_node['id']}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": {
                 "MetaProperty::selection__tech_": {
@@ -2696,9 +2783,12 @@ def test_parameter_selection():
         }
     )
     assert response.status_code == 200
-    response = client.get(
+    response = client.post(
         BASE_URL + f"/api/v1/paraqueries/{paraquery_id}",
-        headers=HEADERS,
+        json={
+            "parameters": {}
+        },
+        headers=get_headers(),
     )
     assert response.status_code == 200
     paraquery = response.json["paraquery"]
@@ -2724,7 +2814,7 @@ def test_retrieving_all_datatypes():
     """
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": query_text
         }
@@ -2777,7 +2867,7 @@ def test_update_all_datatypes():
     # datatypes.
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": """MATCH (a:ComplexObject)
                             RETURN {a: a} AS obj"""
@@ -2789,7 +2879,7 @@ def test_update_all_datatypes():
     complex_object = result['obj']['value']['a']
     response = client.patch(
         BASE_URL + "/api/v1/nodes/bulk_patch",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "patches": [
                 {
@@ -2813,7 +2903,7 @@ def test_creating_complex_properties():
     # as time conversion properly handled.
     response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::ComplexObject"],
             "properties": {
@@ -2885,7 +2975,7 @@ def test_creating_complex_properties():
 
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": """MATCH (a:ComplexObject {name__tech_: "sample_complex_object"})
                             RETURN {a: a} AS obj"""
@@ -2931,7 +3021,7 @@ def test_creating_complex_properties():
 def _try_property(ptype, pvalue):
     response = client.post(
     BASE_URL + "/api/v1/nodes",
-    headers=HEADERS,
+    headers=get_headers(),
     json={
         "labels": ["MetaLabel::ComplexObject"],
         "properties": {
@@ -2979,7 +3069,7 @@ def test_invalid_property_values():
 def test_multi_statement_queries():
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": (
                 "return 23 as a; return \"abc;def'ghi'\" as b"
@@ -3004,7 +3094,7 @@ def test_multi_statement_queries_with_error():
     # an error should break the transaction
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": (
                 'create (n:Test {name: "ignore_me"}); return 1 / 0;'
@@ -3018,7 +3108,7 @@ def test_multi_statement_queries_with_error():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string={"text": "ignore_me"},
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert not response.json
 
@@ -3037,7 +3127,7 @@ def test_relation_type_suggestions():
             "source_id": alice["id"],
             "target_id": dummy_car["id"]
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3052,7 +3142,7 @@ def test_relation_type_suggestions():
             "source_id": bob["id"],
             "target_id": dummy_car["id"]
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3066,7 +3156,7 @@ def test_relation_type_suggestions():
             "source_id": alice["id"],
             "target_id": bob["id"]
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     metarel = response.json["modelDerived"][0]
@@ -3081,7 +3171,7 @@ def test_relation_type_suggestions():
         query_string={
             "source_id": alice["id"]
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     metarels = response.json["modelDerived"]
@@ -3094,7 +3184,7 @@ def test_relation_type_suggestions():
         query_string={
             "target_id": dummy_car["id"]
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     metarel = response.json["modelDerived"][0]
@@ -3110,7 +3200,7 @@ def test_relation_type_suggestions():
         query_string={
             "source_id": alice["id"], "limit": 1
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3121,7 +3211,7 @@ def test_relation_type_suggestions():
         query_string={
             "source_id": alice["id"], "limit": 3
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 2
@@ -3139,7 +3229,7 @@ def test_relation_type_suggestions_filtering():
             "source_id": alice["id"],
             "text": "wns"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3153,7 +3243,7 @@ def test_relation_type_suggestions_filtering():
             "source_id": alice["id"],
             "text": "someone"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3168,7 +3258,7 @@ def test_relation_type_suggestions_filtering():
             "source_id": alice["id"],
             "text": "ource__tech_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["others"]) == 1
@@ -3182,7 +3272,7 @@ def test_relation_type_suggestions_filtering():
             "source_id": alice["id"],
             "text": "where"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["others"]) == 1
@@ -3196,7 +3286,7 @@ def test_relation_type_suggestions_filtering():
             "source_id": alice["id"],
             "text": " "
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 2
@@ -3209,7 +3299,7 @@ def test_relation_type_suggestions_filtering():
         query_string={
             "text": "target__tech_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["others"]) == 1
@@ -3224,7 +3314,7 @@ def test_relation_end_suggestions():
     # add new person without likes__dummy_ relations
     response = client.post(
         BASE_URL + "/api/v1/query/cypher",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "querytext": (
                 "create (n:Person__dummy_ {name__dummy_: 'charles'}) return n"
@@ -3241,7 +3331,7 @@ def test_relation_end_suggestions():
         query_string={
             "end": "source"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) > 10
@@ -3253,7 +3343,7 @@ def test_relation_end_suggestions():
         query_string={
             "end": "invalid"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 422
 
@@ -3262,7 +3352,7 @@ def test_relation_end_suggestions():
         BASE_URL + "/api/v1/meta/relation_end_suggestions",
         query_string={
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 422
 
@@ -3273,7 +3363,7 @@ def test_relation_end_suggestions():
             "end": "source",
             "relationType": "owns__dummy_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 3
@@ -3293,7 +3383,7 @@ def test_relation_end_suggestions():
             "end": "source",
             "relationType": "MetaRelation::owns__dummy_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 3
@@ -3305,7 +3395,7 @@ def test_relation_end_suggestions():
             "end": "source",
             "relationType": owns_metarel
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 3
@@ -3318,7 +3408,7 @@ def test_relation_end_suggestions():
             "relationType": "owns__dummy_",
             "limit": 2
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 2
@@ -3332,7 +3422,7 @@ def test_relation_end_suggestions():
             "end": "source",
             "neighborId": alice_id,
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     # alice may like persons...
@@ -3349,7 +3439,7 @@ def test_relation_end_suggestions():
             "neighborId": charles_id,
             "text": "alice"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3364,7 +3454,7 @@ def test_relation_end_suggestions():
             "neighborId": charles_id,
             "text": "ice"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3379,7 +3469,7 @@ def test_relation_end_suggestions():
             "relationType": "MetaRelation::owns__dummy_",
             "text": "beetle"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3394,7 +3484,7 @@ def test_relation_end_suggestions():
             "neighborId": charles_id,
             "text": "motor"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["others"]) == 1
@@ -3408,7 +3498,7 @@ def test_relation_end_suggestions():
             "neighborId": alice_id,
             "text": " "
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 3
@@ -3421,7 +3511,7 @@ def test_relation_end_suggestions():
             "neighborId": alice_id,
             "relationType": "likes__dummy_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 3
@@ -3435,7 +3525,7 @@ def test_relation_end_suggestions():
             "neighborId": alice_id,
             "relationType": "owns__dummy_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 0
@@ -3448,7 +3538,7 @@ def test_relation_end_suggestions():
             "neighborId": alice_id,
             "relationType": "owns__dummy_"
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 1
@@ -3463,7 +3553,7 @@ def test_relation_end_suggestions():
             "relationType": "likes__dummy_",
             "limit": 2
         },
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert len(response.json["modelDerived"]) == 2
@@ -3471,10 +3561,9 @@ def test_relation_end_suggestions():
 
 
 def test_transfer_export_returns_ndjson_with_nodes_and_relations():  # 00_ai
-    response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_data = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -3483,18 +3572,15 @@ def test_transfer_export_returns_ndjson_with_nodes_and_relations():  # 00_ai
         },
     )
 
-    assert response.status_code == 200
-    assert response.mimetype == "application/x-ndjson"
-
-    lines = [line for line in response.data.decode("utf-8").splitlines() if line.strip()]
+    lines = [line for line in raw_data.decode("utf-8").splitlines() if line.strip()]
     assert lines
 
     parsed = [json.loads(line) for line in lines]
-    assert any(item.get("_grapheditor_type") == "node" for item in parsed)
+    assert any(item.get("type") == "node" for item in parsed)
 
     seen_relation = False
     for item in parsed:
-        item_type = item.get("_grapheditor_type")
+        item_type = item.get("type")
         if item_type == "relation":
             seen_relation = True
         if seen_relation:
@@ -3504,7 +3590,7 @@ def test_transfer_export_returns_ndjson_with_nodes_and_relations():  # 00_ai
 def test_transfer_import_returns_400_without_file():  # 00_ai
     response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "create_new", "batch_size": 2},
         data={},
         content_type="multipart/form-data",
@@ -3518,8 +3604,8 @@ def test_transfer_import_accepts_jsonl_upload_create_new():  # 00_ai
     unique_suffix = uuid.uuid4().hex
     import_lines = [
         {
-            "_grapheditor_type": "node",
-            "_export_id": 1,
+            "type": "node",
+            "export_id": 1,
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
                 "MetaProperty::name__dummy_": {
@@ -3532,8 +3618,8 @@ def test_transfer_import_accepts_jsonl_upload_create_new():  # 00_ai
             "description": "Imported node A",
         },
         {
-            "_grapheditor_type": "node",
-            "_export_id": 2,
+            "type": "node",
+            "export_id": 2,
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
                 "MetaProperty::name__dummy_": {
@@ -3546,10 +3632,10 @@ def test_transfer_import_accepts_jsonl_upload_create_new():  # 00_ai
             "description": "Imported node B",
         },
         {
-            "_grapheditor_type": "relation",
-            "type": "MetaRelation::likes__dummy_",
-            "source_export_id": 1,
-            "target_export_id": 2,
+            "type": "relation",
+            "reltype": "MetaRelation::likes__dummy_",
+            "source_id": 1,
+            "target_id": 2,
             "properties": {
                 "MetaProperty::years": {
                     "edit": True,
@@ -3565,7 +3651,7 @@ def test_transfer_import_accepts_jsonl_upload_create_new():  # 00_ai
 
     response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "create_new", "batch_size": 2},
         data={"file": (io.BytesIO(payload.encode("utf-8")), "import.jsonl")},
         content_type="multipart/form-data",
@@ -3582,8 +3668,8 @@ def test_transfer_import_overwrite_updates_existing_node_by_uuid():  # 00_ai
     updated_name = f"AfterImport-{uuid.uuid4().hex}"
 
     import_line = {
-        "_grapheditor_type": "node",
-        "_export_id": 1,
+        "type": "node",
+        "export_id": 1,
         "labels": ["MetaLabel::Person__dummy_"],
         "properties": {
             "MetaProperty::name__dummy_": {
@@ -3604,7 +3690,7 @@ def test_transfer_import_overwrite_updates_existing_node_by_uuid():  # 00_ai
 
     response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "overwrite", "batch_size": 1},
         data={"file": (io.BytesIO(payload.encode("utf-8")), "overwrite.jsonl")},
         content_type="multipart/form-data",
@@ -3620,16 +3706,16 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_node():  # 00_ai
     imported_name = f"Import-Overwrite-New-{uuid.uuid4().hex}"
 
     import_line = {
-        "_grapheditor_type": "node",
-        "_export_id": 1,
-        "labels": ["MetaLabel::Person__dummy_"],
+        "type": "node",
+        "export_id": 1,
+        "labels": ["Person__dummy_"],
         "properties": {
-            "MetaProperty::name__dummy_": {
+            "name__dummy_": {
                 "edit": True,
                 "type": "string",
                 "value": imported_name,
             },
-            "MetaProperty::_uuid__tech_": {
+            "_uuid__tech_": {
                 "edit": True,
                 "type": "string",
                 "value": imported_uuid,
@@ -3640,7 +3726,7 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_node():  # 00_ai
 
     import_response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "overwrite", "batch_size": 1},
         data={"file": (io.BytesIO(payload.encode("utf-8")), "overwrite_new_uuid.jsonl")},
         content_type="multipart/form-data",
@@ -3649,10 +3735,9 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_node():  # 00_ai
     assert import_response.status_code == 200
     assert import_response.json["nodes_imported"] == 1
 
-    export_response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_data = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -3660,24 +3745,23 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_node():  # 00_ai
             },
         },
     )
-    assert export_response.status_code == 200
 
     export_lines = [
         json.loads(line)
-        for line in export_response.data.decode("utf-8").splitlines()
+        for line in raw_data.decode("utf-8").splitlines()
         if line.strip()
     ]
     exported_nodes = [
-        item for item in export_lines if item.get("_grapheditor_type") == "node"
+        item for item in export_lines if item.get("type") == "node"
     ]
 
     imported_node = find_by_property(
         exported_nodes,
-        "MetaProperty::name__dummy_",
+        "name__dummy_",
         imported_name,
     )
     assert imported_node is not None
-    assert imported_node["properties"]["MetaProperty::_uuid__tech_"]["value"] == imported_uuid
+    assert imported_node["properties"]["_uuid__tech_"]["value"] == imported_uuid
 
 
 def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
@@ -3688,8 +3772,8 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
 
     import_lines = [
         {
-            "_grapheditor_type": "node",
-            "_export_id": 101,
+            "type": "node",
+            "export_id": 101,
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
                 "MetaProperty::name__dummy_": {
@@ -3700,8 +3784,8 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
             },
         },
         {
-            "_grapheditor_type": "node",
-            "_export_id": 102,
+            "type": "node",
+            "export_id": 102,
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
                 "MetaProperty::name__dummy_": {
@@ -3712,10 +3796,10 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
             },
         },
         {
-            "_grapheditor_type": "relation",
-            "source_export_id": 101,
-            "target_export_id": 102,
-            "type": "MetaRelation::likes__dummy_",
+            "type": "relation",
+            "source_id": 101,
+            "target_id": 102,
+            "reltype": "MetaRelation::likes__dummy_",
             "properties": {
                 "MetaProperty::_uuid__tech_": {
                     "edit": True,
@@ -3734,7 +3818,7 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
 
     import_response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "overwrite", "batch_size": 10},
         data={"file": (io.BytesIO(payload.encode("utf-8")), "overwrite_new_relation_uuid.jsonl")},
         content_type="multipart/form-data",
@@ -3744,10 +3828,9 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
     assert import_response.json["nodes_imported"] == 2
     assert import_response.json["relations_imported"] == 1
 
-    export_response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_data = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -3755,33 +3838,32 @@ def test_transfer_import_overwrite_keeps_uuid_for_new_relation():  # 00_ai
             },
         },
     )
-    assert export_response.status_code == 200
 
     export_lines = [
         json.loads(line)
-        for line in export_response.data.decode("utf-8").splitlines()
+        for line in raw_data.decode("utf-8").splitlines()
         if line.strip()
     ]
     exported_relations = [
-        item for item in export_lines if item.get("_grapheditor_type") == "relation"
+        item for item in export_lines if item.get("type") == "relation"
     ]
 
     imported_rel = find_by_property(
         exported_relations,
-        "MetaProperty::import_marker__dummy_",
+        "import_marker__dummy_",
         rel_marker,
     )
+
     assert imported_rel is not None
-    assert imported_rel["properties"]["MetaProperty::_uuid__tech_"]["value"] == rel_uuid
+    assert imported_rel["properties"]["_uuid__tech_"]["value"] == rel_uuid
 
 
 def test_transfer_export_import_roundtrip():  # 00_ai
     """Export all nodes+relations, import as create_new, check counts match."""
     # --- Export ---
-    export_response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_jsonl = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -3789,23 +3871,21 @@ def test_transfer_export_import_roundtrip():  # 00_ai
             },
         },
     )
-    assert export_response.status_code == 200
 
-    raw_jsonl = export_response.data
     lines = [l for l in raw_jsonl.decode("utf-8").splitlines() if l.strip()]
     assert lines, "Export produced no output"
 
     exported_nodes = sum(
-        1 for l in lines if json.loads(l).get("_grapheditor_type") == "node"
+        1 for l in lines if json.loads(l).get("type") == "node"
     )
     exported_relations = sum(
-        1 for l in lines if json.loads(l).get("_grapheditor_type") == "relation"
+        1 for l in lines if json.loads(l).get("type") == "relation"
     )
 
     # --- Import ---
     import_response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "create_new", "batch_size": 1000},
         data={"file": (io.BytesIO(raw_jsonl), "roundtrip.jsonl")},
         content_type="multipart/form-data",
@@ -3820,10 +3900,9 @@ def test_transfer_export_import_roundtrip():  # 00_ai
 def test_transfer_import_overwrite_roundtrip_no_duplicates():  # 00_ai
     """Export all, re-import with overwrite: relations must not be duplicated."""
     # --- Export once ---
-    export_response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_jsonl = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -3831,20 +3910,18 @@ def test_transfer_import_overwrite_roundtrip_no_duplicates():  # 00_ai
             },
         },
     )
-    assert export_response.status_code == 200
-    raw_jsonl = export_response.data
     lines = [l for l in raw_jsonl.decode("utf-8").splitlines() if l.strip()]
     original_node_count = sum(
-        1 for l in lines if json.loads(l).get("_grapheditor_type") == "node"
+        1 for l in lines if json.loads(l).get("type") == "node"
     )
     original_rel_count = sum(
-        1 for l in lines if json.loads(l).get("_grapheditor_type") == "relation"
+        1 for l in lines if json.loads(l).get("type") == "relation"
     )
 
     # --- Import with overwrite ---
     import_response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "overwrite", "batch_size": 1000},
         data={"file": (io.BytesIO(raw_jsonl), "overwrite_roundtrip.jsonl")},
         content_type="multipart/form-data",
@@ -3855,10 +3932,9 @@ def test_transfer_import_overwrite_roundtrip_no_duplicates():  # 00_ai
     assert stats["relations_imported"] == original_rel_count
 
     # --- Export again and verify no duplicates ---
-    export_response2 = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_jsonl2 = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -3866,13 +3942,12 @@ def test_transfer_import_overwrite_roundtrip_no_duplicates():  # 00_ai
             },
         },
     )
-    assert export_response2.status_code == 200
-    lines2 = [l for l in export_response2.data.decode("utf-8").splitlines() if l.strip()]
+    lines2 = [l for l in raw_jsonl2.decode("utf-8").splitlines() if l.strip()]
     after_node_count = sum(
-        1 for l in lines2 if json.loads(l).get("_grapheditor_type") == "node"
+        1 for l in lines2 if json.loads(l).get("type") == "node"
     )
     after_rel_count = sum(
-        1 for l in lines2 if json.loads(l).get("_grapheditor_type") == "relation"
+        1 for l in lines2 if json.loads(l).get("type") == "relation"
     )
 
     assert after_node_count == original_node_count, \

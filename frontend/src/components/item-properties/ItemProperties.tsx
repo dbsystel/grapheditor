@@ -5,8 +5,7 @@ import { AddNewProperty } from 'src/components/add-new-property/AddNewProperty';
 import { AddNewPropertyHandle } from 'src/components/add-new-property/AddNewProperty.interfaces';
 import {
 	processItemPropertiesEntries,
-	PropertiesStorageClass,
-	showNotificationForInvalidProperties
+	PropertiesStorageClass
 } from 'src/components/item-properties/helpers';
 import { ItemPropertiesTable } from 'src/components/item-properties-table/ItemPropertiesTable';
 import {
@@ -25,7 +24,6 @@ import {
 	twoObjectValuesAreEqual
 } from 'src/utils/helpers/general';
 import {
-	areItemPropertiesValid,
 	convertItemPropertyToNewType,
 	getDefaultItemPropertyForItemPropertyType,
 	isItemPropertyOfTypeList,
@@ -62,7 +60,9 @@ export const ItemProperties = ({
 	const [isLoading, setIsLoading] = useState(false);
 	// lazy initialization to prevent creating the PropertiesStorageClass instance on every render
 	const [propertiesStorage] = useState(() => new PropertiesStorageClass(clone(item.properties)));
-	const tabsActiveIndexRef = useRef(-1); // -1 = none
+	const [activeTabIndex, setActiveTabIndex] = useState(-1);
+	// needed to prevent read of stale activeTabIndex state value
+	const activeTabIndexRef = useRef(-1);
 	const topEntriesPropertyKeysCacheRef = useRef<Array<ItemPropertyKey>>([]);
 	const propertyKeyPrefix = useRef(window.crypto.randomUUID());
 	const propsStorageRef = useRef({
@@ -123,7 +123,7 @@ export const ItemProperties = ({
 				topEntriesPropertyKeys: topEntriesPropertyKeysCacheRef.current
 			});
 
-		const renderIncompleteTab = tabsActiveIndexRef.current === 1 && newIncompleteEntries.length;
+		const renderIncompleteTab = activeTabIndexRef.current === 1 && newIncompleteEntries.length;
 		const topTableEntries = renderIncompleteTab ? newIncompleteEntries : newTopEntries;
 		const topEntries: Array<ItemPropertiesTableEntryWithTopFlag> = sortTableEntriesByNodesTitle(
 			topTableEntries
@@ -140,16 +140,26 @@ export const ItemProperties = ({
 	// sort as sort into complete/incomplete columns, not sort alphabetically or similar
 	const sortTopEntriesMap = (keepActiveTabIndex?: boolean) => {
 		if (!keepActiveTabIndex) {
-			setActiveTabIndex(-1);
+			setActiveTabIndexSynced(-1);
 		}
 
 		clearTopEntriesCache();
 		refreshPropsStorageAndProcessTableEntries();
 	};
 
-	const onTabChange = (tabElement: HTMLInputElement, tabIndex: number) => {
-		setActiveTabIndex(tabIndex);
+	const onTabClose = () => {
+		sortTopEntriesMap();
+		setActiveTabIndexSynced(-1);
+	};
+
+	const onTabIndexChange = (tabIndex: number) => {
+		setActiveTabIndexSynced(tabIndex);
 		sortTopEntriesMap(true);
+	};
+
+	const setActiveTabIndexSynced = (index: number) => {
+		activeTabIndexRef.current = index;
+		setActiveTabIndex(index); // still needed to trigger re-render for JSX reads
 	};
 
 	async function handleSave() {
@@ -162,19 +172,7 @@ export const ItemProperties = ({
 				}
 			}
 
-			const itemPropertiesValidation = areItemPropertiesValid(propertiesStorage.properties);
-
-			if (!itemPropertiesValidation.isValid) {
-				showNotificationForInvalidProperties(
-					itemPropertiesValidation.invalidKeys.map((key) =>
-						idFormatter.parseIdToName(key)
-					)
-				);
-
-				return;
-			}
-
-			setActiveTabIndex(0);
+			setActiveTabIndexSynced(0);
 			clearTopEntriesCache();
 			setIsLoading(true);
 
@@ -183,6 +181,9 @@ export const ItemProperties = ({
 				properties: propertiesStorage.properties
 			};
 
+			// Note: we intentionally don't validate properties before saving. Since items can come from
+			// sources with unknown or varying requirements/structure, rejecting the whole save because of
+			// one invalid property would prevent users from persisting the rest of their (correct) changes.
 			if (isNode(item)) {
 				await api.nodes.actions.patchNodesAndUpdateApplication([patchObject]);
 			} else if (isRelation(item)) {
@@ -196,7 +197,7 @@ export const ItemProperties = ({
 	function handleUndo() {
 		propertiesStorage.setProperties(clone(item.properties));
 		refreshPropertyKeyPrefix();
-		setActiveTabIndex(0);
+		setActiveTabIndexSynced(0);
 		clearTopEntriesCache();
 		refreshPropsStorageAndProcessTableEntries();
 	}
@@ -214,10 +215,6 @@ export const ItemProperties = ({
 
 	const clearTopEntriesCache = () => {
 		topEntriesPropertyKeysCacheRef.current = [];
-	};
-
-	const setActiveTabIndex = (tabIndex: number) => {
-		tabsActiveIndexRef.current = tabIndex;
 	};
 
 	const onPropertyCreate = (key: ItemPropertyKey, property: ItemProperty) => {
@@ -288,16 +285,18 @@ export const ItemProperties = ({
 			}}
 		>
 			{isEditMode && (
-				<Tabs initialSelectedMode="manually" onTabChange={onTabChange}>
+				<Tabs activeIndex={activeTabIndex} onIndexChange={onTabIndexChange}>
 					<TabList>
 						<TabItem icon="plus">{t('tab_title_new_property')}</TabItem>
-						{entriesState.renderIncompleteTab && (
-							<TabItem icon="exclamation_mark_circle">
-								{t('tab_title_missing_properties')}
-							</TabItem>
-						)}
+						<TabItem
+							icon="exclamation_mark_circle"
+							showIcon={entriesState.renderIncompleteTab}
+							disabled={!entriesState.renderIncompleteTab}
+						>
+							{entriesState.renderIncompleteTab && t('tab_title_missing_properties')}
+						</TabItem>
 					</TabList>
-					<TabPanel onTabClose={sortTopEntriesMap}>
+					<TabPanel onTabClose={onTabClose}>
 						<AddNewProperty
 							onPropertyCreate={onPropertyCreate}
 							handleRef={addNewPropertyRef}
@@ -307,7 +306,7 @@ export const ItemProperties = ({
 			)}
 			<ItemPropertiesTable
 				entries={entriesState.entries}
-				areTopEntriesMissingProperties={tabsActiveIndexRef.current === 1}
+				areTopEntriesMissingProperties={activeTabIndex === 1}
 				onPropertyRowMouseEnter={onPropertyRowMouseEnter}
 				onPropertyRowMouseLeave={onPropertyRowMouseLeave}
 				onPropertyChange={onPropertyChange}

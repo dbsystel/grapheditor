@@ -72,6 +72,7 @@ export const SingleNode = ({
 	const [labelsMeta, setLabelsMeta] = useState<MetaForMeta | null>(null);
 	const [isLabelsMetaLoading, setIsLabelsMetaLoading] = useState(false);
 	const [labelsValue, setLabelsValue] = useState<Array<Node>>([]);
+	const [isLabelsValueLoading, setIsLabelsValueLoading] = useState<boolean>(false);
 	const [markedLabelIdsAsWarning, setMarkedLabelIdsAsWarning] = useState<Array<NodeId>>([]);
 	const [currentEditMode, setCurrentEditMode] = useState<SingleNodeEditMode>('none');
 	const nodeLabelsHandleRef = useRef<NodeLabelsItemFinderHandle>({
@@ -104,6 +105,8 @@ export const SingleNode = ({
 	}, [node]);
 
 	useEffect(() => {
+		setCurrentEditMode('none');
+
 		if (isInsideItemsDrawer) {
 			useUnsavedChangesStore.getState().addHandle(nodeLabelsHandleRef.current);
 			useUnsavedChangesStore.getState().addHandle(nodePropertiesHandleRef.current);
@@ -120,9 +123,16 @@ export const SingleNode = ({
 	}, [node]);
 
 	const getNodeLabelsNodes = () => {
-		api.nodes.fetch.postNodesBulkFetch({ nodeIds: node.labels }).then((response) => {
-			setLabelsValue(Object.values(response.data.nodes));
-		});
+		setIsLabelsValueLoading(true);
+
+		api.nodes.fetch
+			.postNodesBulkFetch({ nodeIds: node.labels })
+			.then((response) => {
+				setLabelsValue(Object.values(response.data.nodes));
+			})
+			.finally(() => {
+				setIsLabelsValueLoading(false);
+			});
 	};
 
 	const getMetaForMeta = () => {
@@ -288,9 +298,9 @@ export const SingleNode = ({
 					<DBIcon icon="box" />
 
 					<p className="single-item__title-title">
-						{node.title}{' '}
+						<span>{node.title}</span>{' '}
 						<DBTooltip className="db-tooltip-fix db-tooltip-fix--bottom">
-							{t('single-node-node')} {idFormatter.parseIdToName(node.title)}
+							{t('single_node_node')} {idFormatter.parseIdToName(node.title)}
 						</DBTooltip>
 					</p>
 
@@ -354,7 +364,7 @@ export const SingleNode = ({
 				</EditSaveBlock>
 
 				<EditSaveBlock
-					isEditable={isEditable}
+					isEditable={isEditable && !isLabelsValueLoading}
 					isEditMode={currentEditMode === 'labels'}
 					headline={t('single_node_labels_title')}
 					onEditClick={onEditLabelsClick}
@@ -364,21 +374,27 @@ export const SingleNode = ({
 						toggleDefaultOpenSection(sectionsLocation, 'node-labels', isOpen);
 					}}
 				>
-					<NodeLabelsItemFinder
-						handleRef={nodeLabelsHandleRef}
-						defaultLabels={node.labels}
-						mode="edit"
-						node={node}
-						value={labelsValue}
-						onTagsSelected={onUserSelectedLabelsChange}
-						markTagIdsAsWarning={markedLabelIdsAsWarning}
-						isEditMode={currentEditMode === 'labels'}
-						isSelectAllDisabled={variant === 'small'}
-					/>
+					<Loading
+						isLoading={isLabelsValueLoading}
+						wrapChildren={false}
+						renderChildrenWhileLoading={false}
+					>
+						<NodeLabelsItemFinder
+							handleRef={nodeLabelsHandleRef}
+							defaultLabels={node.labels}
+							mode="edit"
+							node={node}
+							value={labelsValue}
+							onTagsSelected={onUserSelectedLabelsChange}
+							markTagIdsAsWarning={markedLabelIdsAsWarning}
+							isEditMode={currentEditMode === 'labels'}
+							isSelectAllDisabled={variant === 'small'}
+						/>
+					</Loading>
 				</EditSaveBlock>
 
 				<EditSaveBlock
-					isEditable={isEditable}
+					isEditable={isEditable && !isLabelsMetaLoading}
 					isEditMode={currentEditMode === 'properties'}
 					headline={t('single_view_properties_title')}
 					onEditClick={onEditPropertiesClick}

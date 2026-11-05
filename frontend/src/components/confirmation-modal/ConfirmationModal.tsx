@@ -1,7 +1,6 @@
 import './ConfirmationModal.scss';
 import { DBButton, DBIcon } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Modal } from 'src/components/modal/Modal';
 import { useConfirmationModalStore } from 'src/stores/confirmation-modal';
@@ -16,7 +15,7 @@ export const ConfirmationModal = ({ id, className, testId }: ConfirmationModalPr
 		return null;
 	}
 
-	return createPortal(
+	return (
 		<Modal id={id} className={rootElementClassName} isOpen={true} data-testid={testId}>
 			<h3 className="confirmation-modal__title">{content.title}</h3>
 			<p className="confirmation-modal__description">
@@ -31,7 +30,6 @@ export const ConfirmationModal = ({ id, className, testId }: ConfirmationModalPr
 					{content.confirmLabel || t('confirmation_modal_confirm')}
 				</DBButton>
 			</div>
-		</Modal>,
-		document.body
+		</Modal>
 	);
 };

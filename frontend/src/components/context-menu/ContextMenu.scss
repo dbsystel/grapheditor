@@ -1,22 +1,16 @@
 .context-menu {
-	.modal__content {
-		background-color: transparent;
-		border: none;
-	}
+	position: fixed;
+	padding: 5px;
+	background-color: var(--db-adaptive-bg-basic-level-1-default);
+	border: 1px solid var(--db-neutral-border);
+	border-radius: var(--db-border-radius-md);
+	box-shadow: 0 0 6px 0 rgba(0, 0, 0, 0.5);
+	max-inline-size: 400px;
+	display: flex;
+	z-index: 200;
 
-	&__content {
-		position: fixed;
-		padding: 5px;
-		background-color: var(--db-adaptive-bg-basic-level-1-default);
-		border: 1px solid var(--db-neutral-border);
-		border-radius: var(--db-border-radius-md);
-		box-shadow: 0 0 6px 0 rgba(0, 0, 0, 0.5);
-		max-inline-size: 400px;
-		display: flex;
-
-		&:empty {
-			display: none;
-		}
+	&:empty {
+		display: none;
 	}
 
 	&__expanded-content {

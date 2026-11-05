@@ -21,6 +21,7 @@ import { Relation, RelationId } from 'src/models/relation';
 import { RequireAtLeastOne } from 'src/types/general';
 import {
 	APP_STORAGE_KEY_PREFIX,
+	GRAPH_AUTO_PAN_MAX_SPEED_PX,
 	GRAPH_DEFAULT_EDGE_LABEL_SIZE,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR,
 	GRAPH_DEFAULT_FONT_SIZE_FACTOR_MAX,
@@ -29,6 +30,7 @@ import {
 	GRAPH_DEFAULT_LABEL_RENDERED_SIZE_THRESHOLD,
 	GRAPH_DEFAULT_NODE_AXIS_FACTOR,
 	GRAPH_DEFAULT_NODE_LABEL_SIZE,
+	GRAPH_DEFAULT_ZOOMING_RATIO,
 	GRAPH_HIDE_ALL_LABELS_THRESHOLD,
 	GRAPH_SELECTED_EDGE_COLOR
 } from 'src/utils/constants';
@@ -54,9 +56,11 @@ type GraphStore = {
 	defaultNodeLabels: Array<Node> | null;
 	setDefaultNodeLabels: (defaultLabels: Array<Node> | null) => void;
 	highlightNode: (nodeId: NodeId) => void;
+	toggleNodeHighlight: (nodeId: NodeId) => void;
 	unHighlightNode: (nodeId: NodeId) => void;
 	unHighlightNodes: () => void;
 	highlightRelation: (relationId: RelationId) => void;
+	toggleRelationHighlight: (relationId: RelationId) => void;
 	unHighlightRelation: (relationId: RelationId) => void;
 	unHighlightRelations: () => void;
 	highlightedNodeIds: Map<NodeId, NodeId>; // map instead of array due to simpler API
@@ -99,6 +103,11 @@ type GraphStore = {
 	zoomFactorMin: number;
 	zoomFactorMax: number;
 	zoomFactorStep: number;
+	autoPanSpeed: number;
+	setAutoPanSpeed: (newAutoPanSpeed: number) => void;
+	autoPanSpeedMin: number;
+	autoPanSpeedMax: number;
+	autoPanSpeedStep: number;
 	setLabelFontSizeFactor: (labelFontSizeFactor: number) => void;
 	increaseLabelFontSizeFactor: () => void;
 	decreaseLabelFontSizeFactor: () => void;
@@ -127,9 +136,11 @@ type InitialState = Omit<
 	| 'setDefaultRelationType'
 	| 'setDefaultNodeLabels'
 	| 'highlightNode'
+	| 'toggleNodeHighlight'
 	| 'unHighlightNode'
 	| 'unHighlightNodes'
 	| 'highlightRelation'
+	| 'toggleRelationHighlight'
 	| 'unHighlightRelation'
 	| 'unHighlightRelations'
 	| 'isNodeHighlighted'
@@ -146,6 +157,7 @@ type InitialState = Omit<
 	| 'removeRelation'
 	| 'setZoomFactor'
 	| 'getZoomFactor'
+	| 'setAutoPanSpeed'
 	| 'toggleLabelsVisibility'
 	| 'setLabelFontSizeFactor'
 	| 'resetLabelFontSizeFactor'
@@ -193,10 +205,14 @@ const getInitialState: () => InitialState = () => {
 		defaultRelationType: null,
 		highlightedNodeIds: new Map(),
 		highlightedRelationIds: new Map(),
-		zoomFactor: 2,
+		zoomFactor: GRAPH_DEFAULT_ZOOMING_RATIO,
 		zoomFactorMin: 1.1,
 		zoomFactorMax: 3,
 		zoomFactorStep: 0.1,
+		autoPanSpeed: GRAPH_AUTO_PAN_MAX_SPEED_PX,
+		autoPanSpeedMin: 1,
+		autoPanSpeedMax: GRAPH_AUTO_PAN_MAX_SPEED_PX * 2,
+		autoPanSpeedStep: 1,
 		labelFontSizeFactor: GRAPH_DEFAULT_FONT_SIZE_FACTOR,
 		labelsRendered: true,
 		nodeSizeFactor: 1,
@@ -274,6 +290,13 @@ export const useGraphStore = create<GraphStore>()(
 						highlightedNodeIds: new Map(get().highlightedNodeIds.set(nodeId, nodeId))
 					});
 				},
+				toggleNodeHighlight: (nodeId) => {
+					if (get().isNodeHighlighted(nodeId)) {
+						get().unHighlightNode(nodeId);
+					} else {
+						get().highlightNode(nodeId);
+					}
+				},
 				highlightRelation: (relationId) => {
 					const sigma = get().sigma;
 					const graphRelationExists = sigma.getGraph().hasEdge(relationId);
@@ -292,6 +315,13 @@ export const useGraphStore = create<GraphStore>()(
 							get().highlightedRelationIds.set(relationId, relationId)
 						)
 					});
+				},
+				toggleRelationHighlight: (relationId) => {
+					if (get().isRelationHighlighted(relationId)) {
+						get().unHighlightRelation(relationId);
+					} else {
+						get().highlightRelation(relationId);
+					}
 				},
 				unHighlightRelation: (relationId) => {
 					const sigma = get().sigma;
@@ -494,6 +524,9 @@ export const useGraphStore = create<GraphStore>()(
 
 					get().sigma.updateSetting('zoomingRatio', () => newZoomFactor);
 				},
+				setAutoPanSpeed: (newAutoPanSpeed) => {
+					set({ autoPanSpeed: newAutoPanSpeed });
+				},
 				reset: () => {
 					set(getInitialState());
 				},
@@ -605,7 +638,8 @@ export const useGraphStore = create<GraphStore>()(
 			storage: createJSONStorage(() => window.localStorage), // (optional) by default, 'localStorage' is used
 			partialize: (store) => {
 				return {
-					zoomFactor: store.zoomFactor
+					zoomFactor: store.zoomFactor,
+					autoPanSpeed: store.autoPanSpeed
 				};
 			}
 		}

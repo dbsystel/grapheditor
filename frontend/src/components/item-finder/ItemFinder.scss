@@ -12,14 +12,14 @@
 		flex: 1 1 auto;
 		min-width: 0;
 
-		&[data-variant="floating"] {
+		&[data-variant='floating'] {
 			#{$this}__input-confirmation-tooltip {
-				inset-block-end: calc(100% + 5px)!important;
+				inset-block-end: calc(100% + 5px) !important;
 			}
 		}
 
 		input {
-			&[data-show-confirmation-tooltip="true"] {
+			&[data-show-confirmation-tooltip='true'] {
 				&:focus {
 					~ #{$this}__input-confirmation-tooltip {
 						display: block;

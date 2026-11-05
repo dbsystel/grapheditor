@@ -10,6 +10,7 @@
 @layer db-ux-core-components {
 	@include meta.load-css('@db-ux/core-foundations/build/styles/theme/rollup.scss');
 	@include meta.load-css('@db-ux/core-components/build/styles/bundle.scss');
+	@include meta.load-css('@db-ux/core-foundations/build/styles/density/classes/all.scss');
 }
 
 :root {
@@ -23,7 +24,28 @@
 
 	select,
 	button {
-		cursor: pointer;
+		&:not(:disabled) {
+			cursor: pointer;
+		}
+	}
+
+	// manual fix of the button's style inside DBInput type="file" (https://github.com/db-ux-design-system/core-web/issues/8505)
+	input[type='file'] {
+		block-size: auto;
+		border: none;
+		padding-inline-start: 0;
+		line-height: var(--db-sizing-md);
+
+		&::file-selector-button {
+			min-block-size: var(--db-sizing-md);
+			block-size: max-content;
+			inline-size: fit-content;
+			padding: var(--db-spacing-fixed-2xs) var(--db-spacing-fixed-md);
+			font: var(--db-type-body-md);
+			font-weight: 700;
+			cursor: pointer;
+			border: 1px solid var(--db-adaptive-on-bg-basic-emphasis-60-default, #C3C7CE);
+		}
 	}
 
 	[data-disabled] {
@@ -43,10 +65,6 @@
 				overflow: initial;
 			}
 		}
-	}
-
-	.db-tabs > .db-tab-panel {
-		padding: var(--db-spacing-fixed-xs);
 	}
 
 	// temporary solution until https://github.com/db-ux-design-system/core-web/issues/6580 is fixed

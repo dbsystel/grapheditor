@@ -10,8 +10,6 @@ describe('Components - ParaQueriesEditor', () => {
 		const paraQuery = Object.values(paraQueries).at(0);
 		const onParameterChange = vi.fn();
 
-		//console.log('paraQuery', paraQuery);
-
 		if (!paraQuery) {
 			throw new Error('No test para-queries');
 		}
@@ -25,9 +23,16 @@ describe('Components - ParaQueriesEditor', () => {
 		const textNodes = paraQueryEditorChildren.filter((node) => {
 			return node.nodeType === node.TEXT_NODE;
 		});
-		// "group" matches the "details" HTML element of DBCustomSelect component
-		const inputsWithSuggestions = screen.getByRole('group').elements();
-		const inputsWithoutSuggestions = screen.getByRole('textbox').elements();
+		// the ComboBox component (used for parameters with "suggestions") renders its text
+		// input wrapped in a ".combo-box" container, while plain parameters (no suggestions)
+		// render a bare DBInput - distinguish them by whether the textbox is inside that wrapper
+		const allTextInputs = screen.getByRole('textbox').elements();
+		const inputsWithSuggestions = allTextInputs.filter((element) =>
+			element.closest('.combo-box')
+		);
+		const inputsWithoutSuggestions = allTextInputs.filter(
+			(element) => !element.closest('.combo-box')
+		);
 
 		const parameters = Array.from(paraQuery.user_text.match(/\$\w+/gim) || []).map((name) => {
 			// easier to understand than working with capture groups
@@ -38,15 +43,15 @@ describe('Components - ParaQueriesEditor', () => {
 		const secondParameterName = parameters.at(1) || '';
 		const thirdParameterName = parameters.at(2) || '';
 
-		expect(paraQueryEditorChildren).toHaveLength(7);
+		expect(paraQueryEditorChildren).toHaveLength(18);
 		expect(inputsWithSuggestions).toHaveLength(2);
 		expect(inputsWithoutSuggestions).toHaveLength(1);
-		expect(textNodes).toHaveLength(4);
+		expect(textNodes).toHaveLength(0);
 
-		expect(inputsWithSuggestions[0].parentNode?.querySelector('select')).toHaveValue(
+		expect(inputsWithSuggestions[0]).toHaveValue(
 			paraQuery.parameters[firstParameterName].default_value || ''
 		);
-		expect(inputsWithSuggestions[1].parentNode?.querySelector('select')).toHaveValue(
+		expect(inputsWithSuggestions[1]).toHaveValue(
 			paraQuery.parameters[secondParameterName].default_value || ''
 		);
 		expect(inputsWithoutSuggestions[0]).toHaveValue(

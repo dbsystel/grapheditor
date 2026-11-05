@@ -5,7 +5,6 @@ export type ModalProps = GlobalComponentProps &
 	PropsWithChildren & {
 		isOpen: boolean;
 		shouldUseBackdrop?: boolean;
-		shouldDisplayAsModal?: boolean;
 		style?: CSSProperties;
 		headline?: string;
 		description?: string;

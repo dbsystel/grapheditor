@@ -7,7 +7,8 @@ import pytest
 # pylint: disable=unused-import, import-error
 from setup import (
     BASE_URL,
-    HEADERS,
+    get_headers,
+    login,
     logged_in,
     find_database_connection,
     client_with_transaction,
@@ -59,7 +60,7 @@ def test_fulltext_without_ft():
     """
     response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::Character__dummy_"],
             "properties": {
@@ -75,7 +76,7 @@ def test_fulltext_without_ft():
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=dict(text="homer"),
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     assert (
@@ -84,5 +85,20 @@ def test_fulltext_without_ft():
     nid = response.json[0]["id"]
 
     # cleanup
-    response = client.delete(BASE_URL + f"/api/v1/nodes/{nid}", headers=HEADERS)
+    response = client.delete(BASE_URL + f"/api/v1/nodes/{nid}", headers=get_headers())
     assert response.status_code == 200
+
+
+def test_post_login_always_generates_fresh_tab_id(find_database_connection):
+    connection_url = find_database_connection
+    old_headers = get_headers()
+
+    login_resp = login(
+        client, connection_url,
+        headers={"x-tab-id": "abc123"}
+    )
+    assert login_resp.json["tabId"] != old_headers["x-tab-id"]
+    login_resp = login(
+        client, connection_url,
+        headers=old_headers
+    )

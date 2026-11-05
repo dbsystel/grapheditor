@@ -145,6 +145,12 @@ export const endpoints = {
 	getBuildFrontendInfoPath: () => {
 		return 'build-info-frontend.json';
 	},
+	getTransferExportPath: () => {
+		return '/v1/transfer/export';
+	},
+	getTransferImportPath: (params: { strategy: string; batchSize: number }) => {
+		return `/v1/transfer/import?strategy=${params.strategy}&batch_size=${params.batchSize}`;
+	},
 	getRelationTypeSuggestionsPath: ({
 		sourceId,
 		targetId,

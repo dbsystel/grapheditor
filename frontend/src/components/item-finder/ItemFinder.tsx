@@ -243,6 +243,14 @@ export const ItemFinder = ({
 		}
 	};
 
+	const registerOptionTriggerElement = (element: HTMLSpanElement | null, node: Node) => {
+		if (element) {
+			useItemOverviewPopoverStore
+				.getState()
+				.registerTriggerElement({ triggerElement: element, item: node });
+		}
+	};
+
 	const listClassName = clsx(
 		'item-finder__list',
 		'border-width-xs',
@@ -325,16 +333,9 @@ export const ItemFinder = ({
 											<span>{idFormatter.parseIdToName(option)}</span>
 										) : (
 											<span
-												ref={(element) => {
-													if (element) {
-														useItemOverviewPopoverStore
-															.getState()
-															.registerTriggerElement({
-																triggerElement: element,
-																item: option
-															});
-													}
-												}}
+												ref={(element) =>
+													registerOptionTriggerElement(element, option)
+												}
 											>
 												<span className="item-finder__list-item-title">
 													<strong>

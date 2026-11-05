@@ -15,20 +15,20 @@ import { ItemPropertyWidgetTime } from 'src/components/item-property-widget/time
 import { ItemPropertyWidgetWgs842D } from 'src/components/item-property-widget/wgs84-2d/ItemPropertyWidgetWgs842D';
 import { ItemPropertyWidgetWgs843D } from 'src/components/item-property-widget/wgs84-3d/ItemPropertyWidgetWgs843D';
 import {
+	isItemPropertyOfTypeBoolean,
+	isItemPropertyOfTypeCartesian2D,
+	isItemPropertyOfTypeCartesian3D,
+	isItemPropertyOfTypeDate,
+	isItemPropertyOfTypeDatetime,
+	isItemPropertyOfTypeDuration,
+	isItemPropertyOfTypeFloat,
+	isItemPropertyOfTypeInteger,
 	isItemPropertyOfTypeList,
-	isItemPropertyOfValidShapeBoolean,
-	isItemPropertyOfValidShapeCartesian2D,
-	isItemPropertyOfValidShapeCartesian3D,
-	isItemPropertyOfValidShapeDate,
-	isItemPropertyOfValidShapeDatetime,
-	isItemPropertyOfValidShapeDuration,
-	isItemPropertyOfValidShapeFloat,
-	isItemPropertyOfValidShapeInteger,
+	isItemPropertyOfTypeString,
+	isItemPropertyOfTypeTime,
+	isItemPropertyOfTypeWgs842D,
+	isItemPropertyOfTypeWgs843D,
 	isItemPropertyOfValidShapeList,
-	isItemPropertyOfValidShapeString,
-	isItemPropertyOfValidShapeTime,
-	isItemPropertyOfValidShapeWgs842D,
-	isItemPropertyOfValidShapeWgs843D,
 	isItemPropertyTypeValid
 } from 'src/utils/helpers/items';
 import { ItemPropertyValueProps } from './ItemPropertyValue.interfaces';
@@ -79,7 +79,7 @@ export const ItemPropertyValue = ({
 		>
 			{localLeadingElement}
 			<div className="item-property-value__property-editor">
-				{isItemPropertyOfValidShapeDuration(property) && (
+				{isItemPropertyOfTypeDuration(property) && (
 					<ItemPropertyWidgetDuration
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -90,7 +90,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeString(property) && (
+				{isItemPropertyOfTypeString(property) && (
 					<ItemPropertyWidgetString
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -101,7 +101,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeFloat(property) && (
+				{isItemPropertyOfTypeFloat(property) && (
 					<ItemPropertyWidgetFloat
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -112,7 +112,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeInteger(property) && (
+				{isItemPropertyOfTypeInteger(property) && (
 					<ItemPropertyWidgetInteger
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -123,7 +123,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeDate(property) && (
+				{isItemPropertyOfTypeDate(property) && (
 					<ItemPropertyWidgetDate
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -134,7 +134,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeTime(property) && (
+				{isItemPropertyOfTypeTime(property) && (
 					<ItemPropertyWidgetTime
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -145,7 +145,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeDatetime(property) && (
+				{isItemPropertyOfTypeDatetime(property) && (
 					<ItemPropertyWidgetDatetime
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -156,7 +156,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeBoolean(property) && (
+				{isItemPropertyOfTypeBoolean(property) && (
 					<ItemPropertyWidgetBoolean
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -167,7 +167,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeCartesian2D(property) && (
+				{isItemPropertyOfTypeCartesian2D(property) && (
 					<ItemPropertyWidgetCartesian2D
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -178,7 +178,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeCartesian3D(property) && (
+				{isItemPropertyOfTypeCartesian3D(property) && (
 					<ItemPropertyWidgetCartesian3D
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -189,7 +189,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeWgs842D(property) && (
+				{isItemPropertyOfTypeWgs842D(property) && (
 					<ItemPropertyWidgetWgs842D
 						isEditMode={isEditMode}
 						onChange={(newValue) => {
@@ -200,7 +200,7 @@ export const ItemPropertyValue = ({
 						{...{ [widgetValuePropName]: property.value }}
 					/>
 				)}
-				{isItemPropertyOfValidShapeWgs843D(property) && (
+				{isItemPropertyOfTypeWgs843D(property) && (
 					<ItemPropertyWidgetWgs843D
 						isEditMode={isEditMode}
 						onChange={(newValue) => {

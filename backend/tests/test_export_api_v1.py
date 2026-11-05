@@ -12,12 +12,12 @@ from urllib.parse import urlparse
 # pylint: disable=unused-import, import-error
 from setup import (
     BASE_URL,
-    HEADERS,
+    get_headers,
     find_database_connection,
     logged_in,
     client_with_transaction,
 )
-from helpers import find_by_property
+from helpers import find_by_property, perform_export
 from main import app
 
 # not a constant, so can be lower case
@@ -37,7 +37,7 @@ def reset_db(logged_in):
 
     response = client.get(
         BASE_URL + f"/api/v1/dev/reset?host={url_parts.scheme}%3A%2F%2F{url_parts.hostname}%3A{url_parts.port}&database=neo4j",
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     yield client
@@ -58,7 +58,7 @@ def create_app_context_00_ai(request):
 def test_transfer_export_requires_selection_for_explicit_mode_00_ai():
     response = client.post(
         BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"mode": "explicit"},
     )
 
@@ -74,11 +74,11 @@ def test_transfer_export_cypher_returns_ndjson_00_ai():
 
     source_response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
-            "labels": ["MetaLabel::Person__dummy_"],
+            "labels": ["Person__dummy_"],
             "properties": {
-                "MetaProperty::name__dummy_": {
+                "name__dummy_": {
                     "edit": True,
                     "type": "string",
                     "value": source_name,
@@ -90,11 +90,11 @@ def test_transfer_export_cypher_returns_ndjson_00_ai():
 
     target_response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
-            "labels": ["MetaLabel::Person__dummy_"],
+            "labels": ["Person__dummy_"],
             "properties": {
-                "MetaProperty::name__dummy_": {
+                "name__dummy_": {
                     "edit": True,
                     "type": "string",
                     "value": target_name,
@@ -106,11 +106,11 @@ def test_transfer_export_cypher_returns_ndjson_00_ai():
 
     relation_response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "source_id": source_response.json["id"],
             "target_id": target_response.json["id"],
-            "type": "MetaRelation::likes2__dummy_",
+            "type": "likes2__dummy_",
             "properties": {},
         },
     )
@@ -122,59 +122,51 @@ def test_transfer_export_cypher_returns_ndjson_00_ai():
         "RETURN s, r, t"
     )
 
-    export_response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={"mode": "cypher", "cypher": cypher},
-    )
-
-    assert export_response.status_code == 200
-    assert export_response.mimetype == "application/x-ndjson"
-    assert (
-        export_response.headers["Content-Disposition"]
-        == "attachment; filename=export.jsonl"
+    raw_data = perform_export(
+        client,
+        {"mode": "cypher", "cypher": cypher},
     )
 
     lines = [
         line
-        for line in export_response.get_data(as_text=True).splitlines()
+        for line in raw_data.decode("utf-8").splitlines()
         if line.strip()
     ]
     assert lines
 
     parsed = [json.loads(line) for line in lines]
-    assert any(item.get("_grapheditor_type") == "node" for item in parsed)
-    assert any(item.get("_grapheditor_type") == "relation" for item in parsed)
+    assert any(item.get("type") == "node" for item in parsed)
+    assert any(item.get("type") == "relation" for item in parsed)
 
     # 00_ai: Check that exported nodes contain the created nodes
     exported_nodes = [
-        item for item in parsed if item.get("_grapheditor_type") == "node"
+        item for item in parsed if item.get("type") == "node"
     ]
     exported_relations = [
-        item for item in parsed if item.get("_grapheditor_type") == "relation"
+        item for item in parsed if item.get("type") == "relation"
     ]
 
     assert find_by_property(
         exported_nodes,
-        "MetaProperty::name__dummy_",
+        "name__dummy_",
         source_name,
     ) is not None, f"Source node '{source_name}' not found in export"
 
     assert find_by_property(
         exported_nodes,
-        "MetaProperty::name__dummy_",
+        "name__dummy_",
         target_name,
     ) is not None, f"Target node '{target_name}' not found in export"
 
     assert any(
-        item.get("type") == "MetaRelation::likes2__dummy_"
+        item.get("reltype") == "likes2__dummy_"
         for item in exported_relations
-    ), "Relation 'MetaRelation::likes2__dummy_' not found in export"
+    ), "Relation 'likes2__dummy_' not found in export"
 
     # Check that nodes come before relations
     seen_relation = False
     for item in parsed:
-        item_type = item.get("_grapheditor_type")
+        item_type = item.get("type")
         if item_type == "relation":
             seen_relation = True
         if seen_relation:
@@ -184,7 +176,7 @@ def test_transfer_export_cypher_returns_ndjson_00_ai():
 def test_transfer_import_returns_400_without_file_00_ai():
     response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "create_new", "batch_size": 2},
         data={},
         content_type="multipart/form-data",
@@ -202,11 +194,11 @@ def test_transfer_import_create_new_then_export_00_ai():
 
     import_lines = [
         {
-            "_grapheditor_type": "node",
-            "_export_id": 1,
-            "labels": ["MetaLabel::Person__dummy_"],
+            "type": "node",
+            "export_id": 1,
+            "labels": ["Person__dummy_"],
             "properties": {
-                "MetaProperty::name__dummy_": {
+                "name__dummy_": {
                     "edit": True,
                     "type": "string",
                     "value": source_name,
@@ -216,11 +208,11 @@ def test_transfer_import_create_new_then_export_00_ai():
             "description": "Imported node A",
         },
         {
-            "_grapheditor_type": "node",
-            "_export_id": 2,
-            "labels": ["MetaLabel::Person__dummy_"],
+            "type": "node",
+            "export_id": 2,
+            "labels": ["Person__dummy_"],
             "properties": {
-                "MetaProperty::name__dummy_": {
+                "name__dummy_": {
                     "edit": True,
                     "type": "string",
                     "value": target_name,
@@ -230,12 +222,12 @@ def test_transfer_import_create_new_then_export_00_ai():
             "description": "Imported node B",
         },
         {
-            "_grapheditor_type": "relation",
-            "type": "MetaRelation::likes2__dummy_",
-            "source_export_id": 1,
-            "target_export_id": 2,
+            "type": "relation",
+            "reltype": "likes2__dummy_",
+            "source_id": 1,
+            "target_id": 2,
             "properties": {
-                "MetaProperty::import_marker__dummy_": {
+                "import_marker__dummy_": {
                     "edit": True,
                     "type": "string",
                     "value": relation_marker,
@@ -249,7 +241,7 @@ def test_transfer_import_create_new_then_export_00_ai():
 
     import_response = client.post(
         BASE_URL + "/api/v1/transfer/import",
-        headers=HEADERS,
+        headers=get_headers(),
         query_string={"strategy": "create_new"},
         data={"file": (io.BytesIO(payload.encode("utf-8")), "import_endpoint.jsonl")},
         content_type="multipart/form-data",
@@ -259,10 +251,9 @@ def test_transfer_import_create_new_then_export_00_ai():
     assert import_response.json["nodes_imported"] == 2
     assert import_response.json["relations_imported"] == 1
 
-    export_response = client.post(
-        BASE_URL + "/api/v1/transfer/export",
-        headers=HEADERS,
-        json={
+    raw_data = perform_export(
+        client,
+        {
             "mode": "explicit",
             "selection": {
                 "nodes": {"mode": "all"},
@@ -270,32 +261,31 @@ def test_transfer_import_create_new_then_export_00_ai():
             },
         },
     )
-    assert export_response.status_code == 200
 
     export_lines = [
         json.loads(line)
-        for line in export_response.get_data(as_text=True).splitlines()
+        for line in raw_data.decode("utf-8").splitlines()
         if line.strip()
     ]
     exported_nodes = [
-        item for item in export_lines if item.get("_grapheditor_type") == "node"
+        item for item in export_lines if item.get("type") == "node"
     ]
     exported_relations = [
-        item for item in export_lines if item.get("_grapheditor_type") == "relation"
+        item for item in export_lines if item.get("type") == "relation"
     ]
 
     assert find_by_property(
         exported_nodes,
-        "MetaProperty::name__dummy_",
+        "name__dummy_",
         source_name,
     ) is not None
     assert find_by_property(
         exported_nodes,
-        "MetaProperty::name__dummy_",
+        "name__dummy_",
         target_name,
     ) is not None
     assert find_by_property(
         exported_relations,
-        "MetaProperty::import_marker__dummy_",
+        "import_marker__dummy_",
         relation_marker,
     ) is not None

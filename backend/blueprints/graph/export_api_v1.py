@@ -1,10 +1,12 @@
+import os
+
 # 00_ai
-from flask import Response, current_app, g, request, stream_with_context
+from flask import request, session, abort, send_file
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
 from blueprints.graph import export_model
-from blueprints.graph.export_service import export_stream, import_stream
+from blueprints.graph.export_service import export_file, import_stream, get_export_file_path
 from blueprints.maintenance.login_api import require_tab_id
 
 blp = Blueprint(
@@ -19,34 +21,66 @@ class Export(MethodView):
     @require_tab_id()
     def post(self, mode, cypher=None, selection=None, **_kwargs):
         """Export nodes and relations as streaming JSONL."""
-        generator = export_stream(
+        filename = export_file(
             mode=mode,
-            conn=g.conn,
-            db=current_app.graph_db,
             cypher=cypher,
             selection=selection
         )
-        return Response(
-            stream_with_context(generator),
+
+        if "exported_files" not in session:
+            session["exported_files"] = set()
+        session["exported_files"].add(filename)
+        session.modified = True
+        return {
+            "download_url": f"{request.path}/{filename}"
+        }
+
+
+@blp.route("/export/<string:filename>")
+class ExportDownload(MethodView):
+    @blp.arguments(
+        export_model.ExportDownloadRequestSchema,
+        location="query",
+        as_kwargs=True
+    )
+    def get(self, filename, save_as:str = "export", extension=export_model.ExportFileExtension):
+        exported_files = session.get("exported_files", set())
+        if filename not in exported_files:
+            abort(404)
+        filepath = get_export_file_path(filename)
+        if not os.path.isfile(filepath):
+            exported_files.remove(filename)
+            session.modified = True
+            abort(404)
+        download_name = f"{save_as}.{extension.value}"
+        return send_file(
+            filepath,
             mimetype="application/x-ndjson",
-            headers={
-                "Content-Disposition":
-                    "attachment; filename=export.jsonl"
-            }
+            as_attachment=True,
+            download_name=download_name
         )
 
 
 @blp.route("/import")
 class Import(MethodView):
     @blp.arguments(
-        export_model.ImportRequestSchema, location="query",
+        export_model.ImportRequestSchema,
+        location="query",
+        as_kwargs=True
+    )
+    @blp.arguments(
+        export_model.ImportFileSchema,
+        location="files",
         as_kwargs=True
     )
     @require_tab_id()
-    def post(self, strategy, batch_size=1000,
-             disable_indexes=False, **_kwargs):
+    def post(self,
+             strategy,
+             batch_size=1000,
+             disable_indexes=False,
+             file=None,
+             **_kwargs):
         """Import JSONL file (streaming upload)."""
-        file = request.files.get("file")
         if not file:
             return {"error": "No file provided"}, 400
 

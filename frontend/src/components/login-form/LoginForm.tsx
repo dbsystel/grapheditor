@@ -8,20 +8,22 @@ import { Form } from 'src/components/form/Form';
 import { FormRow } from 'src/components/form-row/FormRow';
 import { Loading } from 'src/components/loading/Loading';
 import { Logo } from 'src/components/logo/Logo';
-import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
 import { api } from 'src/utils/api/api';
 import { SSO_HOST_STORAGE_KEY } from 'src/utils/constants';
+import { logInUserLocally } from 'src/utils/helpers/auth';
 import { parseError } from 'src/utils/helpers/general';
-import { LoginFormData, LoginFormProps } from './LoginForm.interfaces';
+import {
+	LoginFormData,
+	LoginFormProps,
+	LoginFormType,
+	LoginFormTypeOption
+} from './LoginForm.interfaces';
 
 export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 	const { t } = useTranslation();
-	const connect = useLoginStore((state) => state.connect);
-	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const [authenticationType, setAuthenticationType] = useState<'username-password' | 'sso'>(
-		'username-password'
-	);
+	const [authenticationType, setAuthenticationType] =
+		useState<LoginFormType>('username-password');
 	const [isLoading, setIsLoading] = useState(
 		Boolean(window.localStorage.getItem(SSO_HOST_STORAGE_KEY))
 	);
@@ -38,19 +40,18 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 
 	const onSubmit: SubmitHandler<LoginFormData> = ({ host, username, password }) => {
 		if (authenticationType === 'username-password') {
+			setIsLoading(true);
+
 			api.users.fetch
 				.postLogin({
 					host: host,
 					username: username,
 					password: password
 				})
-				.then(() => {
-					connect(host, username);
+				.then((response) => {
+					const { host, username, tabId } = response.data;
 
-					addNotification({
-						title: t('notifications_success_login'),
-						type: 'successful'
-					});
+					logInUserLocally({ host: host, username: username, tabId: tabId });
 				})
 				.catch((error) => {
 					setIsLoading(false);
@@ -63,6 +64,11 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 		} else if (authenticationType === 'sso') {
 			setIsLoading(true);
 
+			// The backend keeps track of two independent things: a single sign on
+			// authentication token for this browser session, shared by all tabs, and a
+			// separate connection for this specific tab. Because of that, this call
+			// can resolve in two different ways below, regardless of whether this is
+			// the first single sign on attempt or not.
 			api.users.fetch
 				.postLoginSSO({
 					host: host,
@@ -70,6 +76,18 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 				})
 				.then(async (response) => {
 					if ('authorizationUrl' in response.data) {
+						// There is no valid authentication token yet for this browser session
+						// (for example, the user never logged in with single sign on before, the
+						// token expired, or a previous regular logout still left this tab without
+						// a token - see the "else" branch below for when a token is still valid).
+						// The user therefore needs to be sent to the identity provider to
+						// authenticate, so we persist the host in localStorage first:
+						// "window.location.assign" below navigates away from the application
+						// entirely, and once the identity provider redirects back, the backend
+						// completes the authentication and sends the browser back to the
+						// application, which reloads from scratch. The "Auth" component then picks
+						// up this stored host on mount to resume and complete the single sign on
+						// login.
 						await new Promise((resolve) => {
 							window.localStorage.setItem(SSO_HOST_STORAGE_KEY, host);
 							resolve('ok');
@@ -77,7 +95,15 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 
 						window.location.assign(response.data.authorizationUrl);
 					} else {
-						connect(response.data.host, response.data.username);
+						// A valid authentication token already exists for this browser session,
+						// so the backend logged us in immediately without needing to send the user
+						// to the identity provider. This happens for example when opening a new
+						// tab, or after a regular logout, which only clears this tab's connection,
+						// not the underlying authentication token - a full single sign on logout is
+						// needed to invalidate the token itself.
+						const { host, username, tabId } = response.data;
+
+						logInUserLocally({ host: host, username: username, tabId: tabId });
 					}
 				})
 				.catch((error) => {
@@ -91,7 +117,7 @@ export const LoginForm = ({ id, className, testId }: LoginFormProps) => {
 		}
 	};
 
-	const loginOptions = [
+	const loginOptions: Array<LoginFormTypeOption> = [
 		{ label: 'Username / Password', value: 'username-password' },
 		{
 			label: 'Single Sign On',

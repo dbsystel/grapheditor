@@ -27,6 +27,7 @@ class ParaqueriesGetResponseSchema(Schema):
 
 class ParaquerySchema(Schema):
     uuid = fields.Str()
+    db_id = fields.Str()
     name = fields.Str(metadata={
         "description": "Unique (ideally short) name of the paraquery."
     })
@@ -52,11 +53,23 @@ class ParaquerySchema(Schema):
     )
 
 
-class ParaqueryGetResponseSchema(Schema):
+class ParaqueryPostResponseSchema(Schema):
     paraquery = fields.Nested(ParaquerySchema())
 
 
 class ParaqueryPostSchema(Schema):
+    parameters = fields.Dict(
+        keys=fields.Str(),
+        values=fields.Raw(allow_none=True),
+        metadata={
+            "description":
+            "Optional map of parameter names to their values. Passed to selection queries. "
+        },
+        required=False
+    )
+
+
+class ParaqueryExecutePostSchema(Schema):
     uuid = fields.Str(required=False)
     name = fields.Str(required=False)
     db_id = fields.Str(
@@ -65,9 +78,9 @@ class ParaqueryPostSchema(Schema):
     )
     parameters = fields.Dict(
         keys=fields.Str(),
-        values=fields.Raw(),
+        values=fields.Raw(allow_none=True),
         metadata={
-            "description": "Optional map of parameter names to their values."
+            "description": "Optional map of parameter names to their values. "
         },
         required=False
     )

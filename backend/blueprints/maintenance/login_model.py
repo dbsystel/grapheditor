@@ -11,11 +11,22 @@ class LoginPostSchema(Schema):
 class LoginPostResponseSchema(Schema):
     host = fields.Str()
     username = fields.Str()
+    tabId = fields.Str(
+        required=False,
+        metadata={
+            "description": "A fresh tab id."
+        }
+    )
 
 
 class LoginGetResponseSchema(Schema):
     host = fields.Str()
     username = fields.Str()
+    tabId = fields.Str(
+        required=False,
+        metadata={
+            "description": "A fresh tab id generated when 'x-template-tab-id' is provided"
+        })
 
 
 class LogoutPostResponseSchema(Schema):

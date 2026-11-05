@@ -3,6 +3,7 @@ import { DBButton, DBCard, DBDivider, DBTooltip } from '@db-ux/react-core-compon
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ImportExportButtons } from 'src/components/import-export-buttons/ImportExportButtons';
 import { StateManager } from 'src/components/network-graph/state-manager';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -53,40 +54,48 @@ export const LeftWidgetDebug = ({ id, className, testId }: LeftWidgetDebugProps)
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			{/* fake element, just to get label styling */}
-			<div className="db-input">
-				<label>Export</label>
+			<div>
+				{/* fake element, just to get label styling */}
+				<div className="db-input">
+					<label>Export</label>
+				</div>
+				<div className="left-widget__debug-block">
+					<DBButton onClick={exportLogs}>
+						{t('network_graph_settings_export_state_logs')}
+					</DBButton>
+					<DBButton onClick={resetLogs} icon="bin" noText={true}>
+						<DBTooltip>
+							{t('network_graph_settings_reset_state_logs_tooltip', {
+								currentLogsSize: logsSize
+							})}
+						</DBTooltip>
+					</DBButton>
+				</div>
 			</div>
-			<div className="left-widget__debug-block">
-				<DBButton onClick={exportLogs}>
-					{t('network_graph_settings_export_state_logs')}
-				</DBButton>
-				<DBButton onClick={resetLogs} icon="bin" noText={true}>
-					<DBTooltip>
-						{t('network_graph_settings_reset_state_logs_tooltip', {
-							currentLogsSize: logsSize
-						})}
-					</DBTooltip>
-				</DBButton>
-			</div>
+
+			<ImportExportButtons />
 
 			<DBDivider />
-			{/* fake element, just to get label styling */}
-			<div className="db-input">
-				<label>Version</label>
-			</div>
-			<div className="left-widget__debug-block">
-				<p>Backend:</p>
 
-				{buildInfoBackendResponse && (
-					<>
-						<p>{buildInfoBackendResponse.data.timestamp} </p>
-						<DBCard>
-							{buildInfoBackendResponse.data.commit.slice(0, 8)}
-							<DBTooltip>Commit: {buildInfoBackendResponse.data.commit}</DBTooltip>
-						</DBCard>
-					</>
-				)}
+			<div>
+				{/* fake element, just to get label styling */}
+				<div className="db-input">
+					<label>Version</label>
+				</div>
+				<div className="left-widget__debug-block">
+					<p>Backend:</p>
+					{buildInfoBackendResponse && (
+						<>
+							<p>{buildInfoBackendResponse.data.timestamp} </p>
+							<DBCard>
+								{buildInfoBackendResponse.data.commit.slice(0, 8)}
+								<DBTooltip>
+									Commit: {buildInfoBackendResponse.data.commit}
+								</DBTooltip>
+							</DBCard>
+						</>
+					)}
+				</div>
 			</div>
 
 			<div className="left-widget__debug-block">

@@ -4,7 +4,7 @@ import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 
 export type GetParaQueriesResponse = {
-	paraqueries: Array<[NodeId, ParaQuery['description']]>;
+	paraqueries: Array<[NodeId, ParaQuery['description'] | null]>;
 };
 
 export const getParaQueries = () => {

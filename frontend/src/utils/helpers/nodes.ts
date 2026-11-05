@@ -28,7 +28,7 @@ export const isNode = (data: unknown): data is Node => {
 };
 
 export const isPseudoNode = (data: unknown): data is PseudoNode => {
-	return isNode(data) && !('dbId' in data) && !('semanticId' in data);
+	return isNode(data) && !('dbId' in data);
 };
 
 export const isNonPseudoNode = (data: unknown): data is NonPseudoNode => {

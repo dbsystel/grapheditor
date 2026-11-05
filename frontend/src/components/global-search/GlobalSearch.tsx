@@ -127,7 +127,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 		});
 	};
 
-	const onChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+	const localOnChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
 		setTextareaValue(event.target.value);
 	};
 
@@ -138,7 +138,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 			goHistory('forward');
 		}
 		// if not new line
-		else if (event.key === 'Enter' && !event.shiftKey) {
+		else if (event.key === 'Enter' && !event.shiftKey && searchFunctionRef) {
 			event.preventDefault();
 			searchFunctionRef.current.triggerSearch();
 		}
@@ -215,7 +215,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 				<TextareaAutosize
 					key={type}
 					onKeyDown={onKeyDown}
-					onChange={onChange}
+					onChange={localOnChange}
 					value={value}
 					autoComplete="off"
 					autoCorrect="off"
@@ -227,6 +227,7 @@ export const GlobalSearch = ({ id, className, testId, searchFunctionRef }: Globa
 					resize="none"
 					aria-label="Globalsearch"
 				/>
+
 				<DBButton
 					type="button"
 					icon="save"

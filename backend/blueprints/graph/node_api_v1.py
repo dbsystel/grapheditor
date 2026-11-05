@@ -1,4 +1,4 @@
-from flask import abort, current_app, g, session
+from flask import abort, current_app, session
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
@@ -9,7 +9,7 @@ from database.mapper import GraphEditorNode, GraphEditorRelation, prepare_node_p
 from database.id_handling import (
     compute_semantic_id, get_base_id, GraphEditorLabel, parse_semantic_id, id_is_valid
 )
-from database.utils import abort_with_json
+from database.utils import abort_with_json, build_default_labels_session_key
 
 
 blp = Blueprint(
@@ -321,7 +321,7 @@ class NodeDefaultLabels(MethodView):
         Return a dummy default label in case none was set (see POST).
         """
         try:
-            label_ids = session["default_labels"][g.tab_id]
+            label_ids = session[build_default_labels_session_key()]
         except KeyError:
             return {"nodes": []}
         label_nodes_map = current_app.graph_db.get_nodes_by_ids(label_ids)
@@ -342,14 +342,13 @@ class NodeDefaultLabels(MethodView):
         """Set the default labels for node creation. Pass an empty array to
         reset the stored label_ids.
         """
-        if "default_labels" not in session:
-            session["default_labels"] = {}
+        key = build_default_labels_session_key()
 
         if label_ids:
-            session["default_labels"][g.tab_id] = label_ids
-        elif g.tab_id in session["default_labels"]:
+            session[key] = label_ids
+        elif session.get(key):
             # clear defalt_labels when input is empty
-            del session["default_labels"][g.tab_id]
+            del session[key]
 
         return "Default labels set"
 

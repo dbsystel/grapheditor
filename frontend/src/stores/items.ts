@@ -6,8 +6,8 @@ import { isNode, isNonPseudoNode } from 'src/utils/helpers/nodes';
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-type NodeStorage = Map<string, Node>;
-type RelationsStorage = Map<string, Relation>;
+type NodeStorage = Map<NodeId, Node>;
+type RelationsStorage = Map<RelationId, Relation>;
 /**
  * Global application storage containing nodes, relations and API for managing
  * the state. It should be used/seen as the main source of truth when it comes

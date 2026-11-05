@@ -7,7 +7,11 @@ from cryptography.fernet import InvalidToken
 from blueprints.display.style_support import select_style, get_selected_style
 from database.auth import ensure_valid_token, decrypt_password, LoginRequired, get_usernames
 from database.settings import config
-from database.utils import abort_with_json, split_statements
+from database.utils import (
+    abort_with_json, split_statements,
+    build_login_session_key, build_selected_database_session_key,
+    build_default_type_session_key
+)
 
 MAX_RETRIES = 3
 SLEEP_DURATION = 1
@@ -72,7 +76,7 @@ class Neo4jConnection:
 
 
     @classmethod
-    def from_login_data(cls, login_data: dict):
+    def from_login_data(cls, login_data: dict, selected_database=None):
         password = login_data.get("password")
         enc_key_str = request.cookies.get("enc_key")
         if not enc_key_str:
@@ -88,22 +92,22 @@ class Neo4jConnection:
             username=login_data.get("username"),
             password=decrypted_password,
             token=session.get("oidc_auth_token") if not password else None,
-            database=login_data.get("selected_database"),
+            database=selected_database
         )
         return conn
 
 
-    def has_ft(self):
-        """Return if grapheditor functions/procedures are installed and running.
+    def has_ge_functions(self):
+        """Return whether grapheditor functions/procedures are installed and running.
 
-        This is reserved for testing and dev purposes. has_ft() may return
+        This is reserved for testing and dev purposes. has_ge() may return
         true, even though the functions/procedures are not yet available, for
         instance if a different database has them.
         """
 
-        # Running has_ft with admin_tx in /dev/reset caused a problem
+        # Running has_ge_functions with admin_tx in /dev/reset caused a problem
         # where the checks for completion of installation steps never returned
-        # true. The problem is because the install functions run with self._tx,
+        # true. This occurs because the install functions run with self._tx,
         # and one cannot see if they succeded from within self._admin_tx.
         val = False
         show_procedures_result = self.run("""
@@ -122,7 +126,7 @@ class Neo4jConnection:
         # executing both.
 
         # As noticed above, it may happen that a function/procedure is installed
-        # on another database, leading to has_ft returning true before the
+        # on another database, leading to has_ge_functionso returning true before the
         # function/procedure is available on the current database.
 
         try:
@@ -138,6 +142,24 @@ class Neo4jConnection:
                 pass
             return False
 
+    def has_ge_triggers(self):
+        """Return whether IGA triggers are installed."""
+        try:
+            result = self.run(
+                """CALL apoc.trigger.list() YIELD name
+                   RETURN "addFulltextOnCreateNode" in collect(name)
+                """, _as_admin=False)
+            return result and result.single().value()
+        except neo4j.exceptions.Forbidden as e:
+            msg = """
+            Can't call apoc.trigger.list(). Check you have the needed permissions.
+            Particulary the user must be able to call "apoc.trigger.list" in order to
+            see if specific triggers are installed.
+            """
+            current_app.logger.error(msg)
+            current_app.logger.error(repr(e))
+            abort_with_json(400, msg)
+
     def has_nft_index(self):
         query_result = self.run("""
         SHOW FULLTEXT INDEXES YIELD name, state
@@ -145,17 +167,6 @@ class Neo4jConnection:
         RETURN 'nft' IN collect(name)
         """, _as_admin=True)
         return query_result.single().value()
-
-    def has_iga_triggers(self):
-        """Return whether IGA triggers are installed.
-        Used for controlling reset process. Don't call this from a regular
-        user session.
-        """
-        result = self.run(
-            """CALL apoc.trigger.list() YIELD name
-               RETURN "addFulltextOnCreateNode" in collect(name)
-            """, _as_admin=True)
-        return result.single().value()
 
     def has_uuids(self):
         """Return whether database contains _uuid__tech_ properties.
@@ -247,14 +258,18 @@ class Neo4jConnection:
             except neo4j.exceptions.AuthError as e:
                 msg = f"Authentication error: {repr(e)}"
                 current_app.logger.error(msg)
-                abort_with_json(401, msg)
+                # same as above
+                self._setup_driver()
+                retry_count += 1
+                sleep(SLEEP_DURATION)
             except neo4j.exceptions.Neo4jError as e:
                 if e.code == "Neo.ClientError.Database.DatabaseNotFound":
                     current_app.logger.error(
                         f"Error using database {self.database}: {repr(e)} "
                     )
-                    if "login_data" in session and g.tab_id in session["login_data"]:
-                        session["login_data"][g.tab_id]["selected_database"] = None
+                    key = build_selected_database_session_key(g.tab_id)
+                    if key in session:
+                        session[key] = None
                         self.database = None
                     # we don't need several retries for this use case.
                     if retry_count > 1:
@@ -463,65 +478,68 @@ def hash_connection_data(login_data, db):
     )
 
 
-def neo4j_connect():
+def neo4j_connect(tab_id=None, template_tab_id=None):
     """Establish connection to the Neo4j server."""
-    tab_id = None
-    if "x-tab-id" in request.headers:
+    if not tab_id:
         tab_id = request.headers.get("x-tab-id")
     try:
         if tab_id:
             g.tab_id = tab_id
-            g.conn = fetch_connection_by_id(tab_id)
+            g.conn = _fetch_connection_by_id(tab_id, template_tab_id)
             return g.conn
     except neo4j.exceptions.DriverError as e:
         abort_with_json(401, f"Error connecting to Neo4j: {e}")
 
 
-def fetch_connection_by_id(tab_id):
-    """Given a tab id, return a corresponding Neo4jConnection instance."""
-    if "login_data" not in session or tab_id not in session["login_data"]:
-        # we allow reusing connection from a previously used tab ID, so that
-        # the user doesn't have to relog on each tab
-        if "last_tab_id" in session:
-            current_app.logger.debug(
-                "Reusing login credentials from last tab ID"
-            )
-            last_tab_id = session["last_tab_id"]
+def _fetch_connection_by_id(tab_id, template_tab_id=None):
+    """Given a tab id, return a corresponding Neo4jConnection instance.
 
-            if "login_data" in session and last_tab_id not in session["login_data"]:
-                abort_with_json(401, "No connection data for last_tab_id in session.")
-            # for now we don't persist connections per se, only login info.
-            # Connections are reused anyway (see _setup_driver).
-            if "login_data" not in session:
-                session["login_data"] = dict()
-            session["login_data"][tab_id] = dict(session["login_data"][last_tab_id])
+    If no login data is stored yet for this tab_id, credentials may be
+    cloned from another tab, but only if the caller explicitly names that
+    tab via the "x-template-tab-id" header.
+    """
 
-            # copy default relation type if available.
-            if "default_type" not in session:
-                session["default_type"] = dict()
-            if last_tab_id in session["default_type"]:
-                session["default_type"][tab_id] = session["default_type"][last_tab_id]
+    # tab_id is missing, so copy over credentials for template_tab_id,
+    # if available.
+    login_key = build_login_session_key()
+    if login_key not in session:
+        if not template_tab_id:
+            abort_with_json(401, "No login data for tab_id in session.")
+        template_key = build_login_session_key(template_tab_id)
+        if template_key not in session:
+            abort_with_json(401, "No connection data for x-template-tab-id in session.")
+        current_app.logger.debug(
+            "Cloning login credentials from template tab ID"
+        )
+        session[login_key] = dict(session[template_key])
 
-            select_style(get_selected_style(tab_id=last_tab_id), tab_id=tab_id)
-        else:
-            abort_with_json(401, "missing last_tab_id in session")
-    session["last_tab_id"] = tab_id
-    login_data = session["login_data"][tab_id]
-    conn = Neo4jConnection.from_login_data(login_data)
+        # copy default relation type if available.
+        default_type_template_key = build_default_type_session_key(template_tab_id)
+        default_type_key = build_default_type_session_key(g.tab_id)
+        if default_type := session.get(default_type_template_key):
+            session[default_type_key] = default_type
+
+        select_style(get_selected_style(tab_id=template_tab_id), tab_id=tab_id)
+    login_data = session[login_key]
+    conn = Neo4jConnection.from_login_data(
+        login_data,
+        session.get(build_selected_database_session_key(g.tab_id))
+    )
     return conn
 
 
 def get_current_datatabase_name():
     try:
-        return session["login_data"][g.tab_id].get("selected_database")
+        key = build_selected_database_session_key()
+        return session.get(key)
     except KeyError:
         return None
 
 
 def set_current_database_name(name):
-    if "login_data" not in session and g.tab_id not in session["login_data"]:
+    login_key = build_login_session_key()
+    if login_key not in session:
         abort_with_json(401, "Can't set a database when not logged in.")
 
-    login_data = session["login_data"][g.tab_id]
-    login_data["selected_database"] = name
+    session[build_selected_database_session_key()] = name
     g.conn.database = name

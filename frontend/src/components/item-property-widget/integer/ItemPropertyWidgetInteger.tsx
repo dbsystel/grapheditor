@@ -1,4 +1,4 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, FocusEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -46,7 +46,7 @@ export const ItemPropertyWidgetInteger = ({
 			parsedValue = propertyDefaultValueRef.current;
 		}
 
-		updateLocalValue(newValue);
+		setLocalValue(newValue);
 
 		if (onChange) {
 			onChange(parsedValue);
@@ -55,15 +55,11 @@ export const ItemPropertyWidgetInteger = ({
 
 	const onBlur = (event: FocusEvent<HTMLInputElement>) => {
 		if (event.target.value.trim() === '') {
-			updateLocalValue(String(propertyDefaultValueRef.current));
+			setLocalValue(String(propertyDefaultValueRef.current));
 		}
 	};
 
-	const updateLocalValue = (newValue: string) => {
-		if (!isControlled) {
-			setLocalValue(newValue);
-		}
-	};
+	const isValid = html5IntegerRegex.test(displayValue);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -80,6 +76,16 @@ export const ItemPropertyWidgetInteger = ({
 					onChange={localOnChange}
 					onBlur={onBlur}
 					placeholder={html5FIntegerPlaceholder}
+					validation="no-validation"
+				/>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_integer_invalid_message', {
+						context: displayValue ? 'with_value' : undefined,
+						value: displayValue
+					})}
 				/>
 			)}
 		</div>

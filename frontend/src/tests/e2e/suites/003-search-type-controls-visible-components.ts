@@ -17,8 +17,14 @@ export const _003_searchTypeControlsVisibleComponents = async ({
 	const selectedTypeLabel = searchOptions.locator('strong');
 
 	const globalSearchInput = searchLine.getByLabel('Globalsearch');
-	const perspectiveSelect = searchLine.getByText(perspectivePlaceholder, { exact: true });
-	const paraQueriesSelect = searchLine.getByText(paraQueriesPlaceholder, { exact: true });
+	// placeholder is served as :before, and the element has aria-hidden="true"
+	const perspectiveSelect = searchLine.locator(
+		`.db-custom-select-placeholder[data-placeholder="${perspectivePlaceholder}"]`
+	);
+	// placeholder is served as :before, and the element has aria-hidden="true"
+	const paraQueriesSelect = searchLine.locator(
+		`.db-custom-select-placeholder[data-placeholder="${paraQueriesPlaceholder}"]`
+	);
 
 	const assertUserSeesGlobalSearch = async () => {
 		await expect(globalSearchInput).toBeVisible();

@@ -1,8 +1,7 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, FocusEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ItemPropertyShapeDuration } from 'src/models/item';
 import { itemPropertyDefaults } from 'src/utils/helpers/items';
 import { html5DurationPlaceholder } from 'src/utils/helpers/placeholders';
 import { html5DurationRegex } from 'src/utils/helpers/regex';
@@ -29,7 +28,7 @@ export const ItemPropertyWidgetDuration = ({
 	const localOnChange = async (event: ChangeEvent<HTMLInputElement>) => {
 		const newValue = event.target.value.trim();
 
-		updateLocalValue(newValue);
+		setLocalValue(newValue);
 
 		if (onChange) {
 			onChange(
@@ -40,15 +39,11 @@ export const ItemPropertyWidgetDuration = ({
 
 	const onBlur = (event: FocusEvent<HTMLInputElement>) => {
 		if (event.target.value.trim() === '') {
-			updateLocalValue(propertyDefaultValueRef.current);
+			setLocalValue(propertyDefaultValueRef.current);
 		}
 	};
 
-	const updateLocalValue = (newValue: ItemPropertyShapeDuration['value']) => {
-		if (!isControlled) {
-			setLocalValue(newValue);
-		}
-	};
+	const isValid = html5DurationRegex.test(displayValue);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -61,6 +56,16 @@ export const ItemPropertyWidgetDuration = ({
 					onChange={localOnChange}
 					onBlur={onBlur}
 					placeholder={html5DurationPlaceholder}
+					validation="no-validation"
+				/>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_duration_invalid_message', {
+						context: displayValue ? 'with_value' : undefined,
+						value: displayValue
+					})}
 				/>
 			)}
 		</div>

@@ -1,5 +1,6 @@
 import { ItemOverviewPopover } from 'src/components/item-overview-popover/ItemOverviewPopover';
 import i18n from 'src/i18n';
+import { useItemsStore } from 'src/stores/items';
 import { testNodes } from 'src/tests/data/nodes';
 import { idFormatter } from 'src/utils/id-formatter';
 import { vi } from 'vitest';
@@ -9,6 +10,8 @@ describe('Components - ItemOverviewPopover', () => {
 	const node = testNodes[0];
 
 	test('modal content', async () => {
+		useItemsStore.getState().setNode(node);
+
 		const body = document.body;
 		const screen = await render(<ItemOverviewPopover item={node} popoverRef={body} />);
 		const modal = screen.getByRole('dialog').element();
@@ -27,5 +30,7 @@ describe('Components - ItemOverviewPopover', () => {
 		});
 
 		expect(modal).toBeInTheDocument();
+
+		useItemsStore.getState().removeNode(node.id);
 	});
 });

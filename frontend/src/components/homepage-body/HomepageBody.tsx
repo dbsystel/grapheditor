@@ -4,9 +4,10 @@ import clsx from 'clsx';
 import { lazy, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { Logo } from 'src/components/logo/Logo';
 import { Queries } from 'src/components/queries/Queries';
-import { HomepageData, HomepageQuery } from 'src/models/general';
+import { HomepageData, HomepageQuery } from 'src/models/homepage';
 import { useItemsStore } from 'src/stores/items';
 import { useSearchStore } from 'src/stores/search';
 import { useStoppableRequestsStore } from 'src/stores/stoppable-requests';
@@ -20,7 +21,6 @@ import {
 	GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE,
 	GraphEditorTypeSimplified
 } from 'src/utils/constants';
-import { getHomepageData } from 'src/utils/fetch/getHomepageData';
 import { goToApplicationView } from 'src/utils/helpers/application';
 import { isString } from 'src/utils/helpers/general';
 import { isValidSearchType } from 'src/utils/helpers/search';
@@ -55,7 +55,7 @@ export const HomepageBody = ({ id, className, testId }: HomepageBodyProps) => {
 			}
 		);
 
-		getHomepageData().then((response) => {
+		api.homepage.fetch.getHomepageData().then((response) => {
 			setHomepageData(response.data);
 			executeQuery(response.data.graphQuery, true);
 		});
@@ -170,11 +170,13 @@ export const HomepageBody = ({ id, className, testId }: HomepageBodyProps) => {
 					<div className="homepage-body__content">
 						<div className="homepage-body__queries-block">
 							<h3>{t(homepageData.queriesTitle || 'homepage_queries_title')}</h3>
-							<Queries
-								className="homepage-body__queries"
-								queries={homepageData.queriesList}
-								onPlayClick={executeQuery}
-							/>
+							<ErrorBoundary>
+								<Queries
+									className="homepage-body__queries"
+									queries={homepageData.queriesList}
+									onPlayClick={executeQuery}
+								/>
+							</ErrorBoundary>
 						</div>
 						<div className="homepage-body__graph-block">
 							<div className="homepage-body__graph-title-block">

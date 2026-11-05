@@ -3,12 +3,14 @@
   "extends": ["config:recommended"],
   "enabledManagers": ["npm"],
   "npmrc": "registry=https://bahnhub.tech.rz.db.de/artifactory/api/npm/npm-remote/",
+  "minimumReleaseAge": "7 days",
+  "timezone": "Europe/Berlin",
+  "schedule": ["on monday"],
   "packageRules": [
     {
-      "matchManagers": ["npm"],
-      "groupName": "npm updates",
-      "branchName": "942_npm_updates",
-      "minimumReleaseAge": "7 days"
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }

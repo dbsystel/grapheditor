@@ -1,24 +1,24 @@
 import i18n from 'src/i18n';
 import { StoppableRequest } from 'src/models/stoppable-request';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { deleteRequest } from 'src/utils/fetch/deleteRequest';
+import { api } from 'src/utils/api/api';
 
 export const createStoppableRequestConfiguration = (
-	defaultConfiguration: Partial<StoppableRequest>
+	defaultConfiguration?: Partial<StoppableRequest>
 ): StoppableRequest => {
 	return {
-		tags: defaultConfiguration.tags || [],
-		id: defaultConfiguration.id || window.crypto.randomUUID(),
-		abortController: defaultConfiguration.abortController || new AbortController(),
+		tags: defaultConfiguration?.tags || [],
+		id: defaultConfiguration?.id || window.crypto.randomUUID(),
+		abortController: defaultConfiguration?.abortController || new AbortController(),
 		shouldRenderNotificationOnSuccess:
-			defaultConfiguration.shouldRenderNotificationOnSuccess || false
+			defaultConfiguration?.shouldRenderNotificationOnSuccess || false
 	};
 };
 
 export const cancelStoppableRequest = (stoppableRequest: StoppableRequest) => {
 	stoppableRequest.abortController.abort();
 
-	deleteRequest({ requestId: stoppableRequest.id }).then((response) => {
+	api.requests.fetch.deleteRequest({ requestId: stoppableRequest.id }).then((response) => {
 		if (stoppableRequest.shouldRenderNotificationOnSuccess) {
 			if (response.status === 299) {
 				useNotificationsStore.getState().addNotification({

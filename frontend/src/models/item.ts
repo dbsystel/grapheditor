@@ -259,5 +259,5 @@ export type ItemPropertyTypeWithListSubtypes =
 	ItemPropertyTypeNonList | `list_${ItemPropertyTypeNonList}`;
 
 export type ItemPropertyTypeNonList = Exclude<ItemPropertyType, 'list'>;
-
-export type ItemProperties = Record<string, ItemProperty>;
+export type ItemPropertyId = string;
+export type ItemProperties = Record<ItemPropertyId, ItemProperty>;

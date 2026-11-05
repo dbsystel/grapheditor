@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import { TabItemProps } from './TabItem.interfaces';
 
 export const TabItem = ({ testId, className, ...rest }: TabItemProps) => {
-	const inputRef = useRef<HTMLInputElement>(null);
+	const inputRef = useRef<HTMLButtonElement>(null);
 	const rootElementClassName = clsx('tab-item', className);
 
 	return (

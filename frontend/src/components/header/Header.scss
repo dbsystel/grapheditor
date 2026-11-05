@@ -17,6 +17,12 @@
 		align-items: center;
 	}
 
+	&__block-info {
+		display: flex;
+		align-items: center;
+		column-gap: var(--db-spacing-fixed-md);
+	}
+
 	&__divider {
 		margin: 0 var(--db-spacing-fixed-lg) !important;
 		height: 24px;

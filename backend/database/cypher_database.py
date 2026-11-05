@@ -314,17 +314,9 @@ class CypherDatabase(GraphDatabase):
             return BaseNode.from_neo_node(row["n"])
         return None
 
-    def replace_node_by_id(
-            self, nid: str, node_data: dict, existing_node: BaseNode
+    def _replace_node_by_raw_db_id(
+            self, raw_db_id: str, node_data: dict, existing_node: BaseNode
     ) -> BaseNode:
-        """Replace a node by its id from the GraphEditor node_data."""
-        if parse_unknown_id(nid):
-            return None
-
-        raw_db_id = parse_db_id(existing_node.id)
-        if not raw_db_id:
-            raw_db_id = existing_node.id
-
         old_labels = {
             label for label in existing_node.labels if not label.startswith('_')
         }
@@ -361,6 +353,37 @@ class CypherDatabase(GraphDatabase):
         )
 
         return BaseNode.from_neo_node(result.single()["n"])
+
+
+    def replace_node_by_id(
+            self, nid: str, node_data: dict, existing_node: BaseNode
+    ) -> BaseNode:
+        """Replace a node by its id from the GraphEditor node_data."""
+        if parse_unknown_id(nid):
+            return None
+
+        raw_db_id = parse_db_id(existing_node.id)
+        if not raw_db_id:
+            raw_db_id = existing_node.id
+        return self._replace_node_by_raw_db_id(raw_db_id, node_data, existing_node)
+
+
+    def replace_node_by_uuid(
+            self, uuid: str, node_data: dict, existing_node: BaseNode
+    ) -> BaseNode:
+        """Replace a node by its uuid from the GraphEditor node_data."""
+
+
+        node_map = self.get_nodes_by_uuids([uuid], None)
+        if not node_map:
+            return None
+
+        existing_node = node_map[uuid]
+        raw_db_id = parse_db_id(existing_node.id)
+        if not raw_db_id:
+            raw_db_id = existing_node.id
+        return self._replace_node_by_raw_db_id(raw_db_id, node_data, existing_node)
+
 
     def update_node_by_id(
             self, nid: str, node_data: dict, existing_node: BaseNode|None=None
@@ -675,26 +698,45 @@ class CypherDatabase(GraphDatabase):
         """
 
     def get_relations_by_node_ids(
-            self, node_ids: list[str], exclude_relation_types: bool = None
-    ) -> Generator[BaseRelation]: # 00_streaming
+            self,
+            node_ids: list[str],
+            exclude_relation_types: bool = None,
+            convert_to_base_relation: bool = True
+    ) -> Generator[neo4j.graph.Relationship|BaseRelation]: # 00_streaming
         """Return all relations that have any of the nodes with IDs 'node_ids'
         as source and/or target.
+        :param convert_to_base_relation:
         """
         if exclude_relation_types is None:
             exclude_relation_types = []
-        query = ("MATCH (a)-[r]->(b) WHERE elementid(a) in $node_ids AND "
-                 "elementid(b) IN $node_ids")
+
+        # 00_ai: seed from node_ids via its own MATCH clause first, so the
+        # planner performs a NodeByIdSeek on the (small) selected node set
+        # and then only expands relationships from those nodes, filtering
+        # the other endpoint against node_ids. The previous single-MATCH
+        # version (`MATCH (a)-[r]->(b) WHERE elementid(a) IN $node_ids AND
+        # elementid(b) IN $node_ids`) left both endpoints as unseeded
+        # pattern variables, which made Neo4j fall back to scanning every
+        # relationship in the whole graph and filtering both endpoints --
+        # O(total relations in DB) instead of O(relations touching the
+        # selected nodes), causing exports with relations to be far slower
+        # than node-only exports.
+        query = (
+            "MATCH (a) WHERE elementid(a) IN $node_ids "
+            "MATCH (a)-[r]->(b) WHERE elementid(b) IN $node_ids"
+        )
         if exclude_relation_types:
             query += " AND NOT type(r) in $exclude_relation_types"
-        query +=" RETURN r"
+        query += " RETURN r"
 
         result = g.conn.run(
             query,
             node_ids=node_ids,
             exclude_relation_types=exclude_relation_types
         )
-        return (BaseRelation.from_neo_relation(row["r"]) for row in result)
-
+        if convert_to_base_relation:
+            return (BaseRelation.from_neo_relation(row["r"]) for row in result)
+        return (row["r"] for row in result)
 
     def get_nodes_neighbors(
             self, id_map: dict[str, str],
@@ -916,7 +958,10 @@ class CypherDatabase(GraphDatabase):
             for row in res
         }
 
-    def get_relations_by_ids(self, rids: list[str]) -> Generator[(str, BaseRelation)]:
+    def get_relations_by_ids(self,
+                             rids: list[str],
+                             convert_to_base_relation: bool = True
+        ) -> Generator[tuple[str, bool | Any], Any, None]:
         """Fetch relations by their IDs. Return a map of IDs to
         Relation objects.  Assume all IDs are in the format
         id::<id> ."""
@@ -930,15 +975,13 @@ class CypherDatabase(GraphDatabase):
         """
         res = self._run(query, ids=list(id_map.keys()))
 
-        return (
-            (id_map[row["id"]], BaseRelation.from_neo_relation(row["r"])) for row in res
-        )
 
-        #
-        # return {
-        #     id_map[row["id"]]: BaseRelation.from_neo_relation(row["r"])
-        #     for row in res
-        # }
+        return (
+            (id_map[row["id"]],
+             convert_to_base_relation and BaseRelation.from_neo_relation(row["r"]) or row["r"]
+            )
+            for row in res
+        )
 
     def _get_relation_by_raw_db_id(self, rid):
         result = self._run(
@@ -952,30 +995,9 @@ class CypherDatabase(GraphDatabase):
         return None
 
 
-    def update_relation_by_id(
-        self, rid, relation_data, existing_relation=None
+    def _update_relation_by_raw_db_id(
+        self, raw_db_id, relation_data, existing_relation=None
     ):
-        """Update relation with id `rid` according to `relation_data`.
-        `relation_data` is a dict containing partial information
-        of a relation.
-
-        If `existing_relation` is given, update it. Otherwise fetch the
-        node corresponding to nid.
-
-        Return the updated relation."""
-        raw_db_id = parse_db_id(rid)
-        if raw_db_id is None:
-            return None
-
-        if not existing_relation:
-            existing_relation = self.get_relation_by_id(rid)
-
-        if not existing_relation:
-            current_app.logger.error(
-                f"Relation {rid} doesn't exist in the database."
-            )
-            return None
-
         if "properties" in relation_data:
             # collect new properties with corresponding base IDS and keep
             # mandatory ones from the existing relation
@@ -1020,6 +1042,57 @@ class CypherDatabase(GraphDatabase):
         if raw_db_id:
             return BaseRelation.from_neo_relation(new_rel)
         return BaseRelation.from_neo_relation(new_rel)
+
+
+    def update_relation_by_id(
+        self, rid, relation_data, existing_relation=None
+    ):
+        """Update relation with id `rid` according to `relation_data`.
+        `relation_data` is a dict containing partial information
+        of a relation.
+
+        If `existing_relation` is given, update it. Otherwise fetch the
+        node corresponding to nid.
+
+        Return the updated relation."""
+        raw_db_id = parse_db_id(rid)
+        if raw_db_id is None:
+            return None
+
+        if not existing_relation:
+            existing_relation = self.get_relation_by_id(rid)
+
+        if not existing_relation:
+            current_app.logger.error(
+                f"Relation {rid} doesn't exist in the database."
+            )
+            return None
+        return self._update_relation_by_raw_db_id(raw_db_id, relation_data, existing_relation)
+
+
+    def update_relation_by_uuid(
+        self, uuid, relation_data, existing_relation=None
+    ):
+        """Update relation with the given `uuid` according to
+        `relation_data`.  `relation_data` is a dict containing partial
+        information of a relation.
+
+        If `existing_relation` is given, update it. Otherwise fetch the
+        node corresponding to nid.
+
+        Return the updated relation."""
+        rels = self.get_relations_by_uuids([uuid])
+        if not rels or uuid not in rels:
+            current_app.logger.error(
+                f"Relation with UUID {uuid} doesn't exist in the database."
+            )
+            return None
+
+        existing_relation = rels[uuid]
+        return self._update_relation_by_raw_db_id(
+            existing_relation.element_id, relation_data, existing_relation
+        )
+
 
     def create_relations(
             self, relation_data_list: list[dict], preserve_import_uuid: bool = False
@@ -1143,7 +1216,7 @@ class CypherDatabase(GraphDatabase):
 
         query = """
         UNWIND $nodes AS node_id
-        MATCH (n) 
+        MATCH (n)
         WHERE elementid(n) = node_id
         RETURN n._uuid__tech_ AS uuid, elementid(n) AS id"""
         id_uudids = self._run(query, nodes=list(data.keys())).data()
@@ -1162,7 +1235,7 @@ class CypherDatabase(GraphDatabase):
         ]
         query = """
         MATCH (p) WHERE elementid(p) = $pid
-        WITH p 
+        WITH p
         UNWIND $nodes AS node_id
         MATCH (n)
         WHERE elementid(n) = node_id
@@ -1193,7 +1266,7 @@ class CypherDatabase(GraphDatabase):
         WITH p
         UNWIND $arr AS rel_id
         MATCH ()-[r]->()
-        WHERE elementId(r) = rel_id 
+        WHERE elementId(r) = rel_id
         WITH p, collect(r._uuid__tech_) AS relations
         SET p.relations__tech_ = relations
         RETURN p;
@@ -1313,10 +1386,10 @@ class CypherDatabase(GraphDatabase):
         WHERE elementid(p)=$raw_db_id
         WITH p
         OPTIONAL MATCH (b:___tech_)
-        WHERE b._uuid__tech_ IN p.nodes__tech_ 
+        WHERE b._uuid__tech_ IN p.nodes__tech_
         WITH p, collect(b) AS nodes
         OPTIONAL MATCH (a)-[r]->(b)
-        WHERE r._uuid__tech_ IN p.relations__tech_ 
+        WHERE r._uuid__tech_ IN p.relations__tech_
         AND a IN nodes
         AND b IN nodes
         RETURN p, nodes, collect(r) AS relations
@@ -1353,8 +1426,8 @@ class CypherDatabase(GraphDatabase):
         WHERE elementid(p) = $raw_db_id
         SET p.name__tech_ = $name,
             p.description__tech_ = $description,
-            p.nodes__tech_ = [], 
-            p.positions__tech_ = [], 
+            p.nodes__tech_ = [],
+            p.positions__tech_ = [],
             p.relations__tech_ = []
         return p
         """
@@ -1372,8 +1445,8 @@ class CypherDatabase(GraphDatabase):
 
     # ---------------------- Paraqueries ---------------------------------
 
-    def _get_parameter_suggestions(self, selection_query):
-        result = g.conn.run(selection_query)
+    def _get_parameter_suggestions(self, selection_query:str, params:dict):
+        result = g.conn.run(selection_query, _params=params)
         suggestions = []
         for row in result:
             val = row.value()
@@ -1397,7 +1470,9 @@ class CypherDatabase(GraphDatabase):
             pquery_dict[row["pquery_id"]] = row.get("desc", "")
         return pquery_dict
 
-    def get_paraquery(self, pquery_id: str) -> dict:
+    def get_paraquery(self,
+                      pquery_id: str,
+                      given_params:dict) -> dict:
         "Return a single paraquery and its parameters (if any)."
         result = g.conn.run(
             """
@@ -1416,6 +1491,7 @@ class CypherDatabase(GraphDatabase):
             if not pquery: # first run pquery is still empty
                 pquery = {
                     "uuid": pquery_node.get("_uuid__tech_", ""),
+                    "db_id": f"id::{pquery_id}",
                     "name": pquery_node.get("name__tech_", ""),
                     "description": pquery_node.get("description__tech_", ""),
                     "user_text": pquery_node.get("user_text__tech_", ""),
@@ -1431,7 +1507,10 @@ class CypherDatabase(GraphDatabase):
                 if "default_value__tech_" in rel:
                     new_param["default_value"] = rel["default_value__tech_"]
                 if "selection__tech_" in param_node:
-                    suggestions = self._get_parameter_suggestions(param_node["selection__tech_"])
+                    suggestions = self._get_parameter_suggestions(
+                        param_node["selection__tech_"],
+                        given_params
+                    )
                     new_param["suggestions"] = suggestions
                 params[param_name] = new_param
         return pquery
@@ -1538,6 +1617,7 @@ class CypherDatabase(GraphDatabase):
                 """
         result = self._run(query)
         return self._sort_property_names(result)
+
 
     def get_relation_type_suggestions(self, source_id:str|None=None, target_id:str|None=None,
                                       text: str|None=None, limit:int|None=None
@@ -1680,8 +1760,14 @@ class CypherDatabase(GraphDatabase):
             abort_with_json(400, f"invalid metarelation node for relation type {rel_type}")
         return rel_type
 
+    def features(self) -> list[DatabaseFeature]:
+        features = []
 
-    def features(self) -> list[str]:
+        if g.conn.has_ge_functions():
+            features.append(DatabaseFeature.GRAPHEDITOR_FUNCTIONS.value)
         if g.conn.has_uuids():
-            return [DatabaseFeature.PERSPECTIVES.value]
-        return []
+            features.append(DatabaseFeature.PERSPECTIVES.value)
+        if g.conn.has_ge_triggers():
+            features.append(DatabaseFeature.GRAPHEDITOR_TRIGGERS.value)
+
+        return features

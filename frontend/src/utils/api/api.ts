@@ -1,4 +1,7 @@
 import { buildApi } from 'src/utils/api/build';
+import { homepageApi } from 'src/utils/api/homepage';
+import { requestsApi } from 'src/utils/api/requests';
+import { transferApi } from 'src/utils/api/transfer';
 import { contextMenuApi } from './contextMenu';
 import { databasesApi } from './databases';
 import { itemsApi } from './items';
@@ -25,5 +28,8 @@ export const api = {
 	search: searchApi,
 	styles: stylesApi,
 	users: usersApi,
-	build: buildApi
+	transfer: transferApi,
+	requests: requestsApi,
+	build: buildApi,
+	homepage: homepageApi
 };

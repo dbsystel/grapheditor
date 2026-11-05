@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import sys
 import platform
+import re
 
 import waitress
 from flask import Flask, abort, request, current_app, g, send_from_directory, \
@@ -90,10 +91,29 @@ os.environ["GRAPHEDITOR_BASEDIR"] = basedir
 
 app.json.sort_keys = False
 
-app.config["CORS_HEADERS"] = ["Content-Type", "X-Tab-Id", "x-request-id"]
+app.config["CORS_HEADERS"] = ["Content-Type", "X-Tab-Id", "x-request-id", "X-Template-Tab-Id"]
 app.config["SESSION_PERMANENT"] = True
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = "sessions"
+
+# By default, SESSION_REFRESH_EACH_REQUEST is set to True, what makes
+# flask send a cookie in the response for every request, what allows
+# keeping the session from expiring when session.permanent is true.
+# As a side effect, flask overwrites the session file on every
+# request, even if it was only read from. This causes problems when
+# doing several request concurrently in a multithreading setup using
+# gunicorn, where suddendly a thread can't find login data for its
+# tab_id anymore, leading to 401.  We could try to use some sort of
+# lock mechanism to avoid that, or simply set this var to false,
+# greatly reducing the likelihood of such errors. That still could
+# happen in the event of several concurrent changes within the same
+# session.
+# By setting this var to False, session cookies are only refreshed
+# when actually changed. But since the lifetime from session cookies
+# is by default set to 31 days, they would only expire if the user
+# never changes a session file (for instance by opening a new tab) in
+# this time period, what doesn't seem to be a big deal.
+app.config["SESSION_REFRESH_EACH_REQUEST"] = False
 
 app.config["API_TITLE"] = "GraphEditor API"
 app.config["API_VERSION"] = "0.1"
@@ -249,7 +269,14 @@ def close_connection(exception):
         g.conn.close(exception)
 
 
+# matches GET /api/v1/transfer/export/<filename>, which is fetched via a
+# native browser navigation and therefore cannot carry an x-tab-id header.
+EXPORT_DOWNLOAD_RE = re.compile(r"/api/v1/transfer/export/[0-9a-zA-Z_]+$")
+
 def route_requires_connection():
+    # an exception, since only one endpoint in /api/v1/transfer can't have custom headers.
+    if request.method.lower() == "get" and EXPORT_DOWNLOAD_RE.search(request.path):
+        return False
     routes_with_connection = [
         "/api/v1/context_actions",
         "/api/v1/databases",
@@ -263,7 +290,7 @@ def route_requires_connection():
         "/api/v1/requests",
         "/api/v1/relations",
         "/api/v1/context-menu/actions",
-        "/api/v1/transfer",  # 00_ai
+        "/api/v1/transfer",
     ]
     return request.method.lower() != "options" and (
         not request.path
@@ -333,7 +360,7 @@ if config.dev_mode:
     @app.route(f"{api_prefix}/api/iga_debug_info/<path:subpath>")
     def debug_info(subpath=""):
         return f"""
-    
+
         <pre>
         {subpath}
     """ + debug_text()
@@ -418,7 +445,7 @@ if __name__ == "__main__":
             'bind': f"0.0.0.0:{config.port}",
             'workers': multiprocessing.cpu_count() + 1,
             # 'threads': number_of_workers(),
-            'timeout': 120,
+            'timeout': 480,
         }
         StandaloneApplication(app, options).run()
     else:

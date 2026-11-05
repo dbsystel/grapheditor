@@ -16,7 +16,7 @@
 		word-break: break-word;
 		transition: none;
 
-		&[data-number-of-self-loops]:not([data-number-of-self-loops="0"]):before {
+		&[data-number-of-self-loops]:not([data-number-of-self-loops='0']):before {
 			content: attr(data-number-of-self-loops);
 			position: absolute;
 			bottom: 0;
@@ -34,14 +34,16 @@
 
 		&--highlighted {
 			z-index: 1;
-			box-shadow: 0 0 0 2px #ffffff,
-						0 0 8px 2px #000000;
+			box-shadow:
+				0 0 0 2px #ffffff,
+				0 0 8px 2px #000000;
 		}
 
 		&--hover {
 			z-index: 2;
-			box-shadow: 0 0 0 2px #ffffff,
-			0 0 8px 2px #000000;
+			box-shadow:
+				0 0 0 2px #ffffff,
+				0 0 8px 2px #000000;
 
 			&:before {
 				display: none;

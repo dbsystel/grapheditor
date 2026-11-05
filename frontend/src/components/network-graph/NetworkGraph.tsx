@@ -5,19 +5,23 @@ import { LoadGraph } from 'src/components/network-graph/LoadGraph';
 import { NetworkGraphSearch } from 'src/components/network-graph/modules/search/NetworkGraphSearch';
 import { NetworkGraphContainer } from 'src/components/network-graph/NetworkGraphContainer';
 import { NetworkGraphAutoConnectNode } from 'src/components/network-graph/plugins/auto-connect-node/NetworkGraphAutoConnectNode';
+import { NetworkGraphAutoPanSpeed } from 'src/components/network-graph/plugins/auto-pan-speed/NetworkGraphAutoPanSpeed';
 import { NetworkGraphCanvasContextMenu } from 'src/components/network-graph/plugins/canvas-context-menu/NetworkGraphCanvasContextMenu';
 import { NetworkGraphDragNodes } from 'src/components/network-graph/plugins/drag-nodes/NetworkGraphDragNodes';
 import { NetworkGraphNodeClick } from 'src/components/network-graph/plugins/node-click/NetworkGraphNodeClick';
 import { NetworkGraphNodeContextMenu } from 'src/components/network-graph/plugins/node-context-menu/NetworkGraphNodeContextMenu';
+import { NetworkGraphNodeHighlightToggle } from 'src/components/network-graph/plugins/node-highlight-toggle/NetworkGraphNodeHighlightToggle';
 import { NetworkGraphNodeHtmlLabel } from 'src/components/network-graph/plugins/node-html-label/NetworkGraphNodeHtmlLabel';
+import { NetworkGraphNodeLassoSelection } from 'src/components/network-graph/plugins/node-lasso-selection/NetworkGraphNodeLassoSelection';
 import { NetworkGraphNodeRelationMouseover } from 'src/components/network-graph/plugins/node-relation-mouseover/NetworkGraphNodeRelationMouseover';
+import { NetworkGraphNodeSelection } from 'src/components/network-graph/plugins/node-selection/NetworkGraphNodeSelection';
 import { NetworkGraphQuickNode } from 'src/components/network-graph/plugins/quick-node/NetworkGraphQuickNode';
-import { NetworkGraphQuickZoomFactor } from 'src/components/network-graph/plugins/quick-zoom-factor/NetworkGraphQuickZoomFactor';
 import { NetworkGraphRelationClick } from 'src/components/network-graph/plugins/relation-click/NetworkGraphRelationClick';
 import { NetworkGraphRelationContextMenu } from 'src/components/network-graph/plugins/relation-context-menu/NetworkGraphRelationContextMenu';
+import { NetworkGraphRelationHighlightToggle } from 'src/components/network-graph/plugins/relation-highlight-toggle/NetworkGraphRelationHighlightToggle';
 import { NetworkGraphScaleLabels } from 'src/components/network-graph/plugins/scale-labels/NetworkGraphScaleLabels';
 import { NetworkGraphScaleNodes } from 'src/components/network-graph/plugins/scale-nodes/NetworkGraphScaleNodes';
-import { NetworkGraphSelectionTool } from 'src/components/network-graph/plugins/selection-tool/NetworkGraphSelectionTool';
+import { NetworkGraphZoomFactor } from 'src/components/network-graph/plugins/zoom-factor/NetworkGraphZoomFactor';
 import i18n from 'src/i18n';
 import { useGraphStore } from 'src/stores/graph';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -91,20 +95,23 @@ export const NetworkGraph = ({ id, className, testId }: NetworkGraphProps) => {
 			<NetworkGraphContainer>
 				{/* Plugins */}
 				<NetworkGraphAutoConnectNode />
-				<NetworkGraphSelectionTool />
+				<NetworkGraphNodeSelection />
+				<NetworkGraphNodeLassoSelection />
 				<NetworkGraphDragNodes />
 				<NetworkGraphNodeClick />
+				<NetworkGraphNodeHighlightToggle />
 				<NetworkGraphRelationClick />
+				<NetworkGraphRelationHighlightToggle />
 				<NetworkGraphNodeRelationMouseover />
 				<NetworkGraphQuickNode />
 				<NetworkGraphScaleNodes />
 				<NetworkGraphScaleLabels />
+				<NetworkGraphAutoPanSpeed />
 				<NetworkGraphNodeContextMenu />
-				<NetworkGraphQuickZoomFactor />
+				<NetworkGraphZoomFactor />
 				<NetworkGraphNodeHtmlLabel />
 				<NetworkGraphCanvasContextMenu />
 				<NetworkGraphRelationContextMenu />
-
 				<LoadGraph />
 			</NetworkGraphContainer>
 		</div>

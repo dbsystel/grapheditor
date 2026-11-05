@@ -1,6 +1,12 @@
+from enum import Enum
 # 00_ai
+from flask_smorest.fields import Upload
 from marshmallow import Schema, fields, validate, validates_schema
 from marshmallow import ValidationError
+
+
+class ExportFileExtension(Enum):
+    JSONL = "jsonl"
 
 
 class NodeSelectionSchema(Schema):
@@ -44,6 +50,27 @@ class ExportRequestSchema(Schema):
                 "selection field required when mode is 'explicit'")
 
 
+class ExportDownloadRequestSchema(Schema):
+    save_as = fields.Str(
+        metadata = {
+            "description": "The name of the downloaded file WITHOUT extension."
+        },
+        required = False,
+        data_key = "saveAs",
+        load_default = "export"
+    )
+    extension = fields.Enum(
+        ExportFileExtension,
+        by_value=True,
+        metadata = {
+            "description": "The extension of the exported file."
+        },
+        required = False,
+        data_key = "extension",
+        load_default = ExportFileExtension.JSONL
+    )
+
+
 class ImportRequestSchema(Schema):
     strategy = fields.Str(
         required=True,
@@ -51,3 +78,6 @@ class ImportRequestSchema(Schema):
     )
     batch_size = fields.Int(load_default=1000)
     disable_indexes = fields.Bool(load_default=False)
+
+class ImportFileSchema(Schema):
+    file = Upload(required=False, load_default=None)

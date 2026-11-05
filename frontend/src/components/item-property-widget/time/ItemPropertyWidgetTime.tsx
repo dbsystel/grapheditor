@@ -1,10 +1,10 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemPropertyWidgetTimezoneOffset } from 'src/components/item-property-widget/timezone-offset/ItemPropertyWidgetTimezoneOffset';
 import { ItemPropertyWidgetTimezoneOffsetState } from 'src/components/item-property-widget/timezone-offset/ItemPropertyWidgetTimezoneOffset.interfaces';
-import { getTimeFromString } from 'src/utils/helpers/general';
+import { getTimeFromString, isTime } from 'src/utils/helpers/general';
 import { itemPropertyDefaults } from 'src/utils/helpers/items';
 import {
 	ItemPropertyWidgetTimeProps,
@@ -20,9 +20,8 @@ export const ItemPropertyWidgetTime = ({
 	className,
 	testId
 }: ItemPropertyWidgetTimeProps) => {
-	const matches = getTimeFromString(
-		defaultValue || value || itemPropertyDefaults['time']().value
-	);
+	const timeString = defaultValue || value || itemPropertyDefaults['time']().value;
+	const matches = getTimeFromString(timeString);
 	const { t } = useTranslation();
 	const [localValue, setLocalValue] = useState<ItemPropertyWidgetTimeState>({
 		time: matches?.time || '',
@@ -59,9 +58,7 @@ export const ItemPropertyWidgetTime = ({
 	};
 
 	const triggerStateUpdateAndOnChange = (newState: ItemPropertyWidgetTimeState) => {
-		if (!isControlled) {
-			setLocalValue(newState);
-		}
+		setLocalValue(newState);
 
 		if (onChange) {
 			const newDatetime = formatTimeString(newState);
@@ -69,6 +66,8 @@ export const ItemPropertyWidgetTime = ({
 			onChange(newDatetime);
 		}
 	};
+
+	const isValid = isTime(formatTimeString(displayValue));
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -80,6 +79,7 @@ export const ItemPropertyWidgetTime = ({
 						value={displayValue.time}
 						label={t('item_property_widget_time_label')}
 						onChange={localOnChange}
+						validation="no-validation"
 					/>
 					<ItemPropertyWidgetTimezoneOffset
 						defaultValue={{
@@ -90,6 +90,18 @@ export const ItemPropertyWidgetTime = ({
 						isEditMode={isEditMode}
 					/>
 				</>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_time_invalid_message', {
+						// show the raw, unparsed value (same source as the view-mode display above)
+						// so even completely unparseable backend data is still shown to the user,
+						// instead of the reconstructed-from-parts value which can collapse to ''
+						context: timeString ? 'with_value' : undefined,
+						value: timeString
+					})}
+				/>
 			)}
 		</div>
 	);

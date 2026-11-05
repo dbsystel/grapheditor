@@ -275,6 +275,36 @@ def test_no_access_to_disk():
     assert caption.startswith("ERROR: runtime error")
     assert "is not defined" in caption
 
+def test_property_sorting():
+    """Test the Sorter function
+
+
+    """
+    style_text = """
+    node {
+        caption*: \"""
+                ", ".join(sorted(p.keys(), key=Sorter(["id","nam"])))
+            \""";
+    }
+    """
+    styles = parse_style(style_text)
+
+    # we create a node without labels, so that only the first style rule
+    # applies.
+    generic_node = BaseNode(
+        element_id="124",
+        id="generic",
+        labels=[],
+        properties={
+            "firstname__dummy": "Bobson",
+            "name__dummy_": "Bob",
+            "address__dummy_": "somewhere",
+            "ident__tech_": "123"
+        },
+        style={}
+    )
+    result = apply_style_rules(generic_node, styles)
+    assert result.style["caption"] == "ident__tech_, name__dummy_, address__dummy_, firstname__dummy"
 
 # Not working yet
 # def test_infinite_loop_causes_timeout():

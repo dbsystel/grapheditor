@@ -1,8 +1,8 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getFormattedLocaleDatetimeString } from 'src/utils/helpers/general';
+import { getFormattedLocaleDatetimeString, isDate } from 'src/utils/helpers/general';
 import { itemPropertyDefaults } from 'src/utils/helpers/items';
 import { ItemPropertyWidgetDateProps } from './ItemPropertyWidgetDate.interfaces';
 
@@ -26,14 +26,14 @@ export const ItemPropertyWidgetDate = ({
 	const localOnChange = (event: ChangeEvent<HTMLInputElement>) => {
 		const newValue = event.target.value;
 
-		if (!isControlled) {
-			setLocalValue(newValue);
-		}
+		setLocalValue(newValue);
 
 		if (onChange) {
 			onChange(newValue);
 		}
 	};
+
+	const isValid = isDate(displayValue);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -44,6 +44,16 @@ export const ItemPropertyWidgetDate = ({
 					value={displayValue}
 					label={t('item_property_widget_date_label')}
 					onChange={localOnChange}
+					validation="no-validation"
+				/>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_date_invalid_message', {
+						context: displayValue ? 'with_value' : undefined,
+						value: displayValue
+					})}
 				/>
 			)}
 		</div>

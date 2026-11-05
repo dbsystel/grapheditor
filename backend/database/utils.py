@@ -4,7 +4,7 @@ Yes, I know, utils.py is an evil name. TODO
 
 import re
 from typing import Callable
-from flask import abort, current_app, jsonify, make_response
+from flask import abort, current_app, g, jsonify, make_response
 from database.settings import config
 from database.base_types import BaseElement
 
@@ -185,3 +185,23 @@ def split_statements(query:str) -> list[str]:
     "Given a cypher query string, split it at ';' respecting the syntax."
     parser = CypherSplitter(query)
     return parser.read()
+
+def build_login_session_key(tab_id=None):
+    if not tab_id:
+        tab_id = g.tab_id
+    return f"login-data-{tab_id}"
+
+def build_selected_database_session_key(tab_id=None):
+    if not tab_id:
+        tab_id = g.tab_id
+    return f"selected-database-{tab_id}"
+
+def build_default_type_session_key(tab_id=None):
+    if not tab_id:
+        tab_id = g.tab_id
+    return f"default-type-{tab_id}"
+
+def build_default_labels_session_key(tab_id=None):
+    if not tab_id:
+        tab_id = g.tab_id
+    return f"default-labels-{tab_id}"

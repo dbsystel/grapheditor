@@ -73,3 +73,5 @@ function createStoreNotification(notification: Notification): StoreNotification 
 			notification.autoCloseAfterMilliseconds ?? NOTIFICATIONS_AUTOCLOSE_MILLISECONDS
 	};
 }
+
+(window as any).useNotificationsStore = useNotificationsStore;

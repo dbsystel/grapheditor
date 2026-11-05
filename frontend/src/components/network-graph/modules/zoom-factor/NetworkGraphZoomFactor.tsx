@@ -35,6 +35,7 @@ export const NetworkGraphZoomFactor = ({ id, className, testId }: GlobalComponen
 
 		setLocalZoomFactor(newZoomFactor);
 
+		// persist with graph store once the user is done changing the value (reduce the number of graph store and graph updates)
 		delayedCallback(() => {
 			setZoomFactor(newZoomFactor);
 		});

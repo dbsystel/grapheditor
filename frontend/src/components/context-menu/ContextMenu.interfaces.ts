@@ -31,6 +31,7 @@ export type ContextMenuAction =
 	| 'add_labels'
 	| 'remove_labels'
 	| 'add_properties'
+	| 'import'
 	| 'export'
 	| 'save_as_perspective'
 	| 'add_node'

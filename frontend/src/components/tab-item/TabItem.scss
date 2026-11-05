@@ -1,43 +1,22 @@
-.db-tabs:not([data-orientation='vertical']) .db-tab-list > ul .db-tab-item {
+.db-tabs:not([data-orientation='vertical']) .db-tab-list > .db-tab-item {
 	margin-block: 0;
 	border-radius: var(--db-border-radius-xs);
 	border-bottom-right-radius: 0;
 	border-bottom-left-radius: 0;
+	padding-right: var(--db-spacing-fixed-md);
 
-	> label {
+	&:hover {
 		border-radius: var(--db-border-radius-xs);
 		border-bottom-right-radius: 0;
 		border-bottom-left-radius: 0;
-		padding-right: var(--db-spacing-fixed-md);
-
-		&:hover {
-			border-radius: var(--db-border-radius-xs);
-			border-bottom-right-radius: 0;
-			border-bottom-left-radius: 0;
-		}
 	}
 
-	label:has(input:checked) {
+	&[aria-selected='true'] {
 		font-weight: 400;
-	}
-}
+		background: var(--db-neutral-bg-basic-level-2-default);
 
-.db-tabs:not([data-orientation='vertical'])
-	.db-tab-list
-	// TODO check if :has(db-tab-item, dbtabitem) is valid selector
-	> ul:not(:has(db-tab-item, dbtabitem))
-	.db-tab-item:first-of-type {
-	margin-inline-start: 0;
-}
-
-.tab-item {
-	input {
-		&:checked {
-			background-color: var(--db-neutral-bg-basic-level-2-default);
-			border-radius: var(--db-border-radius-xs);
-			border-bottom-left-radius: 0;
-			border-bottom-right-radius: 0;
-			font-weight: 400;
+		&:after {
+			content: none;
 		}
 	}
 }

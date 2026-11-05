@@ -6,6 +6,7 @@ import { useItemsDrawerContext } from 'src/components/items-drawer/context/Items
 import { useContextMenuStore } from 'src/stores/context-menu';
 import { useDrawerStore } from 'src/stores/drawer';
 import { useItemOverviewPopoverStore } from 'src/stores/item-overview-popover';
+import { getDrawerEntriesFromOverviews } from 'src/utils/helpers/item-overview-popover';
 import { isNode } from 'src/utils/helpers/nodes';
 import { idFormatter } from 'src/utils/id-formatter';
 import { ItemInfoProps } from './ItemInfo.interfaces';
@@ -35,20 +36,21 @@ export const ItemInfo = ({
 	 * 	useCallback to prevent double calling of ref callback with null and the element
 	 * 	@see https://legacy.reactjs.org/docs/refs-and-the-dom.html#caveats-with-callback-refs
 	 */
-	const onRefChange = useCallback((element: HTMLButtonElement | null) => {
-		setRef(element);
+	const onRefChange = useCallback(
+		(element: HTMLButtonElement | null) => {
+			setRef(element);
 
-		if (element) {
-			useItemOverviewPopoverStore
-				.getState()
-				.registerTriggerElement({ triggerElement: element, item: item });
-		}
-	}, []);
+			if (element) {
+				useItemOverviewPopoverStore
+					.getState()
+					.registerTriggerElement({ triggerElement: element, item: item });
+			}
+		},
+		[item]
+	);
 
 	const onClick = () => {
-		const overviewEntries = useItemOverviewPopoverStore
-			.getState()
-			.overviews.map((overview) => ({ item: overview.item }));
+		const overviewEntries = getDrawerEntriesFromOverviews();
 
 		useItemOverviewPopoverStore.getState().reset();
 

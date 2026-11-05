@@ -2,9 +2,11 @@ import { DBSelectOptionType } from '@db-ux/react-core-components';
 import {
 	ItemPropertyDynamicBasedOnType,
 	ItemPropertyDynamicType,
+	ItemPropertyId,
 	ItemPropertyType,
 	ItemPropertyTypeBasedOnType
 } from 'src/models/item';
+import { NodeId } from 'src/models/node';
 
 export const GLOBAL_SEARCH_QUERY_KEY = 'q';
 export const GLOBAL_SEARCH_TYPE_KEY = 'type';
@@ -182,6 +184,10 @@ export const GRAPH_ARROW_HEAD_LENGTH_TO_THICKNESS_RATIO = 5;
 export const GRAPH_ARROW_HEAD_WIDENESS_TO_THICKNESS_RATIO = 3.5;
 export const GRAPH_RENDER_HTML_LABELS_THRESHOLD = 200;
 export const GRAPH_FIT_TO_VIEWPORT_MIN_ZOOM = 0.3; // higher number means greater zoom-out
+// distance (px) from the graph container's boundaries that triggers node-drag auto-panning
+export const GRAPH_AUTO_PAN_BOUNDARIES_THRESHOLD_PX = 40;
+// maximum node-drag auto-pan speed, in screen pixels per animation frame
+export const GRAPH_AUTO_PAN_MAX_SPEED_PX = 15;
 // after scaling this value will match .grass file node diameter value, meaning 50 here is like "diameter: 50px" in .grass
 export const GRAPH_CONTEXT_MENU_LAYOUT_DISTANCE_BETWEEN_NODES = 50;
 
@@ -194,5 +200,12 @@ export const NOT_AVAILABLE_SIGN = 'N/A';
 export const APP_LANGUAGES = Object.freeze<['en', 'de', 'cimode']>(['en', 'de', 'cimode']);
 export const APP_STORAGE_KEY_PREFIX = '_app_';
 export const SSO_HOST_STORAGE_KEY = APP_STORAGE_KEY_PREFIX + 'sso-host';
+export const TAB_ID_STORAGE_KEY = APP_STORAGE_KEY_PREFIX + 'tab-id';
+export const TAB_CREATED_AT_STORAGE_KEY = APP_STORAGE_KEY_PREFIX + 'tab-created-at';
 
 export const STOPPABLE_REQUEST_HEADER_KEY = 'x-request-id';
+
+export const NON_REMOVABLE_NODE_IDS: Array<NodeId | ItemPropertyId> = [
+	'MetaLabel::___tech_',
+	'MetaProperty::_uuid__tech_'
+];

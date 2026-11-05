@@ -67,6 +67,7 @@ class ContextMenuAction(Enum):
     APPLY_LAYOUT_TO_FOLLOWING_NODES = "apply_layout_to_following_nodes"
     LOAD_PERSPECTIVE = "load_perspective"
     SAVE_AS_PERSPECTIVE = "save_as_perspective"
+    IMPORT = "import"
     EXPORT = "export"
     HIDE_WITH_FILTER = "hide_with_filter"
 
@@ -103,6 +104,7 @@ context_action_table = {
     CA.APPLY_LAYOUT_TO_FOLLOWING_NODES: is_single_node,
     CA.LOAD_PERSPECTIVE: lambda n, r: is_single_node(n, r) and is_perspective(n, r),
     CA.SAVE_AS_PERSPECTIVE: is_multi_selection,
+    CA.IMPORT: no_selection,
     CA.EXPORT: lambda n, r: is_multi_selection(n, r) or no_selection(n, r),
     CA.HIDE_WITH_FILTER: no_selection,
     # fmt: on

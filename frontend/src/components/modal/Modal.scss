@@ -1,4 +1,5 @@
 .modal {
+	inset: 0;
 	width: 100%;
 	height: 100%;
 	max-width: 100%; // override user-agent style
@@ -6,6 +7,7 @@
 	z-index: 9999;
 	background-color: rgba(0, 0, 0, 0.4);
 	display: flex;
+	overflow: auto;
 	align-items: center;
 	justify-content: center;
 	padding: var(--db-spacing-fixed-lg);
@@ -19,7 +21,7 @@
 	}
 
 	&__content {
-		padding: var(--db-spacing-fixed-lg) !important;
+		padding: var(--db-spacing-fixed-md) !important;
 		max-width: 500px;
 	}
 
@@ -29,24 +31,29 @@
 		}
 	}
 
-	&__header-title {
+	&__header-top {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		margin-block-end: var(--db-spacing-fixed-lg);
+	}
 
-		> h3 {
-			margin: 0;
-		}
+	&__title {
+		margin: 0;
+		font-weight: 300;
 	}
 
 	&__header-info {
 		display: flex;
 		align-items: start;
 		column-gap: var(--db-spacing-fixed-sm);
-		margin: var(--db-spacing-fixed-lg) 0;
+		margin-bottom: var(--db-spacing-fixed-sm);
+	}
 
-		> p {
-			margin: 0 0 var(--db-spacing-fixed-2xs) 0;
-		}
+	&__description {
+		margin: 0 0 var(--db-spacing-fixed-2xs) 0;
+	}
+
+	&__close {
+		margin-left: auto;
 	}
 }

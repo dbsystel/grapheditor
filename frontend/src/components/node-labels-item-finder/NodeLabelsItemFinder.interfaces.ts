@@ -39,12 +39,13 @@ export type NodeLabelsItemFinderTagProps = {
 	isHighlighted: boolean;
 	showTooltipOnHover?: boolean;
 	shouldRenderWarningIcon?: boolean;
+	isRemovable: boolean;
 	editLabels: boolean;
 	label: Node;
 	onLabelChange: (item: Node, isItemSelected: boolean, selectedItems: Array<Node>) => void;
 	value: Array<Node>;
 	onTagSelect: (tagId: NodeId) => void;
-	tooltipLabel: Node | null;
+	tooltipLabel: Node;
 };
 
 export type NodeLabelsItemFinderHandle = UnsavedChangesHandle & {

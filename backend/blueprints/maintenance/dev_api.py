@@ -137,15 +137,15 @@ class Reset(MethodView):
         # triggers can be installed first and cause issues when manipulating
         # data.
         counter = 0
-        while not g.conn.has_ft():
+        while not g.conn.has_ge_functions():
             if counter >= TIMEOUT_LIMIT:
                 abort_with_json(500, "Timeout installing functions/procedures.")
             counter = counter + 1
             current_app.logger.debug(
                 f"Waiting for function/procedure installation since {counter} seconds."
             )
-            # if we don't commit here, has_ft is executed in the same transaction, returning
-            # always the same result.
+            # if we don't commit here, has_ge_functions is executed in the same
+            # transaction, returning always the same result.
             g.conn.commit()
             time.sleep(1)
         current_app.logger.info("GraphEditor functions/procedures installed.")
@@ -154,7 +154,7 @@ class Reset(MethodView):
 
         # triggers must be installed before adding data.
         counter = 0
-        while not g.conn.has_iga_triggers():
+        while not g.conn.has_ge_triggers():
             if counter >= TIMEOUT_LIMIT:
                 abort_with_json(500, "Timeout installing triggers.")
             counter = counter + 1

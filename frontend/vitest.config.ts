@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig, mergeConfig } from 'vitest/config';
-import viteConfigFn from './vite.config';
+import viteConfigFn from './vite.config.ts';
 
 // Vite 8: mergeConfig no longer accepts callback-form configs — resolve first
 const viteConfig = viteConfigFn({

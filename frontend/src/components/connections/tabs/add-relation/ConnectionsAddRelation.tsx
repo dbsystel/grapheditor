@@ -1,6 +1,5 @@
-import { DBDivider } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { useRef } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AddRelationForm } from 'src/components/add-relation-form/AddRelationForm';
 import { TabItem } from 'src/components/tab-item/TabItem';
@@ -18,22 +17,26 @@ export const ConnectionsAddRelation = ({
 	onTabClose
 }: ConnectionsAddRelationProps) => {
 	const { t } = useTranslation();
+	const [activeTabIndex, setActiveTabIndex] = useState(-1);
 	const rootElementClassName = clsx('connections__add-relation', className);
-	const tabsActiveIndexRef = useRef(-1);
 
-	const onTabChange = (tabElement: HTMLInputElement, tabIndex: number) => {
-		tabsActiveIndexRef.current = tabIndex;
+	const onIndexChange = (tabIndex: number) => {
+		setActiveTabIndex(tabIndex);
+	};
+
+	const localOnTabClose = () => {
+		setActiveTabIndex(-1);
+		onTabClose();
 	};
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			<Tabs initialSelectedMode="manually" onTabChange={onTabChange}>
+			<Tabs activeIndex={activeTabIndex} onIndexChange={onIndexChange}>
 				<TabList>
 					<TabItem icon="plus">{t('add_relation')}</TabItem>
-					<DBDivider />
 				</TabList>
 
-				<TabPanel onTabClose={onTabClose} className="db-bg-color-basic-level-2">
+				<TabPanel onTabClose={localOnTabClose} className="db-bg-color-basic-level-2">
 					<AddRelationForm refNode={refItem} onSave={onSave} />
 				</TabPanel>
 			</Tabs>

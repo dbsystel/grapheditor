@@ -196,12 +196,10 @@ export const useSearchStore = create<SearchStore>()(
 						type:
 							type && isCypherQueryOrFullText(type)
 								? type
-								: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY
-					});
-					set({ query: query || '' });
-					set({ presentation: presentation || GRAPH_PRESENTATION_GRAPH });
-					set({ algorithm: algorithm });
-					set({
+								: GLOBAL_SEARCH_TYPE_VALUE_CYPHER_QUERY,
+						query: query || '',
+						presentation: presentation || GRAPH_PRESENTATION_GRAPH,
+						algorithm: algorithm,
 						searchValue: query ? query : GLOBAL_SEARCH_CYPHER_QUERY_DEFAULT_SEARCH_VALUE
 					});
 				},
@@ -292,3 +290,5 @@ export const useSearchStore = create<SearchStore>()(
 		)
 	)
 );
+
+(window as any).useSearchStore = useSearchStore;

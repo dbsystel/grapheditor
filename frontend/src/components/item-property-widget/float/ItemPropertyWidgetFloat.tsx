@@ -1,4 +1,4 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, FocusEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -77,7 +77,7 @@ export const ItemPropertyWidgetFloat = ({
 				onChange(parsedValue);
 			}
 		} else {
-			updateLocalValue(newValue);
+			setLocalValue(newValue);
 
 			if (onChange) {
 				onChange(parsedValue);
@@ -87,17 +87,12 @@ export const ItemPropertyWidgetFloat = ({
 
 	const onBlur = (event: FocusEvent<HTMLInputElement>) => {
 		if (event.target.value.trim() === '') {
-			updateLocalValue(String(propertyDefaultValueRef.current));
-		}
-	};
-
-	const updateLocalValue = (newValue: string) => {
-		if (!isControlled) {
-			setLocalValue(newValue);
+			setLocalValue(String(propertyDefaultValueRef.current));
 		}
 	};
 
 	const inputLabel = label || t('item_property_widget_float_label');
+	const isValid = html5IntegerAndFloatRegex.test(displayValue);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -111,6 +106,16 @@ export const ItemPropertyWidgetFloat = ({
 					onChange={localOnChange}
 					onBlur={onBlur}
 					placeholder={html5FloatPlaceholder}
+					validation="no-validation"
+				/>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_float_invalid_message', {
+						context: displayValue ? 'with_value' : undefined,
+						value: displayValue
+					})}
 				/>
 			)}
 		</div>

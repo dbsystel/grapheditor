@@ -3,26 +3,18 @@ import { DBButton, DBCheckbox, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLoginStore } from 'src/stores/login';
-import { useNotificationsStore } from 'src/stores/notifications';
 import { api } from 'src/utils/api/api';
+import { logOutUserLocally } from 'src/utils/helpers/auth';
 import { LogoutProps } from './Logout.interfaces';
 
 export const Logout = ({ id, className, testId }: LogoutProps) => {
-	const addNotification = useNotificationsStore((store) => store.addNotification);
-	const { disconnect } = useLoginStore((state) => state);
 	const { t } = useTranslation();
 	const doSSOServerLogoutRef = useRef(false);
 	const rootElementClassName = clsx('logout', className);
 
 	const onDisconnect = () => {
 		api.users.fetch.postLogout({ ssoLogout: doSSOServerLogoutRef.current }).then(() => {
-			disconnect();
-
-			addNotification({
-				title: t('notifications_success_logout'),
-				type: 'successful'
-			});
+			logOutUserLocally();
 		});
 	};
 

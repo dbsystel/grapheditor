@@ -2,6 +2,7 @@ import {
 	CameraState,
 	MouseCoords,
 	SigmaEdgeEventPayload,
+	SigmaEventPayload,
 	SigmaNodeEventPayload,
 	SigmaStageEventPayload,
 	WheelCoords
@@ -10,11 +11,7 @@ import { getEdgeLabelAtPoint } from 'src/components/network-graph/helpers';
 import { NodeId } from 'src/models/node';
 import { ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS } from 'src/utils/constants';
 import { isFunction, isFunctionWithoutParameters, isObject } from 'src/utils/helpers/general';
-import {
-	isAltKeyPressed,
-	isControlKeyPressed,
-	isShiftKeyPressed
-} from 'src/utils/keyboard-observer';
+import { areExactModifiersPressed, areNoModifiersPressed } from 'src/utils/keyboard-observer';
 import { Logger } from 'src/utils/logger';
 import { GraphEditorSigma } from './NetworkGraph.interfaces';
 
@@ -22,16 +19,23 @@ type StateManagerStateKeys = keyof typeof StateManagerStates;
 type StateManagerStateValues = (typeof StateManagerStates)[StateManagerStateKeys];
 
 type PayloadType<T extends StateManagerStateValues> = T extends
-	'nodeDown' | 'nodeEnter' | 'nodeLeave' | 'nodeClick' | 'nodeTooltip' | 'nodeContextMenu'
+	| 'nodeDown'
+	| 'nodeEnter'
+	| 'nodeLeave'
+	| 'nodeClick'
+	| 'nodeHighlightToggle'
+	| 'nodeTooltip'
+	| 'nodeContextMenu'
 	? SigmaNodeEventPayload
 	: T extends
 				| 'relationEnter'
 				| 'relationLeave'
 				| 'relationClick'
+				| 'relationHighlightToggle'
 				| 'relationTooltip'
 				| 'relationContextMenu'
 		? SigmaEdgeEventPayload
-		: T extends 'nodeSelection' | 'nodeAutoConnect' | 'mouseUp'
+		: T extends 'nodeSelection' | 'nodeLassoSelection' | 'nodeAutoConnect' | 'mouseUp'
 			? MouseCoords
 			: T extends 'nodeDrag'
 				? MouseCoords & { nodeId: NodeId }
@@ -39,9 +43,11 @@ type PayloadType<T extends StateManagerStateValues> = T extends
 					? SigmaStageEventPayload
 					: T extends 'cameraUpdate'
 						? CameraState
-						: T extends 'scaleLabels' | 'scaleNodes' | 'zoomFactor'
+						: T extends 'scaleLabels' | 'scaleNodes' | 'zoomFactor' | 'autoPanSpeed'
 							? WheelCoords
-							: void;
+							: T extends 'stageDown'
+								? SigmaEventPayload
+								: void;
 
 const StateManagerStates = Object.freeze({
 	// initial/starting state
@@ -55,7 +61,9 @@ const StateManagerStates = Object.freeze({
 	NODE_LEAVE: 'nodeLeave',
 	NODE_DRAG: 'nodeDrag',
 	NODE_SELECTION: 'nodeSelection',
+	NODE_LASSO_SELECTION: 'nodeLassoSelection',
 	NODE_CLICK: 'nodeClick',
+	NODE_HIGHLIGHT_TOGGLE: 'nodeHighlightToggle',
 	NODE_QUICK: 'nodeQuick',
 	NODE_AUTO_CONNECT: 'nodeAutoConnect',
 	NODE_CONTEXT_MENU: 'nodeContextMenu',
@@ -63,6 +71,7 @@ const StateManagerStates = Object.freeze({
 	RELATION_ENTER: 'relationEnter',
 	RELATION_LEAVE: 'relationLeave',
 	RELATION_CLICK: 'relationClick',
+	RELATION_HIGHLIGHT_TOGGLE: 'relationHighlightToggle',
 	RELATION_TOOLTIP: 'relationTooltip',
 	RELATION_CONTEXT_MENU: 'relationContextMenu',
 	// misc state
@@ -73,14 +82,20 @@ const StateManagerStates = Object.freeze({
 	STAGE_CONTEXT_MENU: 'stageContextMenu',
 	SCALE_LABELS: 'scaleLabels',
 	SCALE_NODES: 'scaleNodes',
-	ZOOM_FACTOR: 'zoomFactor'
+	ZOOM_FACTOR: 'zoomFactor',
+	AUTO_PAN_SPEED: 'autoPanSpeed'
 });
 
 type StateManagerState<StateKey extends StateManagerStateValues> = {
 	transitionTo: Array<StateManagerStateValues>;
 	callbacks: Array<StateManagerInternalCallback<StateKey>>;
-	// allow direct state callbacks execution without any (state) checks
-	isDirectCallbackExecutionAllowed?: boolean;
+	// for deferred states: which mouse event commits a marked (pending) transition
+	// into this state. 'mouse-move' commits on the first mouse move (continuous
+	// states such as drag/selection/auto-connect), 'mouse-up' commits on mouse
+	// release (e.g. quick node)
+	commitOn?: 'mouse-move' | 'mouse-up';
+	// continuous states keep firing their main callback on every mouse move while active
+	isContinuous?: boolean;
 };
 
 type StateManagerCallback<StateKey extends StateManagerStateValues> = {
@@ -124,15 +139,30 @@ export class StateManager {
 	private lastRelationEvent: SigmaEdgeEventPayload | null;
 	private enterNodeTimeout: number;
 	private enterRelationTimeout: number;
+	// a transition that has been marked but not yet committed (see markTransition)
+	private pendingState: StateManagerStateValues | null;
 	// allow only one central StateManager instance to prevent issues with multiple event listeners and state desynchronization
 	static _instance: StateManager;
+	// one-shot guard, set on mouseup after a drag/selection/lasso/auto-connect gesture ends, to suppress the native "click"
+	// that still follows and could otherwise re-open node/relation details for whatever is at the release position.
+	// Consumed by the capture-phase "click" interceptor registered on the Sigma container's parent in "initializeEvents",
+	// not checked individually by "clickNode"/"clickEdge"/the label-click listener, since that interceptor runs (and stops propagation)
+	// before any of them do
+	private suppressNextClick: boolean;
 
+	/**
+	 * Create the manager in the "IDLE" state, build the state graph (allowed
+	 * transitions plus per-state "commitOn"/"isContinuous" configuration), and wire
+	 * Sigma events when a Sigma instance is provided.
+	 */
 	constructor(parameters?: { sigma?: GraphEditorSigma }) {
 		this.sigma = parameters?.sigma || null;
 		this.currentState = StateManagerStates.IDLE;
 		this.lastRelationEvent = null;
 		this.enterNodeTimeout = 0;
 		this.enterRelationTimeout = 0;
+		this.pendingState = null;
+		this.suppressNextClick = false;
 		this.state = {
 			// initial/starting state
 			idle: {
@@ -145,10 +175,12 @@ export class StateManager {
 					StateManagerStates.RELATION_ENTER,
 					// needed for relation label click
 					StateManagerStates.RELATION_CLICK,
+					StateManagerStates.RELATION_HIGHLIGHT_TOGGLE,
 					StateManagerStates.STAGE_DOWN,
 					StateManagerStates.SCALE_LABELS,
 					StateManagerStates.SCALE_NODES,
 					StateManagerStates.ZOOM_FACTOR,
+					StateManagerStates.AUTO_PAN_SPEED,
 					// allow node context menu after e.g. node drag
 					StateManagerStates.NODE_CONTEXT_MENU,
 					StateManagerStates.STAGE_CONTEXT_MENU,
@@ -160,6 +192,7 @@ export class StateManager {
 				callbacks: [],
 				transitionTo: [
 					StateManagerStates.NODE_SELECTION,
+					StateManagerStates.NODE_LASSO_SELECTION,
 					StateManagerStates.NODE_QUICK,
 					StateManagerStates.IDLE
 				]
@@ -175,6 +208,7 @@ export class StateManager {
 					StateManagerStates.NODE_DRAG,
 					StateManagerStates.NODE_AUTO_CONNECT,
 					StateManagerStates.NODE_CLICK,
+					StateManagerStates.NODE_HIGHLIGHT_TOGGLE,
 					StateManagerStates.NODE_CONTEXT_MENU
 				]
 			},
@@ -189,10 +223,13 @@ export class StateManager {
 			},
 			nodeQuick: {
 				callbacks: [],
+				commitOn: 'mouse-up',
 				transitionTo: [StateManagerStates.IDLE]
 			},
 			nodeAutoConnect: {
 				callbacks: [],
+				commitOn: 'mouse-move',
+				isContinuous: true,
 				transitionTo: [StateManagerStates.IDLE]
 			},
 			nodeLeave: {
@@ -205,14 +242,28 @@ export class StateManager {
 			},
 			nodeDrag: {
 				callbacks: [],
+				commitOn: 'mouse-move',
+				isContinuous: true,
 				transitionTo: [StateManagerStates.IDLE]
 			},
 			nodeClick: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.NODE_LEAVE, StateManagerStates.NODE_CONTEXT_MENU]
 			},
+			nodeHighlightToggle: {
+				callbacks: [],
+				transitionTo: [StateManagerStates.NODE_LEAVE, StateManagerStates.NODE_CONTEXT_MENU]
+			},
 			nodeSelection: {
 				callbacks: [],
+				commitOn: 'mouse-move',
+				isContinuous: true,
+				transitionTo: [StateManagerStates.IDLE]
+			},
+			nodeLassoSelection: {
+				callbacks: [],
+				commitOn: 'mouse-move',
+				isContinuous: true,
 				transitionTo: [StateManagerStates.IDLE]
 			},
 			nodeContextMenu: {
@@ -233,6 +284,7 @@ export class StateManager {
 				transitionTo: [
 					StateManagerStates.RELATION_LEAVE,
 					StateManagerStates.RELATION_CLICK,
+					StateManagerStates.RELATION_HIGHLIGHT_TOGGLE,
 					StateManagerStates.RELATION_TOOLTIP,
 					StateManagerStates.RELATION_CONTEXT_MENU
 				]
@@ -258,28 +310,38 @@ export class StateManager {
 					StateManagerStates.RELATION_CONTEXT_MENU
 				]
 			},
+			relationHighlightToggle: {
+				callbacks: [],
+				transitionTo: [
+					// needed for relation label click
+					StateManagerStates.IDLE,
+					StateManagerStates.RELATION_LEAVE,
+					StateManagerStates.RELATION_CONTEXT_MENU
+				]
+			},
 			relationContextMenu: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
 			},
 			relationTooltip: {
 				callbacks: [],
-				transitionTo: [StateManagerStates.RELATION_CLICK, StateManagerStates.RELATION_LEAVE]
+				transitionTo: [
+					StateManagerStates.RELATION_CLICK,
+					StateManagerStates.RELATION_HIGHLIGHT_TOGGLE,
+					StateManagerStates.RELATION_LEAVE
+				]
 			},
-			// misc state
+			// misc state (broadcast to subscribers regardless of the current state)
 			mouseUp: {
 				transitionTo: [],
-				isDirectCallbackExecutionAllowed: true,
 				callbacks: []
 			},
 			resize: {
 				transitionTo: [],
-				isDirectCallbackExecutionAllowed: true,
 				callbacks: []
 			},
 			cameraUpdate: {
 				transitionTo: [],
-				isDirectCallbackExecutionAllowed: true,
 				callbacks: []
 			},
 			scaleLabels: {
@@ -293,6 +355,10 @@ export class StateManager {
 			zoomFactor: {
 				callbacks: [],
 				transitionTo: [StateManagerStates.IDLE]
+			},
+			autoPanSpeed: {
+				callbacks: [],
+				transitionTo: [StateManagerStates.IDLE]
 			}
 		};
 
@@ -302,6 +368,10 @@ export class StateManager {
 		this.initializeEvents();
 	}
 
+	/**
+	 * Return the shared singleton instance, creating it on first access. A single
+	 * central instance prevents duplicate event listeners and state desynchronization.
+	 */
 	static getInstance() {
 		if (!StateManager._instance) {
 			StateManager._instance = new StateManager();
@@ -310,6 +380,10 @@ export class StateManager {
 		return StateManager._instance;
 	}
 
+	/**
+	 * Attach a Sigma instance and (re)wire its event listeners. Does nothing when the
+	 * same instance is already set.
+	 */
 	setSigma(sigma: GraphEditorSigma) {
 		if (this.sigma !== sigma) {
 			this.sigma = sigma;
@@ -317,10 +391,21 @@ export class StateManager {
 		}
 	}
 
+	/**
+	 * Prevent the browser's native context menu on the Sigma container so it does not
+	 * interfere with Sigma's right-click events.
+	 */
 	disableSigmaContainerContextMenu(event: MouseEvent) {
 		event.preventDefault();
 	}
 
+	/**
+	 * Wire all Sigma, mouse-captor, camera, and DOM events to the finite-state
+	 * machine. Discrete events switch state immediately via "enterState"; the
+	 * drag/selection/quick-node gestures are marked on mouse-down and committed later;
+	 * "mouseUp", "resize", and "cameraUpdate" broadcast to their subscribers
+	 * regardless of the current state. No-op until a Sigma instance is set.
+	 */
 	initializeEvents() {
 		if (!this.sigma) {
 			return;
@@ -333,6 +418,18 @@ export class StateManager {
 			.getContainer()
 			.addEventListener('contextmenu', this.disableSigmaContainerContextMenu);
 
+		this.sigma.getContainer().parentElement?.addEventListener(
+			'click',
+			(event) => {
+				if (this.suppressNextClick) {
+					this.suppressNextClick = false;
+					event.stopImmediatePropagation();
+					event.preventDefault();
+				}
+			},
+			{ capture: true }
+		);
+
 		this.sigma.addListener('downNode', (event) => {
 			// possible right mouse button
 			if ('buttons' in event.event.original && event.event.original.buttons === 2) {
@@ -341,11 +438,20 @@ export class StateManager {
 
 			nodeId = event.node;
 
-			this.transitionTo(StateManagerStates.NODE_DOWN);
-			this.executeStateCallbacks(StateManagerStates.NODE_DOWN, event);
+			this.enterState(StateManagerStates.NODE_DOWN, event);
 
-			if (event.event.original.ctrlKey) {
-				this.transitionTo(StateManagerStates.NODE_AUTO_CONNECT);
+			/**
+			 * Mark the transition to be committed on the first mouse move. Holding
+			 * CTRL + SHIFT engages auto-connect, while no modifier engages a plain
+			 * node drag. The manager stays in NODE_DOWN until the user actually
+			 * starts moving, so a click without movement never turns into a
+			 * drag/auto-connect. CTRL alone intentionally marks nothing here so the
+			 * subsequent clickNode can trigger the node highlight toggle.
+			 */
+			if (areExactModifiersPressed('Control', 'Shift')) {
+				this.markTransition(StateManagerStates.NODE_AUTO_CONNECT);
+			} else if (areNoModifiersPressed()) {
+				this.markTransition(StateManagerStates.NODE_DRAG);
 			}
 		});
 
@@ -384,8 +490,13 @@ export class StateManager {
 					edge: edgeKey
 				};
 
-				this.transitionTo(StateManagerStates.RELATION_CLICK);
-				this.executeStateCallbacks(StateManagerStates.RELATION_CLICK, syntheticEvent);
+				// CTRL + label click toggles relation highlight, a plain label
+				// click opens relation details
+				if (areExactModifiersPressed('Control')) {
+					this.enterState(StateManagerStates.RELATION_HIGHLIGHT_TOGGLE, syntheticEvent);
+				} else {
+					this.enterState(StateManagerStates.RELATION_CLICK, syntheticEvent);
+				}
 				// Reset state since there's no leaveEdge event to do it for label-only clicks
 				this.resetState();
 			}
@@ -402,33 +513,25 @@ export class StateManager {
 			 */
 			if (this.currentState === StateManagerStates.RELATION_ENTER) {
 				if (this.lastRelationEvent) {
-					this.transitionTo(StateManagerStates.RELATION_LEAVE);
-					this.executeStateCallbacks(
-						StateManagerStates.RELATION_LEAVE,
-						this.lastRelationEvent
-					);
+					this.enterState(StateManagerStates.RELATION_LEAVE, this.lastRelationEvent);
 				}
 			}
 
-			this.transitionTo(StateManagerStates.NODE_ENTER);
-			this.executeStateCallbacks(StateManagerStates.NODE_ENTER, event);
+			this.enterState(StateManagerStates.NODE_ENTER, event);
 
 			this.enterNodeTimeout = window.setTimeout(() => {
-				this.transitionTo(StateManagerStates.NODE_TOOLTIP);
-				this.executeStateCallbacks(StateManagerStates.NODE_TOOLTIP, event);
+				this.enterState(StateManagerStates.NODE_TOOLTIP, event);
 			}, ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS);
 		});
 
 		this.sigma.addListener('rightClickNode', (event) => {
-			this.transitionTo(StateManagerStates.NODE_CONTEXT_MENU);
-			this.executeStateCallbacks(StateManagerStates.NODE_CONTEXT_MENU, event);
+			this.enterState(StateManagerStates.NODE_CONTEXT_MENU, event);
 		});
 
 		this.sigma.addListener('leaveNode', (event) => {
 			window.clearTimeout(this.enterNodeTimeout);
 
-			this.transitionTo(StateManagerStates.NODE_LEAVE);
-			this.executeStateCallbacks(StateManagerStates.NODE_LEAVE, event);
+			this.enterState(StateManagerStates.NODE_LEAVE, event);
 
 			// manually reset the state, otherwise the manager will hang in the
 			// NODE_LEAVE state
@@ -438,26 +541,27 @@ export class StateManager {
 		});
 
 		this.sigma.addListener('clickNode', (event) => {
-			this.transitionTo(StateManagerStates.NODE_CLICK);
-			this.executeStateCallbacks(StateManagerStates.NODE_CLICK, event);
+			// CTRL + click toggles node highlight, a plain click opens node details
+			if (areExactModifiersPressed('Control')) {
+				this.enterState(StateManagerStates.NODE_HIGHLIGHT_TOGGLE, event);
+			} else {
+				this.enterState(StateManagerStates.NODE_CLICK, event);
+			}
 		});
 
 		this.sigma.addListener('enterEdge', (event) => {
 			this.lastRelationEvent = event;
-			this.transitionTo(StateManagerStates.RELATION_ENTER);
-			this.executeStateCallbacks(StateManagerStates.RELATION_ENTER, event);
+			this.enterState(StateManagerStates.RELATION_ENTER, event);
 
 			this.enterRelationTimeout = window.setTimeout(() => {
-				this.transitionTo(StateManagerStates.RELATION_TOOLTIP);
-				this.executeStateCallbacks(StateManagerStates.RELATION_TOOLTIP, event);
+				this.enterState(StateManagerStates.RELATION_TOOLTIP, event);
 			}, ITEM_OVERVIEW_MOUSE_ENTER_TIMEOUT_MILLISECONDS);
 		});
 
 		this.sigma.addListener('leaveEdge', (event) => {
 			window.clearTimeout(this.enterRelationTimeout);
 
-			this.transitionTo(StateManagerStates.RELATION_LEAVE);
-			this.executeStateCallbacks(StateManagerStates.RELATION_LEAVE, event);
+			this.enterState(StateManagerStates.RELATION_LEAVE, event);
 
 			// manually reset the state, otherwise the manager will hang in the
 			// RELATION_LEAVE state
@@ -467,13 +571,16 @@ export class StateManager {
 		});
 
 		this.sigma.addListener('clickEdge', (event) => {
-			this.transitionTo(StateManagerStates.RELATION_CLICK);
-			this.executeStateCallbacks(StateManagerStates.RELATION_CLICK, event);
+			// CTRL + click toggles relation highlight, a plain click opens relation details
+			if (areExactModifiersPressed('Control')) {
+				this.enterState(StateManagerStates.RELATION_HIGHLIGHT_TOGGLE, event);
+			} else {
+				this.enterState(StateManagerStates.RELATION_CLICK, event);
+			}
 		});
 
 		this.sigma.addListener('rightClickEdge', (event) => {
-			this.transitionTo(StateManagerStates.RELATION_CONTEXT_MENU);
-			this.executeStateCallbacks(StateManagerStates.RELATION_CONTEXT_MENU, event);
+			this.enterState(StateManagerStates.RELATION_CONTEXT_MENU, event);
 		});
 
 		this.sigma.addListener('downStage', (event) => {
@@ -482,37 +589,55 @@ export class StateManager {
 				return;
 			}
 
-			this.transitionTo(StateManagerStates.STAGE_DOWN);
+			/**
+			 * Sigma does not hit-test edge labels (they are drawn on a Canvas2D layer without hit detection),
+			 * so a mousedown on a label is reported as a stage event. Without this guard, that would also mark a stage
+			 * gesture (e.g. NODE_QUICK on Ctrl) which conflicts with the dedicated label click handled separately by
+			 * the container "click" listener (see RELATION_CLICK / RELATION_HIGHLIGHT_TOGGLE below). Ignoring the
+			 * stage-down here leaves the state in IDLE so only the label click handler reacts.
+			 */
+			if (getEdgeLabelAtPoint(event.event.x, event.event.y)) {
+				return;
+			}
 
-			if (event.event.original.shiftKey) {
-				this.transitionTo(StateManagerStates.NODE_SELECTION);
-			} else if (event.event.original.ctrlKey) {
-				this.transitionTo(StateManagerStates.NODE_QUICK);
+			this.enterState(StateManagerStates.STAGE_DOWN, event);
+
+			/**
+			 * Mark the transition to be committed later: ALT+SHIFT starts a lasso
+			 * selection and SHIFT a rectangle selection (both committed on the first
+			 * mouse move), CTRL creates a quick node (committed on mouse release).
+			 * Until then the manager stays in STAGE_DOWN so plain stage interactions
+			 * (camera pan) are unaffected.
+			 */
+			if (areExactModifiersPressed('Alt', 'Shift')) {
+				this.markTransition(StateManagerStates.NODE_LASSO_SELECTION);
+			} else if (areExactModifiersPressed('Shift')) {
+				this.markTransition(StateManagerStates.NODE_SELECTION);
+			} else if (areExactModifiersPressed('Control')) {
+				this.markTransition(StateManagerStates.NODE_QUICK);
 			}
 		});
 
 		this.sigma.addListener('upStage', (event) => {
-			this.executeStateCallbacks(StateManagerStates.NODE_QUICK, event);
+			// commit a pending quick-node transition (marked on CTRL + stage down)
+			this.commitPendingTransition('mouse-up', event);
 		});
 
 		this.sigma.addListener('rightClickStage', (event) => {
-			this.transitionTo(StateManagerStates.STAGE_CONTEXT_MENU);
-			this.executeStateCallbacks(StateManagerStates.STAGE_CONTEXT_MENU, event);
+			this.enterState(StateManagerStates.STAGE_CONTEXT_MENU, event);
 		});
 
-		// here we should execute the callbacks only, checks should be done in downNode event
 		this.sigma.getMouseCaptor().addListener('mousemovebody', (event) => {
+			const dragEvent = { ...event, nodeId: nodeId };
+
 			/**
-			 * If mouse down on node and mouse moved - switch to node drag
-			 * (this can be approved by either splitting functionality into
-			 * different modes (edit/move and similar) or assigning node drag
-			 * to mouse down + shift key for example).
-			 * For now, leaving the drag node key combination as it was to
-			 * reduce confusion by users.
+			 * Commit a pending move-triggered gesture (node drag, rectangle/lasso
+			 * selection or auto-connect). This is the point where "mouse down + move"
+			 * actually switches into the continuous state and fires its entry
+			 * callbacks. The drag payload (with nodeId) is a superset of the plain
+			 * MouseCoords the other gestures expect, so it is safe for all of them.
 			 */
-			if (this.currentState === StateManagerStates.NODE_DOWN) {
-				this.transitionTo(StateManagerStates.NODE_DRAG);
-			}
+			const committed = this.commitPendingTransition('mouse-move', dragEvent);
 
 			if (this.currentState === StateManagerStates.RELATION_ENTER) {
 				if (this.lastRelationEvent) {
@@ -524,58 +649,76 @@ export class StateManager {
 				}
 			}
 
-			this.executeStateCallbacks(StateManagerStates.NODE_SELECTION, event);
-			this.executeStateCallbacks(StateManagerStates.NODE_AUTO_CONNECT, event);
-			this.executeStateCallbacks(StateManagerStates.NODE_DRAG, { ...event, nodeId: nodeId });
+			// keep firing the active continuous state's callback on every move
+			// (skip the commit move, since entering already fired the callback)
+			if (!committed) {
+				this.updateState(dragEvent);
+			}
 		});
 
 		this.sigma.getMouseCaptor().addListener('mouseup', (event) => {
-			this.executeStateCallbacks(StateManagerStates.MOUSE_UP, event);
+			this.broadcast(StateManagerStates.MOUSE_UP, event);
 
 			if (
 				this.currentState === StateManagerStates.NODE_DRAG ||
 				this.currentState === StateManagerStates.NODE_SELECTION ||
+				this.currentState === StateManagerStates.NODE_LASSO_SELECTION ||
 				this.currentState === StateManagerStates.NODE_AUTO_CONNECT ||
 				this.currentState === StateManagerStates.STAGE_DOWN ||
 				this.currentState === StateManagerStates.NODE_QUICK
 			) {
+				/**
+				 * A drag/selection/lasso/auto-connect gesture just ended. Sigma's native "click" (fired right after this
+				 * "mouseup") can still resolve to a node at the release position - regardless of our own state machine -
+				 * so suppress the very next "clickNode"/"clickEdge"/label-click once, to avoid the node/relation details
+				 * drawer opening as an unintended side-effect of finishing a drag
+				 */
+				if (
+					this.currentState === StateManagerStates.NODE_DRAG ||
+					this.currentState === StateManagerStates.NODE_SELECTION ||
+					this.currentState === StateManagerStates.NODE_LASSO_SELECTION ||
+					this.currentState === StateManagerStates.NODE_AUTO_CONNECT
+				) {
+					this.suppressNextClick = true;
+				}
+
 				this.resetState();
+			} else {
+				// a marked-but-never-committed transition (e.g. CTRL/SHIFT pressed on
+				// a node/stage without an actual drag) must not leak into the next
+				// interaction
+				this.pendingState = null;
 			}
 		});
 
 		this.sigma.addListener('resize', () => {
-			this.executeStateCallbacks(StateManagerStates.RESIZE);
+			this.broadcast(StateManagerStates.RESIZE);
 		});
 
 		this.sigma.getCamera().addListener('updated', (state) => {
-			this.executeStateCallbacks(StateManagerStates.CAMERA_UPDATE, state);
+			this.broadcast(StateManagerStates.CAMERA_UPDATE, state);
 		});
 
 		this.sigma.getMouseCaptor().addListener('wheel', (event: WheelCoords) => {
-			const controlKeyPressed = isControlKeyPressed();
-			const shiftKeyPressed = isShiftKeyPressed();
-			const altKeyPressed = isAltKeyPressed();
-
-			// return if no state-manager specific state should be triggered
-			if (!controlKeyPressed && !shiftKeyPressed && !altKeyPressed) {
-				return;
-			}
-
 			if (event.delta !== 0) {
-				if (controlKeyPressed) {
-					this.transitionTo(StateManagerStates.ZOOM_FACTOR);
-					this.executeStateCallbacks(StateManagerStates.ZOOM_FACTOR, event);
-				} else if (shiftKeyPressed) {
-					this.transitionTo(StateManagerStates.SCALE_LABELS);
-					this.executeStateCallbacks(StateManagerStates.SCALE_LABELS, event);
-				} else if (altKeyPressed) {
-					this.transitionTo(StateManagerStates.SCALE_NODES);
-					this.executeStateCallbacks(StateManagerStates.SCALE_NODES, event);
+				if (areExactModifiersPressed('Control', 'Alt')) {
+					this.enterState(StateManagerStates.AUTO_PAN_SPEED, event);
+				} else if (areExactModifiersPressed('Control')) {
+					this.enterState(StateManagerStates.ZOOM_FACTOR, event);
+				} else if (areExactModifiersPressed('Shift')) {
+					this.enterState(StateManagerStates.SCALE_LABELS, event);
+				} else if (areExactModifiersPressed('Alt')) {
+					this.enterState(StateManagerStates.SCALE_NODES, event);
 				}
 			}
 		});
 	}
 
+	/**
+	 * Reset the manager to its initial state: clear every subscription's one-shot
+	 * "beforeCallbackExecuted"/"afterCallbackExecuted" flags, drop any pending marked
+	 * transition, and transition back to "IDLE" when that transition is allowed.
+	 */
 	resetState() {
 		Object.values(this.state).forEach((state) => {
 			if ('callbacks' in state) {
@@ -586,72 +729,192 @@ export class StateManager {
 			}
 		});
 
+		this.pendingState = null;
 		this.transitionTo(StateManagerStates.IDLE);
 	}
 
+	/**
+	 * Return the configuration object for the current state.
+	 */
 	getSelectedState() {
 		return this.state[this.currentState];
 	}
 
-	transitionTo(newState: StateManagerStateValues) {
+	/**
+	 * Switch into a new state and fire its entry callbacks in one step. Convenience
+	 * wrapper over the transition (which runs the previous state's exit callbacks)
+	 * followed by the new state's callback execution. Behaviour is identical to
+	 * calling "transitionTo" and then "executeStateCallbacks" back-to-back.
+	 */
+	enterState<T extends StateManagerStateValues>(target: T, event?: PayloadType<T>) {
+		this.transitionTo(target);
+		this.executeStateCallbacks(target, event);
+	}
+
+	/**
+	 * Mark a transition to be committed later, without changing the current state.
+	 * The manager stays put until the transition is committed on the target state's
+	 * configured trigger (see "commitOn"): continuous states (drag/selection/
+	 * auto-connect) commit on the first mouse move, deferred discrete states (quick
+	 * node) commit on mouse release. This keeps the state machine stable and
+	 * guarantees callbacks always fire when the switch actually happens.
+	 */
+	markTransition(target: StateManagerStateValues) {
+		// only mark transitions that are actually reachable from the current state
+		if (this.getSelectedState().transitionTo.includes(target)) {
+			this.pendingState = target;
+		}
+	}
+
+	/**
+	 * Commit a previously marked (pending) transition if its "commitOn" trigger
+	 * matches the given one. Committing performs the actual state switch and fires
+	 * the target state's entry callbacks. Returns true if a transition was committed.
+	 */
+	commitPendingTransition(
+		trigger: 'mouse-move' | 'mouse-up',
+		event?: PayloadType<StateManagerStateValues>
+	) {
+		if (!this.pendingState) {
+			return false;
+		}
+
+		const target = this.pendingState;
+
+		if (this.state[target].commitOn !== trigger) {
+			return false;
+		}
+
+		// consume the intent regardless of the switch outcome, so a stale pending
+		// transition can never leak into a later interaction
+		this.pendingState = null;
+
+		this.enterState(target, event);
+
+		/**
+		 * Node drag/selection/lasso/auto-connect all call "preventSigmaCameraMovement", which sets "sigmaDefaultPrevented"
+		 * and makes Sigma's own MouseCaptor skip its "draggedEvents++" bookkeeping (see handleMove). Left unpatched,
+		 * Sigma's native "click" handler (fired right after mouseup) then believes no drag happened and re-hit-tests
+		 * "getNodeAtPosition" at the current cursor position, emitting a spurious "clickNode" for whatever node now
+		 * renders there - most noticeable after auto-panning shuffled the graph underneath a stationary cursor.
+		 * Bumping "draggedEvents" ourselves restores that invariant so Sigma's own "draggedEvents < draggedEventsTolerance"
+		 * guard suppresses the click as intended.
+		 */
+		if (this.getSelectedState().isContinuous && this.sigma) {
+			this.sigma.getMouseCaptor().draggedEvents++;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Fire the main callback of the current state on a continuous interaction
+	 * (e.g. every mouse move while dragging/selecting). Non-continuous states are
+	 * ignored so their callbacks only run once, on entry.
+	 */
+	updateState(event?: PayloadType<StateManagerStateValues>) {
+		if (this.getSelectedState().isContinuous) {
+			this.executeStateCallbacks(this.currentState, event);
+		}
+	}
+
+	/**
+	 * Switch "currentState" to "newState" when that transition is allowed from the
+	 * current state. Runs the current state's exit ("afterCallback") handlers before
+	 * leaving, but does not fire the new state's callbacks - use "enterState" for that.
+	 */
+	private transitionTo(newState: StateManagerStateValues) {
 		const state = this.getSelectedState();
 
 		if (state.transitionTo.includes(newState)) {
 			this.logger.addLog(newState);
 
-			state.callbacks.forEach((callback) => {
-				if (callback.afterCallback && !callback.afterCallbackExecuted) {
-					callback.afterCallbackExecuted = true;
-					callback.afterCallback();
-				}
-			});
+			this.runExitCallbacks(state);
 
 			this.currentState = newState;
 		}
 	}
 
-	executeStateCallbacks<T extends StateManagerStateValues>(
+	/**
+	 * Run each subscription's one-shot "afterCallback" for the given state (guarded by
+	 * "afterCallbackExecuted" so it fires only once), just before leaving that state.
+	 */
+	private runExitCallbacks<StateKey extends StateManagerStateValues>(
+		state: StateManagerState<StateKey>
+	) {
+		state.callbacks.forEach((internalCallback) => {
+			if (internalCallback.afterCallback && !internalCallback.afterCallbackExecuted) {
+				internalCallback.afterCallbackExecuted = true;
+				internalCallback.afterCallback();
+			}
+		});
+	}
+
+	/**
+	 * Fire a state's callbacks independently of the finite-state-machine flow.
+	 * Used for the "direct execution" states (mouseUp, resize, cameraUpdate) that
+	 * notify their subscribers regardless of the current state.
+	 */
+	broadcast<T extends StateManagerStateValues>(stateKey: T, event?: PayloadType<T>) {
+		this.runStateCallbacks(this.state[stateKey], event);
+	}
+
+	/**
+	 * Fire a state's entry callbacks ("beforeCallback" once, then the main
+	 * "callback"), but only when the requested state is the current one. This is the
+	 * finite-state-machine-guarded counterpart to "broadcast": it is used by
+	 * "enterState" right after a successful switch and by "updateState" on every move
+	 * of a continuous state. State-independent notifications go through "broadcast".
+	 */
+	private executeStateCallbacks<T extends StateManagerStateValues>(
 		currentState: T,
 		event?: PayloadType<T>
 	) {
-		const newState = this.state[currentState];
-
-		if ('isDirectCallbackExecutionAllowed' in newState) {
-			executeCallbacks(newState, event);
-		} else if (this.currentState === currentState) {
-			const state = this.getSelectedState();
-
-			executeCallbacks<typeof this.currentState>(state, event);
-		}
-
-		function executeCallbacks<StateKey extends StateManagerStateValues>(
-			state: StateManagerState<StateKey>,
-			event?: PayloadType<StateKey>
-		) {
-			state.callbacks.forEach((internalCallback) => {
-				if (!internalCallback.beforeCallbackExecuted && internalCallback.beforeCallback) {
-					internalCallback.beforeCallbackExecuted = true;
-
-					const internalBeforeCallback = internalCallback.beforeCallback;
-
-					if (event) {
-						internalBeforeCallback(event);
-					} else if (isFunctionWithoutParameters(internalCallback.beforeCallback)) {
-						internalCallback.beforeCallback();
-					}
-				}
-
-				if (internalCallback.callback) {
-					if (event) {
-						internalCallback.callback(event);
-					} else if (isFunctionWithoutParameters(internalCallback.callback)) {
-						internalCallback.callback();
-					}
-				}
-			});
+		if (this.currentState === currentState) {
+			this.runStateCallbacks<typeof this.currentState>(this.getSelectedState(), event);
 		}
 	}
 
+	/**
+	 * Low-level primitive that invokes a state's subscriptions, unconditionally
+	 * (no current-state check). For each subscription it runs the one-shot
+	 * "beforeCallback" (guarded by "beforeCallbackExecuted" so it fires only once per
+	 * state cycle) and then the main "callback". When an "event" is provided it is
+	 * passed to the handlers; otherwise parameterless handlers are still invoked.
+	 * Shared by "executeStateCallbacks" (current-state) and "broadcast" (any state).
+	 */
+	private runStateCallbacks<StateKey extends StateManagerStateValues>(
+		state: StateManagerState<StateKey>,
+		event?: PayloadType<StateKey>
+	) {
+		state.callbacks.forEach((internalCallback) => {
+			if (!internalCallback.beforeCallbackExecuted && internalCallback.beforeCallback) {
+				internalCallback.beforeCallbackExecuted = true;
+
+				const internalBeforeCallback = internalCallback.beforeCallback;
+
+				if (event) {
+					internalBeforeCallback(event);
+				} else if (isFunctionWithoutParameters(internalCallback.beforeCallback)) {
+					internalCallback.beforeCallback();
+				}
+			}
+
+			if (internalCallback.callback) {
+				if (event) {
+					internalCallback.callback(event);
+				} else if (isFunctionWithoutParameters(internalCallback.callback)) {
+					internalCallback.callback();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Register a subscriber for a state. Accepts either a bare function (used as the
+	 * main "callback") or an object with "beforeCallback"/"callback"/"afterCallback".
+	 * Returns an unsubscribe function for convenience.
+	 */
 	subscribe<I extends StateManagerStateValues>(
 		event: I,
 		callback:
@@ -681,6 +944,10 @@ export class StateManager {
 		return () => this.unsubscribe(event, callbackFunction);
 	}
 
+	/**
+	 * Remove a previously registered subscriber from a state by matching its main
+	 * "callback" reference.
+	 */
 	unsubscribe<I>(event: StateManagerStateValues, callback: (event: I) => void) {
 		const state = this.state[event];
 

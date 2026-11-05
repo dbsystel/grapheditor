@@ -8,6 +8,7 @@
 	background-color: var(--db-adaptive-bg-basic-transparent-semi-default);
 	resize: vertical;
 	padding-bottom: 12px; // needed for the resize element
+	padding-right: var(--db-spacing-fixed-functional-sm);
 
 	&--focused {
 		outline: var(--db-border-width-2xs) solid
@@ -28,7 +29,7 @@
 		user-select: none;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: flex-end;
 		color: var(--db-adaptive-on-bg-basic-emphasis-80-default);
 		border-radius: var(--db-border-radius-xs);
 		border-top-right-radius: 0;
@@ -96,7 +97,7 @@
 	&__test-element {
 		overflow-wrap: break-word;
 		font: inherit;
-		white-space: pre;
+		white-space: pre-wrap;
 	}
 
 	label {

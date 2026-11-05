@@ -24,7 +24,7 @@ class ParaQueries(MethodView):
         }
 
     @blp.arguments(
-        paraquery_model.ParaqueryPostSchema, as_kwargs=True
+        paraquery_model.ParaqueryExecutePostSchema, as_kwargs=True
     )
     @blp.response(
         200,
@@ -46,6 +46,13 @@ class ParaQueries(MethodView):
         server won't return an error though if multiple, possibly
         inconsistent values are provided.
         """
+
+        # Note: the more natural way of offering this feature would be
+        # to add an endpoint /api/v1/paraqueries/<paraquery_id>/execute
+        # or something like that. But then we should provide a way
+        # to specify what kind of ID is given, since this API also
+        # allows to "select" a paraquery though its uuid or name.
+
         paraquery_node = None
         if uuid:
             nodes = current_app.graph_db.get_nodes_by_uuids([uuid])
@@ -76,11 +83,21 @@ class ParaQueries(MethodView):
 
 @blp.route("/<pquery_id>")
 class ParaQuery(MethodView):
-    @blp.response(200, paraquery_model.ParaqueryGetResponseSchema)
+    @blp.arguments(
+        paraquery_model.ParaqueryPostSchema, as_kwargs=True, location="json"
+    )
+    @blp.response(200, paraquery_model.ParaqueryPostResponseSchema)
     @require_tab_id()
-    def get(self, pquery_id: str):
-        "Return a paraquery by its ID."
-        pquery = current_app.graph_db.get_paraquery(get_base_id(pquery_id))
+    def post(self, pquery_id: str, parameters:dict|None=None):
+        """Return a paraquery by its ID.
+        Parameters is an optional object mapping parameter names to values.
+        They are passed to the selecion queries as an extra parameter, so that
+        it can react to values provided by the user, for example for filtering
+        results.
+        """
+        if parameters is None:
+            parameters = {}
+        pquery = current_app.graph_db.get_paraquery(get_base_id(pquery_id), parameters)
         if not pquery:
             abort(404)
         return {

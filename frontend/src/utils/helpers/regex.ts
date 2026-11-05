@@ -4,18 +4,22 @@ const dateRegexPattern = '(?<year>\\d{4})-(?<month>0[1-9]|1[0-2])-(?<day>0[1-9]|
 export const dateRegex = new RegExp(dateRegexPattern);
 export const html5DateRegex = new RegExp(`^${dateRegexPattern}$`);
 
-// YYYY-MM-DDTHH:MM:SS[.s][(+|-)HH:MM]
+// YYYY-MM-DDTHH:MM:SS[.s][(+|-)HH:MM|Z]
+// "Z" (Zulu/UTC) is a standard ISO 8601 timezone designator, equivalent to "+00:00"
 export const html5DatetimeRegex =
-	/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.?(\d+)?(\+|-)?(\d{2}:\d{2})?$/;
+	/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.?(\d+)?(?:(\+|-)(\d{2}:\d{2})|Z)?$/;
 // 1234, -1234, 1234.56, -1234.56, .56, -.56 (decimal delimiter: "." or ",")
 export const html5IntegerAndFloatRegex = /^-?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/;
 // 1234 or -1234
 export const html5IntegerRegex = /^-?\d+$/;
 // 1234.56 or -1234.56
 export const html5FloatRegex = /^-?\d+[.,]\d+$/;
-// HH:MM:SS[.s-ssssss][(+|-)HH:MM]
+// HH:MM:SS[.s-ssssss][(+|-)HH:MM|Z]
+// "Z" (Zulu/UTC) is a standard ISO 8601 timezone designator, equivalent to "+00:00"
 export const html5TimeRegex =
-	/^((?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9])(?:.(\d{1,9}))?(?:([\+\-])((?:[01][0-9]|2[0-3]):[0-5][0-9]))?$/;
+	/^((?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9])(?:.(\d{1,9}))?(?:([\+\-])((?:[01][0-9]|2[0-3]):[0-5][0-9])|Z)?$/;
+// HH:MM (no seconds), used for timezone offset time values
+export const html5TimeHourMinuteRegex = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
 // true | false
 export const html5BooleanRegex = /^(true|false)$/;
 // PnYnMnDTnHnMnS and ISO 8601‑2 extensions (TODO use Temporal.Duration)

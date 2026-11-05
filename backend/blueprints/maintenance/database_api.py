@@ -49,7 +49,7 @@ class DatabaseCurrent(MethodView):
         db = g.conn.get_database(name)
         if db["status"] != "online":
             abort_with_json(409, f"{name} not available")
-        # commit last transaction, since it was an admin transaction
+        # close last transaction, since it was an admin transaction
         # and we now do a regular query (we get the wrong result
         # if both happen in the same transaction).
         Neo4jConnection.close(None)

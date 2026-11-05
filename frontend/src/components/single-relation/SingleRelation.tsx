@@ -245,7 +245,7 @@ export const SingleRelation = ({
 					<p className="single-item__title-title">
 						{relation.title}
 						<DBTooltip className="db-tooltip-fix db-tooltip-fix--bottom">
-							{t('single-relation-relation')}{' '}
+							{t('single_relation_relation')}{' '}
 							{idFormatter.parseIdToName(relation.title)}
 						</DBTooltip>
 					</p>
@@ -297,7 +297,7 @@ export const SingleRelation = ({
 				<EditSaveBlock
 					isEditable={false}
 					isEditMode={false}
-					headline={t('single-relation-relation')}
+					headline={t('single_relation_relation')}
 					onToggle={(isOpen) => {
 						toggleDefaultOpenSection(sectionsLocation, 'relation-relation', isOpen);
 					}}
@@ -316,9 +316,9 @@ export const SingleRelation = ({
 							) : (
 								<DBNotification
 									semantic="critical"
-									headline={t('single-relation-failure-notification-headline')}
+									headline={t('single_relation_failure_notification_headline')}
 								>
-									{t('single-relation-failure-notification-content')}
+									{t('single_relation_failure_notification_content')}
 								</DBNotification>
 							)}
 						</DBSection>

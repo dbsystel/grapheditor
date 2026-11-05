@@ -1,4 +1,4 @@
-import { HomepageData } from 'src/models/general';
+import { HomepageData } from 'src/models/homepage';
 import { backendApi } from 'src/utils/api';
 import { endpoints } from 'src/utils/endpoints';
 

@@ -1,4 +1,3 @@
-import { setApiHeaderTabId } from 'src/utils/api';
 import { create } from 'zustand';
 
 type LoginStore = {
@@ -7,9 +6,6 @@ type LoginStore = {
 	setIsConnecting: (isConnecting: boolean) => void;
 	checkIfLoggedInDone: boolean;
 	setCheckIfLoggedInDone: (done: boolean) => void;
-	// TODO find a way to have unique tab IDs per tab. Previously we would store tab ID in the sessionStorage,
-	//  but this caused issues when duplicating tabs (the sessionStorage would also be duplicated).
-	tabId: string;
 	username: string;
 	host: string;
 	connect: (host: string, username: string) => void;
@@ -19,10 +15,9 @@ type LoginStore = {
 /**
  * Store for keeping track which login data is currently used.
  */
-export const useLoginStore = create<LoginStore>((set, get) => ({
+export const useLoginStore = create<LoginStore>((set) => ({
 	isConnected: false,
 	isConnecting: false,
-	tabId: window.crypto.randomUUID(),
 	username: '',
 	host: '',
 	checkIfLoggedInDone: false,
@@ -33,8 +28,6 @@ export const useLoginStore = create<LoginStore>((set, get) => ({
 		set({ isConnected: false, isConnecting: false, host: '', username: '' });
 	},
 	connect: (host, username) => {
-		setApiHeaderTabId(get().tabId);
-
 		set({
 			isConnected: true,
 			isConnecting: false,

@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 			return (
 				<div id={this.props.id} className={rootElementClassName}>
 					<DBIcon icon="exclamation_mark_circle" />
-					{i18n.t('something_went_wrong')}
+					<span>{i18n.t('something_went_wrong')}</span>
 					<DBButton
 						type="button"
 						onClick={this.reload}

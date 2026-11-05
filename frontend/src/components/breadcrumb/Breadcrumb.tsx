@@ -26,15 +26,18 @@ export const Breadcrumb = ({
 		className
 	);
 
-	const onRefChange = useCallback((element: HTMLSpanElement | null) => {
-		if (element) {
-			useItemOverviewPopoverStore.getState().registerTriggerElement({
-				triggerElement: element,
-				item: breadcrumb.item,
-				popoverPlacement: 'left-start'
-			});
-		}
-	}, []);
+	const onRefChange = useCallback(
+		(element: HTMLSpanElement | null) => {
+			if (element) {
+				useItemOverviewPopoverStore.getState().registerTriggerElement({
+					triggerElement: element,
+					item: breadcrumb.item,
+					popoverPlacement: 'left-start'
+				});
+			}
+		},
+		[breadcrumb.item]
+	);
 
 	const localOnClick = (event: MouseEvent<HTMLSpanElement>) => {
 		if (breadcrumb.onClick) {

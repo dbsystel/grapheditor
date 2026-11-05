@@ -8,4 +8,5 @@ reset method. But if we use the `Omit` type, TypeScript will automatically remin
 method type definition.
 
 ### TODOs
+
 1. Migrate perspectives to a separate store

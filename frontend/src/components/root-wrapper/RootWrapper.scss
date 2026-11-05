@@ -1,8 +1,8 @@
 .root-wrapper {
 	display: grid;
 	grid-template-areas:
-    "header header header"
-    "left-widget content right-widget";
+		'header header header'
+		'left-widget content right-widget';
 	grid-template-rows: auto minmax(0, 100%);
 	grid-template-columns: auto 1fr auto;
 	height: 100dvh;

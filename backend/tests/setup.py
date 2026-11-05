@@ -1,8 +1,8 @@
 import time
-import uuid
 import socket
 import os
 import pytest
+
 
 from main import app
 
@@ -10,8 +10,7 @@ BASE_URL = "http://localhost:4999"
 MAX_RETRIES = 10
 NEO4J_INTERNAL_PORT = 7687
 
-TAB_ID = str(uuid.uuid4())
-HEADERS = {"x-tab-id": TAB_ID}
+HEADERS = {}
 
 NEO4J_PORT = int(os.environ.get("TEST_NEO4J_BOLT_LISTEN_ADDRESS", "7687"))
 NEO4J_PASSWORD = os.environ.get("GUI_PASSWORD", "replace-me")
@@ -30,6 +29,10 @@ def started_on_localhost(port: int) -> bool:
 connection_url = None  # pylint: disable=invalid-name
 
 
+def get_headers():
+    return HEADERS
+
+
 @pytest.fixture(scope="session")
 def find_database_connection(request):
     """Search a running Neo4j on the port defined in env-variables."""
@@ -46,7 +49,7 @@ def find_database_connection(request):
         yield connection_url
         return
 
-    return None
+    return
 
 
 @pytest.fixture(scope="module")
@@ -69,6 +72,7 @@ def logged_in(find_database_connection, client_with_transaction):
 
 def login(client, connection_url, headers=None):
     """Log in to the server and return the corresponding response."""
+    global HEADERS
     if headers is None:
         headers = HEADERS
 
@@ -84,6 +88,8 @@ def login(client, connection_url, headers=None):
         ),
     )
     assert response.status_code == 200
+
+    HEADERS = {"x-tab-id": response.json["tabId"]}
     return response
 
 
@@ -93,7 +99,7 @@ def ensure_login(client):
         if count > MAX_RETRIES:
             pytest.fail("Could not login to the server")
         response = client.get(
-            BASE_URL + "/api/v1/session/login", headers=HEADERS
+            BASE_URL + "/api/v1/session/login", headers=get_headers()
         )
         if response.status_code == 200:
             return

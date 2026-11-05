@@ -4,6 +4,7 @@ import { GeneralEvent } from '@db-ux/react-core-components/dist/shared/model';
 import clsx from 'clsx';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DatabaseMenuFeatureIcon } from 'src/components/database-menu/trigger-function-icon/DatabaseMenuFeatureIcon';
 import { Database } from 'src/models/database';
 import { useDatabaseStore } from 'src/stores/database';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -102,27 +103,28 @@ export const DatabaseMenuSelector = ({ id, className, testId }: DatabaseMenuSele
 	});
 
 	return (
-		<DBCustomSelect
-			options={options}
-			showLabel={false}
-			id={id}
-			className={rootElementClassName}
-			label=""
-			data-testid={testId}
-			showIcon
-			icon="databases"
-			formFieldWidth="full"
-			dropdownWidth="auto"
-			showSearch
-			placeholder={t('database_selector_placeholder')}
-			showLoading={isPostDatabaseCurrentLoading || isGetDatabasesLoading}
-			loadingText={t('database_selector_loading')}
-			noResultsText={t('database_selector_nothing_found')}
-			showClearSelection={false}
-			onDropdownToggle={fetchDatabases}
-			onOptionSelected={onDatabaseChange}
-			searchPlaceholder={t('database_selector_search_placeholder')}
-			values={selectedDatabaseValue}
-		/>
+		<div className={rootElementClassName} data-testid={testId} id={id}>
+			<DatabaseMenuFeatureIcon />
+			<DBCustomSelect
+				options={options}
+				showLabel={false}
+				id={id}
+				label=""
+				showIcon
+				icon="databases"
+				formFieldWidth="full"
+				dropdownWidth="auto"
+				showSearch
+				placeholder={t('database_selector_placeholder')}
+				showLoading={isPostDatabaseCurrentLoading || isGetDatabasesLoading}
+				loadingText={t('database_selector_loading')}
+				noResultsText={t('database_selector_nothing_found')}
+				showClearSelection={false}
+				onDropdownToggle={fetchDatabases}
+				onOptionSelected={onDatabaseChange}
+				searchPlaceholder={t('database_selector_search_placeholder')}
+				values={selectedDatabaseValue}
+			/>
+		</div>
 	);
 };

@@ -1,5 +1,6 @@
 import { ChangeEvent } from 'react';
 import { clearCanvasContexts } from 'src/components/network-graph/helpers';
+import { backendApi } from 'src/utils/api';
 
 export const checkBrowserRenderingCapabilities = () => {
 	// consider https://www.npmjs.com/package/detect-gpu
@@ -71,4 +72,41 @@ export const requestPostAnimationFrame = (callback: () => void): void => {
 		mc.port1.onmessage = callback;
 		mc.port2.postMessage(undefined);
 	});
+};
+
+/**
+ * Formats a byte count into a human-readable string, switching to the * next unit once the value reaches
+ * 1 whole unit (i.e. >= 1024 of the current unit), e.g.:
+ * - 0 -> "0 B"
+ * - 988 -> "988 B"
+ * - 1023 -> "1023 B"
+ * - 1024 -> "1 KB"
+ * - 988 * 1024 -> "988 KB"
+ * - 1100 * 1024  -> "1.1 MB"
+ */
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'] as const;
+
+export const formatBytes = (bytes: number, decimals = 1) => {
+	if (!Number.isFinite(bytes) || bytes <= 0) {
+		return '0 B';
+	}
+
+	let value = bytes;
+	let unitIndex = 0;
+
+	while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
+		value /= 1024;
+		unitIndex += 1;
+	}
+
+	const formattedValue =
+		unitIndex === 0
+			? value.toString() // bytes are always whole numbers, no decimals needed
+			: parseFloat(value.toFixed(decimals)).toString(); // trims trailing zeros, e.g. 1.0 -> "1"
+
+	return `${formattedValue} ${BYTE_UNITS[unitIndex]}`;
+};
+
+export const generateAbsoluteBackendUrl = (relativeUrl: string) => {
+	return new URL(relativeUrl, backendApi.defaults.baseURL).toString();
 };

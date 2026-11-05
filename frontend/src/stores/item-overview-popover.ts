@@ -21,6 +21,12 @@ type OverviewTimeout = {
 	id: number;
 };
 
+type ElementListeners = {
+	// optional since event listeners won't be added at the same time at the same place
+	mouseenter?: (event: MouseEvent) => void;
+	mouseleave?: (event: MouseEvent) => void;
+};
+
 type ItemOverviewPopoverStore = {
 	reset: () => void;
 	registerOverview: (options: {
@@ -36,6 +42,7 @@ type ItemOverviewPopoverStore = {
 		popoverPlacement?: Placement;
 		ignoreOverviewRegistration?: boolean;
 	}) => void;
+	unregisterTriggerElement: (triggerElement: HTMLElement) => void;
 	registerTriggerElementMouseEnterEvent: (options: {
 		triggerElement: HTMLElement;
 		timeout: OverviewTimeout;
@@ -48,27 +55,29 @@ type ItemOverviewPopoverStore = {
 		triggerElement: HTMLElement,
 		timeout: OverviewTimeout
 	) => void;
-	registerPopoverElementAndEvents: (popoverElement: HTMLElement) => void;
+	registerPopoverElement: (popoverElement: HTMLElement) => void;
+	unregisterPopoverElement: (popoverElement: HTMLElement) => void;
 	getOverviewIndexByElement: (elementType: 'trigger' | 'popover', element: HTMLElement) => number;
 	isElementTriggerElement: (element: HTMLElement) => boolean;
 	getContainingPopoverElement: (element: HTMLElement) => HTMLElement | null;
 	getCurrentlyHoveredOverview: () => Overview | undefined;
 	overviews: Array<Overview>;
-	getOverviewsItems: () => Array<Item>;
 	initializeMouseEnterTimeout: (callback: () => void) => number;
 	initializeMouseLeaveTimeout: (callback: () => void) => number;
+	elementListeners: WeakMap<HTMLElement, ElementListeners>;
 };
 
 type InitialState = Omit<
 	ItemOverviewPopoverStore,
 	| 'registerOverview'
 	| 'registerTriggerElement'
+	| 'unregisterTriggerElement'
 	| 'registerTriggerElementMouseEnterEvent'
 	| 'registerTriggerElementMouseLeaveEvent'
-	| 'registerPopoverElementAndEvents'
+	| 'registerPopoverElement'
+	| 'unregisterPopoverElement'
 	| 'getOverviewIndexByElement'
 	| 'isElementTriggerElement'
-	| 'getOverviewsItems'
 	| 'getCurrentlyHoveredOverview'
 	| 'getContainingPopoverElement'
 	| 'initializeMouseEnterTimeout'
@@ -78,7 +87,8 @@ type InitialState = Omit<
 
 const getInitialState: () => InitialState = () => {
 	return {
-		overviews: []
+		overviews: [],
+		elementListeners: new WeakMap()
 	};
 };
 
@@ -106,6 +116,8 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 		popoverPlacement,
 		ignoreOverviewRegistration
 	}) => {
+		get().unregisterTriggerElement(triggerElement);
+
 		const timeout = { id: -1 };
 
 		triggerElement.dataset[triggerElementDatasetId] = '';
@@ -120,6 +132,19 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 		});
 		get().registerTriggerElementMouseLeaveEvent(triggerElement, timeout);
 	},
+	unregisterTriggerElement: (triggerElement) => {
+		const listeners = get().elementListeners.get(triggerElement);
+
+		if (listeners?.mouseenter) {
+			triggerElement.removeEventListener('mouseenter', listeners.mouseenter);
+		}
+		if (listeners?.mouseleave) {
+			triggerElement.removeEventListener('mouseleave', listeners.mouseleave);
+		}
+
+		get().elementListeners.delete(triggerElement);
+		delete triggerElement.dataset[triggerElementDatasetId];
+	},
 	registerTriggerElementMouseEnterEvent: ({
 		triggerElement,
 		timeout,
@@ -128,7 +153,7 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 		popoverPlacement,
 		ignoreOverviewRegistration
 	}) => {
-		triggerElement.addEventListener('mouseenter', () => {
+		const handleMouseEnter = () => {
 			const triggerElementIndex = get().getOverviewIndexByElement('trigger', triggerElement);
 
 			// trigger element already registered, removing all overviews after the trigger element index
@@ -169,10 +194,17 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 					}
 				});
 			}
+		};
+
+		triggerElement.addEventListener('mouseenter', handleMouseEnter);
+
+		get().elementListeners.set(triggerElement, {
+			...get().elementListeners.get(triggerElement),
+			mouseenter: handleMouseEnter
 		});
 	},
 	registerTriggerElementMouseLeaveEvent: (triggerElement, timeout) => {
-		triggerElement.addEventListener('mouseleave', () => {
+		const handleMouseLeave = () => {
 			window.clearTimeout(timeout.id);
 
 			get().initializeMouseLeaveTimeout(() => {
@@ -211,6 +243,13 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 					}
 				}
 			});
+		};
+
+		triggerElement.addEventListener('mouseleave', handleMouseLeave);
+
+		get().elementListeners.set(triggerElement, {
+			...get().elementListeners.get(triggerElement),
+			mouseleave: handleMouseLeave
 		});
 	},
 	registerOverview: ({ triggerElement, item, popoverOffset, popoverPlacement }) => {
@@ -235,23 +274,25 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 			});
 		}
 	},
-	registerPopoverElementAndEvents: (popoverElement) => {
+	registerPopoverElement: (popoverElement) => {
 		const lastOverview = get().overviews.at(get().overviews.length - 1);
 
 		if (lastOverview && !lastOverview.popoverElement) {
+			get().unregisterPopoverElement(popoverElement);
+
 			popoverElement.dataset[popoverElementDatasetId] = '';
 			lastOverview.popoverElement = popoverElement;
 
-			popoverElement.addEventListener('mouseenter', function () {
+			const handleMouseEnter = () => {
 				const overviewIndex = get().getOverviewIndexByElement('popover', popoverElement);
 
 				if (overviewIndex > -1) {
 					// mouseenter popover, setting isMouseInsidePopover to true for overview index
 					get().overviews[overviewIndex].isMouseInsidePopover = true;
 				}
-			});
+			};
 
-			popoverElement.addEventListener('mouseleave', function (event) {
+			const handleMouseLeave = (event: MouseEvent) => {
 				const overviewIndex = get().getOverviewIndexByElement('popover', popoverElement);
 
 				if (overviewIndex > -1) {
@@ -295,8 +336,29 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 						}
 					}
 				}, 100);
+			};
+
+			popoverElement.addEventListener('mouseenter', handleMouseEnter);
+			popoverElement.addEventListener('mouseleave', handleMouseLeave);
+
+			get().elementListeners.set(popoverElement, {
+				mouseenter: handleMouseEnter,
+				mouseleave: handleMouseLeave
 			});
 		}
+	},
+	unregisterPopoverElement: (popoverElement) => {
+		const listeners = get().elementListeners.get(popoverElement);
+
+		if (listeners?.mouseenter) {
+			popoverElement.removeEventListener('mouseenter', listeners.mouseenter);
+		}
+		if (listeners?.mouseleave) {
+			popoverElement.removeEventListener('mouseleave', listeners.mouseleave);
+		}
+
+		get().elementListeners.delete(popoverElement);
+		delete popoverElement.dataset[popoverElementDatasetId];
 	},
 	getOverviewIndexByElement: (elementType, element) => {
 		if (elementType === 'trigger') {
@@ -312,9 +374,6 @@ export const useItemOverviewPopoverStore = create<ItemOverviewPopoverStore>((set
 	},
 	getContainingPopoverElement: (element) => {
 		return element.closest(popoverElementDatasetSelector);
-	},
-	getOverviewsItems: () => {
-		return get().overviews.map((overview) => overview.item);
 	},
 	getCurrentlyHoveredOverview: () => {
 		return get().overviews.find((overview) => overview.isMouseInsidePopover === true);

@@ -1,21 +1,25 @@
 import { UUID } from 'src/models/general';
-import { NodeLabelId } from 'src/models/node';
 
 export type ParaQuery = {
 	cypher: string;
 	description: string;
 	name: string;
-	parameters: Record<string, ParaQueryParameter>;
+	parameters: ParaQueryParameters;
 	user_text: string;
 	uuid: UUID;
+	db_id: string;
 };
 
+export type ParaQueryParameters = Record<string, ParaQueryParameter>;
+
 export type ParaQueryParameter = {
-	default_value?: string;
+	default_value?: ParaQueryParameterValueWithoutNull;
 	help_text: string;
 	type: ParaQueryParameterType;
-	suggestions?: Array<NodeLabelId>;
+	suggestions?: Array<ParaQueryParameterValueWithoutNull>;
 };
 
 export type ParaQueryParameterType = 'string' | 'integer';
-export type ParaQueryParameterValues = Record<string, string | number>;
+export type ParaQueryParameterValue = string | number | null;
+export type ParaQueryParameterValueWithoutNull = Exclude<ParaQueryParameterValue, null>;
+export type ParaQueryParameterValues = Record<string, ParaQueryParameterValue>;

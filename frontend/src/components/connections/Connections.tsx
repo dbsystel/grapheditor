@@ -170,7 +170,7 @@ const ConnectionsBox = ({
 								<DBButton variant="ghost" size="small" noText type="button">
 									<DBIcon icon="box" />
 									<DBTooltip placement="right">
-										{t('single-node-node')}{' '}
+										{t('single_node_node')}{' '}
 										{idFormatter.parseIdToName(node.title)}
 									</DBTooltip>
 								</DBButton>
@@ -213,7 +213,7 @@ const ConnectionsBox = ({
 									options={[
 										{
 											icon: 'bin',
-											title: t('connections-delete-relation-button'),
+											title: t('connections_delete_relation_button'),
 											onClick: () => onDelete(relation),
 											closeMenuOnClick: true
 										}

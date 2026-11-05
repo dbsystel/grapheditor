@@ -1,16 +1,28 @@
 # 00_ai
+# The export works currently on neo4j directly. TODO refactor to make it working more generic,
+#                                                    e.g. with other graph databases
+
+
 import json
 import tempfile
+import os
 
 from flask import g, current_app
 import neo4j.exceptions
 
-from database.base_types import BaseNode
-from database.mapper import (
-    GraphEditorNode, GraphEditorRelation, grapheditorproperty2neo,
+from database.mapper import grapheditorproperty2neo, neoobject2grapheditor
+from database.id_handling import (
+    get_base_id as id_get_base, parse_db_id,
 )
-from database.id_handling import get_base_id as id_get_base
 
+
+EXPORT_DIR = os.path.join(tempfile.gettempdir(), "graph_export")
+os.makedirs(EXPORT_DIR, exist_ok=True)
+
+
+def get_export_file_path(filename):
+    path = os.path.join(EXPORT_DIR, filename)
+    return path
 
 # 00_ai
 def _dump_jsonl_line(payload):
@@ -55,8 +67,8 @@ def _converted_properties(properties):
 
 
 def _extract_relation_import_data(obj, local_id_to_db_id):
-    source_db_id = local_id_to_db_id.get(obj["source_export_id"])
-    target_db_id = local_id_to_db_id.get(obj["target_export_id"])
+    source_db_id = local_id_to_db_id.get(obj["source_id"])
+    target_db_id = local_id_to_db_id.get(obj["target_id"])
     if not source_db_id or not target_db_id:
         return None
 
@@ -64,7 +76,7 @@ def _extract_relation_import_data(obj, local_id_to_db_id):
     return {
         "source_id": source_db_id,
         "target_id": target_db_id,
-        "type": id_get_base(obj["type"]),
+        "reltype": id_get_base(obj["reltype"]),
         "properties": properties,
         "uuid": properties.get("_uuid__tech_"),
     }
@@ -73,39 +85,87 @@ def _extract_relation_import_data(obj, local_id_to_db_id):
 def export_stream(mode, conn, db, cypher=None, selection=None):
     """Generator that yields JSONL lines: first nodes, then relations.
 
-    Yields strings (each a JSON line terminated by newline).
+    Yields batched strings (each containing one or more newline-terminated
+    JSON lines), instead of yielding one line at a time, to reduce the
+    number of HTTP chunks / write syscalls sent to the client.
     """
     if mode == "cypher":
-        yield from _export_cypher(conn, cypher)
+        line_generator = _export_cypher(conn, cypher)
     else:
-        yield from _export_explicit(conn, db, selection)
+        line_generator = _export_explicit(conn, db, selection)
+
+    yield from _batch_lines(line_generator)
+
+
+def _batch_lines(line_generator, flush_threshold=64 * 1024):
+    """Buffer individual JSONL lines and yield them in larger chunks.
+
+    This keeps memory usage bounded (only ever holds up to
+    ~flush_threshold bytes at a time) while drastically reducing the
+    number of yields (and therefore HTTP chunks / write syscalls)
+    compared to yielding one line at a time.
+    """
+    buffer = []
+    buffer_size = 0
+
+    for line in line_generator:
+        buffer.append(line)
+        buffer_size += len(line)
+
+        if buffer_size >= flush_threshold:
+            yield "".join(buffer)
+            buffer = []
+            buffer_size = 0
+
+    if buffer:
+        yield "".join(buffer)
+
+
+def export_file(mode, cypher=None, selection=None):
+    generator = export_stream(
+        mode=mode,
+        conn=g.conn,
+        db=current_app.graph_db,
+        cypher=cypher,
+        selection=selection
+    )
+    temp_file = _stream_to_temp_file(generator, directory=EXPORT_DIR, delete=False)
+    current_app.logger.debug(f"Graph exported to file: {temp_file.name}")
+    return os.path.basename(temp_file.name)
 
 
 def _export_cypher(conn, cypher_text):
-    """Export nodes and relations returned by a Cypher query."""
+    """Export nodes and relations returned by a Cypher query.
+
+    Warning: The result might mix nodes and relations, but it should still be valid
+    Reward: If you can show that it doesn't work, you will get a cookie :-o....
+    Warning: In case only relations are given in cypher query, nothing will get exported
+
+    """
     result = conn.run(cypher_text)
     local_id_counter = 0
     db_id_to_local = {}
 
-    for item_type, value in _iter_unique_cypher_entities(result):
+    for item_type, db_item in _iter_unique_cypher_entities(result):
         if item_type == "node":
             local_id_counter += 1
             local_id = local_id_counter
-            element_id = value.element_id
+            element_id = db_item.element_id
             db_id_to_local[element_id] = local_id
-            ge_node = GraphEditorNode.from_neo_node(value)
-            line = _node_to_export_dict(ge_node, local_id)
+            # base_node = BaseNode.from_neo_node(value)
+            line = _node_to_export_dict_fast(db_item, local_id)
             yield _dump_jsonl_line(line)
 
         elif item_type == "relation":
-            source_eid = value.start_node.element_id
-            target_eid = value.end_node.element_id
+            source_eid = db_item.start_node.element_id
+            target_eid = db_item.end_node.element_id
             if source_eid not in db_id_to_local or \
                target_eid not in db_id_to_local:
                 continue
-            ge_rel = GraphEditorRelation.from_neo_relation(value)
-            line = _relation_to_export_dict(
-                ge_rel, db_id_to_local[source_eid],
+            # base_rel = BaseRelation.from_neo_relation(value)
+            line = _relation_to_export_dict_fast(
+                db_item,
+                db_id_to_local[source_eid],
                 db_id_to_local[target_eid]
             )
             yield _dump_jsonl_line(line)
@@ -120,19 +180,21 @@ def _export_explicit(conn, db, selection):
     # --- Nodes --- 00_ai: stream row by row, don't collect in memory
     node_sel = selection["nodes"]
     if node_sel["mode"] == "all":
-        result = conn.run("MATCH (n) RETURN n, elementId(n) AS eid")
-        # The brackets (without comma) create a generator
-        node_iter = (BaseNode.from_neo_node(row["n"]) for row in result)
+        node_iter = conn.run("MATCH (n) RETURN n, elementId(n) AS eid")
     else:
         node_ids = node_sel["ids"]
-        node_iter = db.iter_nodes_by_element_ids(node_ids)
+        raw_ids = [parse_db_id(i) or i for i in node_ids]
+        node_iter = conn.run(
+            "MATCH (n) WHERE elementId(n) IN $eids RETURN n",
+            eids=raw_ids,
+        )
 
-    for base_node in node_iter:
+
+    for row in node_iter:
+        db_node=row["n"]
         export_id_counter += 1
-        node_db_id_to_local[base_node.element_id] = export_id_counter
-        # TODO Do we need a full GraphEditorNode?
-        ge_node = GraphEditorNode.from_base_node(base_node)
-        line = _node_to_export_dict(ge_node, export_id_counter)
+        node_db_id_to_local[db_node.element_id] = export_id_counter
+        line = _node_to_export_dict_fast(db_node, export_id_counter)
         yield _dump_jsonl_line(line)
 
     # --- Edges ---
@@ -143,49 +205,55 @@ def _export_explicit(conn, db, selection):
         exported_eids = list(node_db_id_to_local.keys())
         if not exported_eids:
             return
-        relations = db.get_relations_by_node_ids(exported_eids)
+        relations = db.get_relations_by_node_ids(exported_eids, convert_to_base_relation=False)
     elif edge_sel["mode"] == "ids":
         edge_ids = edge_sel["ids"]
-        fetched = db.get_relations_by_ids(edge_ids)
+        fetched = db.get_relations_by_ids(edge_ids, convert_to_base_relation=False)
         relations = (i[1] for i in fetched)
     else:
         return
 
     for base_rel in relations:
-        source_eid = base_rel.source.element_id
-        target_eid = base_rel.target.element_id
+        source_eid = base_rel.start_node.element_id
+        target_eid = base_rel.end_node.element_id
         if source_eid not in node_db_id_to_local or \
            target_eid not in node_db_id_to_local:
             continue
-        ge_rel = GraphEditorRelation.from_base_relation(base_rel)
-        line = _relation_to_export_dict(
-            ge_rel, node_db_id_to_local[source_eid],
+        line = _relation_to_export_dict_fast(
+            base_rel,
+            node_db_id_to_local[source_eid],
             node_db_id_to_local[target_eid]
         )
         yield _dump_jsonl_line(line)
 
 
-def _node_to_export_dict(ge_node, local_id):
-    return {
-        "_grapheditor_type": "node",
-        "_export_id": local_id,
-        "labels": ge_node.labels,
-        "properties": ge_node.properties,
-        "title": ge_node.title,
-        "description": ge_node.description,
-    }
+def _node_to_export_dict_fast(db_node, local_id):
+    """Build the export dict directly from a BaseNode, skipping style
+    rule evaluation, semantic ID computation, and long-description HTML
+    generation -- none of which are included in the exported JSONL
+    payload, but which (especially style rules) are comparatively
+    expensive to compute for every node/relation.
+    """
+
+    return dict(type="node",
+                labels=list(db_node.labels),
+                export_id=local_id,
+                properties={k:neoobject2grapheditor(v) for k,v in db_node.items()
+                            if k not in ['_ft__tech_']}
+    )
 
 
-def _relation_to_export_dict(ge_rel, source_local_id, target_local_id):
-    return {
-        "_grapheditor_type": "relation",
-        "type": ge_rel.type,
-        "source_export_id": source_local_id,
-        "target_export_id": target_local_id,
-        "properties": ge_rel.properties,
-        "title": ge_rel.title,
-        "description": ge_rel.description,
-    }
+
+def _relation_to_export_dict_fast(db_relation, source_local_id, target_local_id):
+    """Same idea as _node_to_export_dict_fast, but for relations."""
+
+    return dict(type="relation",
+                reltype=db_relation.type,
+                source_id=source_local_id,
+                target_id=target_local_id,
+                properties={k: neoobject2grapheditor(v) for k, v in db_relation.items()
+                            if k not in ['_ft__tech_']}
+                )
 
 
 # --- Import ---
@@ -198,7 +266,7 @@ def import_stream(file_stream, strategy, batch_size=1000,
     """
     db = current_app.graph_db
 
-    if disable_indexes: # wir sind hier, jhb
+    if disable_indexes:
         dropped_indexes = _disable_indexes()
 
     try:
@@ -211,11 +279,11 @@ def import_stream(file_stream, strategy, batch_size=1000,
 
 
 # 00_ai
-def _stream_to_temp_file(file_stream):
+def _stream_to_temp_file(file_stream, directory=None, delete=True):
     """Write incoming stream to a temp file so we can do two read passes."""
     # We don't use with, since we are returning temp_file
     # pylint: disable=consider-using-with
-    temp_file = tempfile.NamedTemporaryFile(mode="w+b", delete=True)
+    temp_file = tempfile.NamedTemporaryFile(mode="w+b", delete=delete, dir=directory)
     for raw_line in file_stream:
         if isinstance(raw_line, str):
             raw_line = raw_line.encode("utf-8")
@@ -255,8 +323,9 @@ def _do_import(file_stream, db, strategy, batch_size):
     with _stream_to_temp_file(file_stream) as temp_file:
         node_batch = []
         for obj in _iter_jsonl_objects(temp_file):
-            if obj.get("_grapheditor_type") != "node":
+            if obj.get("type") != "node":
                 continue
+
             node_batch.append(obj)
             if len(node_batch) < batch_size:
                 continue
@@ -277,7 +346,7 @@ def _do_import(file_stream, db, strategy, batch_size):
 
         relation_batch = []
         for obj in _iter_jsonl_objects(temp_file):
-            if obj.get("_grapheditor_type") != "relation":
+            if obj.get("type") != "relation":
                 continue
             relation_batch.append(obj)
             if len(relation_batch) < batch_size:
@@ -322,13 +391,14 @@ def _import_node_batch(batch, db, strategy, local_id_to_db_id):
             existing_nodes_by_uuid = db.get_nodes_by_uuids(unique_uuids)
 
     for obj in batch:
-        export_id = obj["_export_id"]
+        export_id = obj["export_id"]
 
         # Todo database/mapper/prepare_node_patch
         labels = [id_get_base(label) for label in obj["labels"]]
         properties = _converted_properties(obj.get("properties", {}))
-
         existing_node = None
+        uuid_val = None
+
         if strategy == "overwrite":
             uuid_val = properties.get("_uuid__tech_")
             if isinstance(uuid_val, str) and uuid_val:
@@ -338,8 +408,8 @@ def _import_node_batch(batch, db, strategy, local_id_to_db_id):
             node_data = {"labels": labels, "properties": properties}
 
             # TODO bulk replace
-            db.replace_node_by_id(
-                existing_node.element_id, node_data, existing_node
+            db.replace_node_by_uuid(
+                uuid_val, node_data, existing_node
             )
             local_id_to_db_id[export_id] = existing_node.element_id
         else:
@@ -388,13 +458,12 @@ def _import_relation_batch(batch, db, strategy, local_id_to_db_id):
             uuid_val = relation_data["uuid"]
             existing_rel = existing_by_uuid.get(uuid_val) if uuid_val else None
 
-            if existing_rel:
-
+            if existing_rel and uuid_val:
                 # TODO bulk replace
-                db.update_relation_by_id(
-                    f"id::{existing_rel.element_id}",
+                db.update_relation_by_uuid(
+                    uuid_val,
                     {
-                        "type": relation_data["type"],
+                        "type": relation_data["reltype"],
                         "properties": relation_data["properties"],
                     },
                     existing_relation=existing_rel,
@@ -404,7 +473,7 @@ def _import_relation_batch(batch, db, strategy, local_id_to_db_id):
                 rel_data_list.append({
                     "source_id": relation_data["source_id"],
                     "target_id": relation_data["target_id"],
-                    "type": relation_data["type"],
+                    "type": relation_data["reltype"],
                     "properties": relation_data["properties"],
                 })
     else:
@@ -416,7 +485,7 @@ def _import_relation_batch(batch, db, strategy, local_id_to_db_id):
             rel_data_list.append({
                 "source_id": relation_data["source_id"],
                 "target_id": relation_data["target_id"],
-                "type": relation_data["type"],
+                "type": relation_data["reltype"],
                 "properties": relation_data["properties"],
             })
 

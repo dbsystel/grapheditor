@@ -15,8 +15,7 @@ export const Modal = ({
 	headline,
 	description,
 	onClose,
-	shouldUseBackdrop = true,
-	shouldDisplayAsModal = true
+	shouldUseBackdrop = true
 }: ModalProps) => {
 	const [dialogRef, setDialogRef] = useState<HTMLDialogElement | null>(null);
 	const rootElementClassName = clsx('modal', className, {
@@ -32,16 +31,19 @@ export const Modal = ({
 
 	/**
 	 * We need the "dialogRef" to be an element reference in order to show/hide it.
-	 *
-	 * TODO: Refactor with isOpen true/false, not only true
 	 */
 	useEffect(() => {
-		if (isOpen && dialogRef) {
-			if (shouldDisplayAsModal) {
-				dialogRef.showModal();
-			} else {
-				dialogRef.show();
-			}
+		if (!dialogRef) {
+			return;
+		}
+
+		if (isOpen) {
+			// non-modal "show" instead of "showModal" so dialogs stack via normal z-index rather than
+			// the browser's top layer, and so notifications (rendered elsewhere) can always render
+			// above them
+			dialogRef.show();
+		} else {
+			dialogRef.close();
 		}
 	}, [isOpen, dialogRef]);
 
@@ -66,15 +68,22 @@ export const Modal = ({
 			<DBCard className="modal__content" style={style}>
 				<div className="modal__header">
 					{headline && (
-						<div className="modal__header-title">
-							<h3>{headline}</h3>
-							<DBButton onClick={handleClose} noText variant="ghost" icon="cross" />
+						<div className="modal__header-top">
+							<h3 className="modal__title">{headline}</h3>
+							<DBButton
+								className="modal__close"
+								onClick={handleClose}
+								noText
+								variant="ghost"
+								icon="cross"
+							/>
 						</div>
 					)}
+
 					{description && (
 						<div className="modal__header-info">
 							<DBIcon icon="information_circle" />
-							<p>{description}</p>
+							<p className="modal__description">{description}</p>
 						</div>
 					)}
 				</div>

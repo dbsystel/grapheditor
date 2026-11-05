@@ -1,7 +1,6 @@
 import './DatabaseMenu.scss';
 import { DBSection } from '@db-ux/react-core-components';
 import clsx from 'clsx';
-import { ApplicationLoadingIndicator } from 'src/components/application-loading-indicator/ApplicationLoadingIndicator';
 import { ErrorBoundary } from 'src/components/error-boundary/ErrorBoundary';
 import { DatabaseMenuProps } from './DataBaseMenu.interfaces';
 import { DatabaseMenuHost } from './host/DatabaseMenuHost';
@@ -13,8 +12,6 @@ export const DatabaseMenu = ({ id, className, testId }: DatabaseMenuProps) => {
 
 	return (
 		<DBSection className={rootElementClassName} id={id} data-testid={testId} spacing="none">
-			<ApplicationLoadingIndicator />
-
 			<DatabaseMenuHost />
 
 			<ErrorBoundary>

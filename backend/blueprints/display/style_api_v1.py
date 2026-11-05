@@ -30,6 +30,7 @@ def load_style_file(file):
                 "rules": rules,
                 "text": text,
             }
+            session.modified = True
             select_style(file.filename)
         else:
             current_app.logger.error(f"Can't upload file {file.filename}")

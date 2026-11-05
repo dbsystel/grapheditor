@@ -7,6 +7,7 @@ import hashlib
 import re
 import ast
 import textwrap
+from functools import lru_cache
 import pyparsing as pp
 
 from RestrictedPython import (
@@ -79,6 +80,23 @@ def get_luminance(hex_color):
 
     return hex_red * 0.2126 + hex_green * 0.7152 + hex_blue * 0.0722
 
+class Sorter:
+    """Sort something, but put prioritized items first"""
+
+    def __init__(self, priorities):
+        self.priorities = priorities and priorities or []
+
+    def __call__(self,value):
+        for i, p in enumerate(self.priorities):
+            if value.startswith(p):
+                return (0, i, value)
+        return (1, value, 0)
+
+def custom_sorted(obj, key=None, reverse=False):
+    items = list(obj)
+    items.sort(key=key, reverse=reverse)
+    return items
+
 # a dict with functions and variables available for using in _safe_eval
 globals_dict = dict(
     __builtins__=dict(
@@ -90,7 +108,9 @@ globals_dict = dict(
         random=random,
         re=re,
         hashlib=hashlib,
-        get_luminance = get_luminance
+        get_luminance = get_luminance,
+        Sorter = Sorter,
+        sorted = custom_sorted
     )
     | safe_builtins
     | limited_builtins
@@ -116,6 +136,20 @@ def parse_code_with_result(code):
         targets.insert(0, ast.Name(id="result", ctx=ast.Store()))
         return ast.Assign(targets=targets, value=last_expr.value)
     return tree
+
+
+@lru_cache(maxsize=256)
+def _compile_restricted_cached(code: str):
+    """Compile restricted-python code once per unique code string.
+
+    ast.parse + compile_restricted are comparatively expensive, and the
+    same rule code (condition/star-property expressions from the style
+    file) gets evaluated repeatedly, once per node/relation. Caching
+    the compiled bytecode avoids re-parsing/re-compiling identical code
+    on every call.
+    """
+    tree = ast.fix_missing_locations(parse_code_with_result(code))
+    return compile_restricted(tree, filename="<style file>", mode="exec")
 
 
 class StyleRule:
@@ -217,11 +251,9 @@ class StyleRule:
         # pylint: disable=broad-exception-caught
 
         try:
-            # parse/transform code and add missing line/column numbers
-            tree = ast.fix_missing_locations(parse_code_with_result(code))
-            byte_code = compile_restricted(
-                tree, filename="<style file>", mode="exec"
-            )
+            # parse/transform code and add missing line/column numbers,
+            # cached per unique code string.
+            byte_code = _compile_restricted_cached(code)
 
             if "result" in context:
                 context.pop("result")
@@ -433,9 +465,11 @@ def select_style(filename, tab_id=None):
     # by having no stored selection
     if filename:
         session["selected_style"][cur_tab_id] = filename
+        session.modified = True
     else:
         if cur_tab_id in session["selected_style"]:
             del session["selected_style"][cur_tab_id]
+            session.modified = True
 
 
 def get_stored_style(filename):
@@ -450,5 +484,6 @@ def delete_stored_style(filename):
         del session["style_files"][filename]
         if get_selected_style() == filename:
             del session["selected_style"][g.tab_id]
+        session.modified = True
     else:
         raise exceptions.StyleNotFoundException

@@ -3,16 +3,18 @@ import clsx from 'clsx';
 import { useEffect, useMemo } from 'react';
 import { Loading } from 'src/components/loading/Loading';
 import { LoginForm } from 'src/components/login-form/LoginForm';
+import i18n from 'src/i18n';
 import {
 	destroyApplicationStoresObservers,
 	initializeApplicationStoresObservers
 } from 'src/observers';
 import { useLoginStore } from 'src/stores/login';
 import { useNotificationsStore } from 'src/stores/notifications';
-import { setApiHeaderTabId } from 'src/utils/api';
+import { useTabStore } from 'src/stores/tab';
 import { api } from 'src/utils/api/api';
 import { SSO_HOST_STORAGE_KEY } from 'src/utils/constants';
 import { resetApplicationStates } from 'src/utils/helpers/application';
+import { logInUserLocally } from 'src/utils/helpers/auth';
 import { parseError } from 'src/utils/helpers/general';
 import { AuthProps } from './Auth.interfaces';
 
@@ -21,8 +23,6 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 		isConnected,
 		isConnecting,
 		setIsConnecting,
-		tabId,
-		connect,
 		disconnect,
 		checkIfLoggedInDone,
 		setCheckIfLoggedInDone
@@ -48,8 +48,9 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 	// TODO --quick-fix end
 
 	useEffect(() => {
-		setApiHeaderTabId(tabId);
 		setIsConnecting(true);
+
+		const tabData = useTabStore.getState().tabData;
 
 		const checkLogin = async () => {
 			const ssoHost = await new Promise((resolve: (value: string | null) => void) => {
@@ -71,8 +72,10 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 						useToken: true
 					})
 					.then((response) => {
-						if ('host' in response.data && 'username' in response.data) {
-							connect(response.data.host, response.data.username);
+						if (!('authorizationUrl' in response.data)) {
+							const { host, username, tabId } = response.data;
+
+							logInUserLocally({ host: host, username: username, tabId: tabId });
 						}
 					})
 					.catch((error) => {
@@ -84,8 +87,15 @@ export const Auth = ({ children, id, className, testId }: AuthProps) => {
 			}
 			// else try and get existing login session
 			else {
-				loginPromise = api.users.fetch.getLogin().then((data) => {
-					connect(data.data.host, data.data.username);
+				loginPromise = api.users.fetch.getLogin().then((response) => {
+					const { host, username, tabId } = response.data;
+					const tabIdToUse = tabId || tabData.tabId;
+
+					if (!tabIdToUse) {
+						throw new Error(i18n.t('notifications_failure_login'));
+					}
+
+					logInUserLocally({ host: host, username: username, tabId: tabIdToUse });
 				});
 			}
 

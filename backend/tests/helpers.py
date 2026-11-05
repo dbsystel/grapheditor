@@ -2,7 +2,7 @@ import io
 import os
 
 # pylint: disable=import-error
-from setup import BASE_URL, HEADERS
+from setup import BASE_URL, get_headers
 
 # pylint complains that portions of blueprints.* and this test are duplicate.
 # Usually it's acceptable (and even encouraged) to duplicate stuff between
@@ -11,7 +11,7 @@ from setup import BASE_URL, HEADERS
 
 
 def fetch_node_by_id(client, nid):
-    response = client.get(BASE_URL + f"/api/v1/nodes/{nid}", headers=HEADERS)
+    response = client.get(BASE_URL + f"/api/v1/nodes/{nid}", headers=get_headers())
     assert response.status_code == 200
     return response.json
 
@@ -25,7 +25,7 @@ def fetch_sample_node(client, text="bob", labels=None):
     response = client.get(
         BASE_URL + "/api/v1/nodes",
         query_string=query_string,
-        headers=HEADERS,
+        headers=get_headers(),
     )
     assert response.status_code == 200
     return response.json[0]
@@ -39,13 +39,33 @@ def fetch_sample_relation(client, text="likes"):
     response = client.get(
         BASE_URL + "/api/v1/relations",
         query_string={"text": text},
-        headers=HEADERS,
+        headers=get_headers(),
     )
     return response.json[0]
 
 
 def fetch_sample_relation_id(client, text="likes__dummy_"):
     return fetch_sample_relation(client, text=text)["id"]
+
+
+def perform_export(client, payload):
+    """POST /transfer/export, then GET the returned download_url.
+
+    Returns the raw bytes of the exported JSONL file.
+    """
+    response = client.post(
+        BASE_URL + "/api/v1/transfer/export",
+        headers=get_headers(),
+        json=payload,
+    )
+    assert response.status_code == 200
+    download_url = response.json["download_url"]
+
+    download_response = client.get(download_url, headers=get_headers())
+    assert download_response.status_code == 200
+    assert download_response.mimetype == "application/x-ndjson"
+
+    return download_response.data
 
 
 def find_by_property(lst: list, prop_name: str, prop_val):
@@ -79,7 +99,7 @@ def create_perspective(client):
     }
 
     response = client.post(
-        BASE_URL + "/api/v1/perspectives", headers=HEADERS, json=json
+        BASE_URL + "/api/v1/perspectives", headers=get_headers(), json=json
     )
     assert response.status_code == 200
     assert "id" in response.json
@@ -89,7 +109,7 @@ def create_perspective(client):
 
     response = client.get(
         BASE_URL + f"/api/v1/nodes/{pid}",
-        headers=HEADERS,
+        headers=get_headers(),
     )
 
     return pid
@@ -98,7 +118,7 @@ def create_perspective(client):
 def create_sample_node(client, name):
     response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
@@ -117,7 +137,7 @@ def create_sample_node(client, name):
 def create_empty_node(client):
     response = client.post(
         BASE_URL + "/api/v1/nodes",
-        headers=HEADERS,
+        headers=get_headers(),
         json={"labels": [], "properties": {}},
     )
     assert response.status_code == 200
@@ -132,7 +152,7 @@ def reset_person(client, name):
 
     response = client.put(
         BASE_URL + f"/api/v1/nodes/{nid}",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "labels": ["MetaLabel::Person__dummy_"],
             "properties": {
@@ -159,7 +179,7 @@ def create_sample_relation(client, rel_type, source, target, properties=None):
         }
     response = client.post(
         BASE_URL + "/api/v1/relations",
-        headers=HEADERS,
+        headers=get_headers(),
         json={
             "properties": properties,
             "source_id": source,
@@ -188,7 +208,7 @@ def create_data_from_file(filename):
 
 def upload_style_file(client, filename, headers=None):
     if headers is None:
-        headers = HEADERS
+        headers = get_headers()
     data = create_data_from_file(filename)
     client.post(
         BASE_URL + "/api/v1/styles",

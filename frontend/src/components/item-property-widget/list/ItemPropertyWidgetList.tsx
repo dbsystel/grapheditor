@@ -1,5 +1,5 @@
 import './ItemPropertyWidgetList.scss';
-import { DBButton } from '@db-ux/react-core-components';
+import { DBButton, DBInfotext } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { DragEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { ItemProperty, ItemPropertyShapeNonList, ItemPropertyTypeNonList } from 
 import { clone, getAt, getElementIndex, isElementBeforeElement } from 'src/utils/helpers/general';
 import {
 	getDefaultItemPropertyForItemPropertyType,
+	isItemPropertyListTypeConsistent,
 	isItemPropertyOfTypeList,
 	itemPropertyDefaults
 } from 'src/utils/helpers/items';
@@ -43,17 +44,11 @@ export const ItemPropertyWidgetList = ({
 		if (index !== undefined && !isItemPropertyOfTypeList(updatedProperty)) {
 			valueClone[index].value = updatedProperty.value;
 
-			updateLocalValue(valueClone);
+			setLocalValue(valueClone);
 
 			if (onChange) {
 				onChange(valueClone);
 			}
-		}
-	};
-
-	const updateLocalValue = (newValue: Array<ItemPropertyShapeNonList>) => {
-		if (!isControlled) {
-			setLocalValue(newValue);
 		}
 	};
 
@@ -65,7 +60,7 @@ export const ItemPropertyWidgetList = ({
 		const newItemProperty = getDefaultItemPropertyForItemPropertyType(newPropertyType);
 		valueClone.push(newItemProperty);
 
-		updateLocalValue(valueClone);
+		setLocalValue(valueClone);
 
 		if (onChange) {
 			onChange(valueClone);
@@ -77,7 +72,7 @@ export const ItemPropertyWidgetList = ({
 
 		valueClone.splice(index, 1);
 
-		updateLocalValue(valueClone);
+		setLocalValue(valueClone);
 
 		if (onChange) {
 			onChange(valueClone);
@@ -152,7 +147,7 @@ export const ItemPropertyWidgetList = ({
 			newValue[index] = valueClone[newIndex];
 		});
 
-		updateLocalValue(newValue);
+		setLocalValue(newValue);
 
 		if (onChange) {
 			onChange(newValue);
@@ -163,8 +158,16 @@ export const ItemPropertyWidgetList = ({
 		draggedElementRef.current = null;
 	}
 
+	const isValid = isItemPropertyListTypeConsistent(displayValue);
+
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_list_invalid_message')}
+				/>
+			)}
 			{displayValue.length === 0 && isEditMode && (
 				<div className="item-property-widget-list__new-property">
 					<ItemPropertyTypeDropdown

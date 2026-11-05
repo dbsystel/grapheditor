@@ -1,11 +1,15 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ItemPropertyWidgetFractionOfSecond } from 'src/components/item-property-widget/fraction-of-second/ItemPropertyWidgetFractionOfSecond';
 import { ItemPropertyWidgetTimezoneOffset } from 'src/components/item-property-widget/timezone-offset/ItemPropertyWidgetTimezoneOffset';
 import { ItemPropertyWidgetTimezoneOffsetState } from 'src/components/item-property-widget/timezone-offset/ItemPropertyWidgetTimezoneOffset.interfaces';
-import { getDatetimeFromString, getFormattedLocaleDatetimeString } from 'src/utils/helpers/general';
+import {
+	getDatetimeFromString,
+	getFormattedLocaleDatetimeString,
+	isDatetime
+} from 'src/utils/helpers/general';
 import { itemPropertyDefaults } from 'src/utils/helpers/items';
 import {
 	ItemPropertyWidgetDatetimeProps,
@@ -68,9 +72,7 @@ export const ItemPropertyWidgetDatetime = ({
 	};
 
 	const triggerStateUpdateAndOnChange = (newState: ItemPropertyWidgetDatetimeState) => {
-		if (!isControlled) {
-			setLocalValue(newState);
-		}
+		setLocalValue(newState);
 
 		if (onChange) {
 			const newDatetime = formatDatetimeString(newState);
@@ -78,6 +80,9 @@ export const ItemPropertyWidgetDatetime = ({
 			onChange(newDatetime);
 		}
 	};
+
+	const combinedDatetimeString = formatDatetimeString(displayValue);
+	const isValid = isDatetime(combinedDatetimeString);
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -90,6 +95,7 @@ export const ItemPropertyWidgetDatetime = ({
 						step={1}
 						label={t('item_property_widget_datetime_label')}
 						onChange={onDatetimeChange}
+						validation="no-validation"
 					/>
 					<ItemPropertyWidgetFractionOfSecond
 						defaultValue={displayValue.fractionOfSecond}
@@ -105,6 +111,18 @@ export const ItemPropertyWidgetDatetime = ({
 						isEditMode={isEditMode}
 					/>
 				</>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_datetime_invalid_message', {
+						// show the raw, unparsed value (same source as the view-mode display above)
+						// so even completely unparseable backend data is still shown to the user,
+						// instead of the reconstructed-from-parts value which can collapse to ''
+						context: datetimeString ? 'with_value' : undefined,
+						value: datetimeString
+					})}
+				/>
 			)}
 		</div>
 	);

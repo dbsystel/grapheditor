@@ -12,6 +12,7 @@ import {
 	scaleNodeCoordinates,
 	showGraphContainer
 } from 'src/components/network-graph/helpers';
+import { StateManager } from 'src/components/network-graph/state-manager';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
 import { useNotificationsStore } from 'src/stores/notifications';
@@ -50,13 +51,13 @@ export const LoadGraph = () => {
 		};
 
 		sigma.getMouseCaptor().addListener('mousedown', disableAutoscale);
-		sigma.addListener('downStage', unHighlightNodes);
-		sigma.addListener('downStage', unHighlightRelations);
+		StateManager.getInstance().subscribe('stageDown', unHighlightNodes);
+		StateManager.getInstance().subscribe('stageDown', unHighlightRelations);
 
 		return () => {
 			sigma.getMouseCaptor().removeListener('mousedown', disableAutoscale);
-			sigma.removeListener('downStage', unHighlightNodes);
-			sigma.removeListener('downStage', unHighlightRelations);
+			StateManager.getInstance().unsubscribe('stageDown', unHighlightNodes);
+			StateManager.getInstance().unsubscribe('stageDown', unHighlightRelations);
 			setIsGraphRendered(false);
 		};
 	}, []);

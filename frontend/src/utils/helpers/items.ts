@@ -20,6 +20,7 @@ import {
 	ItemPropertyShapeFloat,
 	ItemPropertyShapeInteger,
 	ItemPropertyShapeList,
+	ItemPropertyShapeNonList,
 	ItemPropertyShapeString,
 	ItemPropertyShapeTime,
 	ItemPropertyShapeWgs8422D,
@@ -57,6 +58,7 @@ import {
 	parseError
 } from 'src/utils/helpers/general';
 import { isCartesian2D, isCartesian3D, isWgs8422D, isWgs8423D } from 'src/utils/helpers/graph';
+import { getDrawerEntriesFromOverviews } from 'src/utils/helpers/item-overview-popover';
 import { getNodeMetaPropertyType, isMetaNode, isNode } from 'src/utils/helpers/nodes';
 import { isRelation } from 'src/utils/helpers/relations';
 
@@ -272,6 +274,32 @@ export const isItemPropertyListValid = (property: ItemPropertyShapeList): boolea
 
 	return property.value.every((itemProperty) => {
 		return itemProperty.type === firstItemType && isItemPropertyValid(itemProperty);
+	});
+};
+
+/**
+ * Unlike isItemPropertyListValid, this only checks the list-specific invariant that all elements
+ * share the same type. It intentionally does NOT check each element's individual validity, because
+ * each element already renders its own invalid message via its own widget - checking it again here
+ * would only produce a redundant, duplicate signal with no new information for the user.
+ *
+ * Takes the array of elements directly (not the wrapping ItemPropertyShapeList) since the "list"
+ * type of the wrapper is never actually used by this check - only the elements are.
+ *
+ * Use this for UI-level "should we show a generic list message" decisions (e.g. in
+ * ItemPropertyWidgetList). Use isItemPropertyListValid for actual save/submission validity gating.
+ */
+export const isItemPropertyListTypeConsistent = (
+	items: Array<ItemPropertyShapeNonList>
+): boolean => {
+	if (items.length === 0) {
+		return true;
+	}
+
+	const firstItemType = items[0].type;
+
+	return items.every((itemProperty) => {
+		return itemProperty.type === firstItemType;
 	});
 };
 
@@ -623,9 +651,7 @@ export const getItemMissingPropertiesForMeta = (
 };
 
 export const openInItemsDrawer = (item: Item, isInsideItemsDrawer: boolean) => {
-	const overviewEntries = useItemOverviewPopoverStore
-		.getState()
-		.overviews.map((overview) => ({ item: overview.item }));
+	const overviewEntries = getDrawerEntriesFromOverviews();
 
 	useItemOverviewPopoverStore.getState().reset();
 

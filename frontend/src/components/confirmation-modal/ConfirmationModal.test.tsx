@@ -80,13 +80,15 @@ describe('Components ConfirmationModal', () => {
 
 		await expect
 			.element(
-				screen.getByRole('button', { name: i18n.t('confirm_unsaved_changes_save_button') })
+				screen
+					.getByRole('button')
+					.filter({ hasText: i18n.t('confirm_unsaved_changes_save_button') })
 			)
 			.toBeInTheDocument();
 		await expect
 			.element(
-				screen.getByRole('button', {
-					name: i18n.t('confirm_unsaved_changes_cancel_button')
+				screen.getByRole('button').filter({
+					hasText: i18n.t('confirm_unsaved_changes_cancel_button')
 				})
 			)
 			.toBeInTheDocument();

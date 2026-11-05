@@ -19,7 +19,7 @@ export const resetApplicationStates = () => {
 	useContextMenuStore.getState().reset();
 	useDrawerStore.getState().reset();
 	// exclude persisted keys
-	useGraphStore.getState().resetButExclude(['zoomFactor', 'nodeAxisFactor']);
+	useGraphStore.getState().resetButExclude(['zoomFactor', 'nodeAxisFactor', 'autoPanSpeed']);
 	useItemsStore.getState().reset();
 	useParallaxStore.getState().reset();
 	useApplicationStore.getState().reset();

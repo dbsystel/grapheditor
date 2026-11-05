@@ -15,6 +15,8 @@ from database.base_types import BaseNode, BaseRelation
 
 class DatabaseFeature(Enum):
     PERSPECTIVES = "Perspectives"
+    GRAPHEDITOR_TRIGGERS = "GraphEditorTriggers"
+    GRAPHEDITOR_FUNCTIONS = "GraphEditorFunctions"
 
 
 class RelationEnd(Enum):

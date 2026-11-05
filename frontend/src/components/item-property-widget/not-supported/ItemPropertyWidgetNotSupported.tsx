@@ -1,4 +1,6 @@
+import { DBInfotext } from '@db-ux/react-core-components';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { ItemPropertyWidgetNotSupportedProps } from './ItemPropertyWidgetNotSupported.interfaces';
 
 /**
@@ -11,11 +13,20 @@ export const ItemPropertyWidgetNotSupported = ({
 	className,
 	testId
 }: ItemPropertyWidgetNotSupportedProps) => {
+	const { t } = useTranslation();
 	const rootElementClassName = clsx('item-property-widget-not-supported', className);
+	const isValid = defaultValue !== undefined && defaultValue !== null;
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
-			{JSON.stringify(defaultValue)}
+			{isValid ? (
+				JSON.stringify(defaultValue)
+			) : (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_not_supported_invalid_message')}
+				/>
+			)}
 		</div>
 	);
 };

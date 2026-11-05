@@ -1,7 +1,7 @@
 import {
 	destroyKeyboardObserver,
 	initializeKeyboardObserver,
-	isAltKeyPressed,
+	isAlternateKeyPressed,
 	isControlKeyPressed,
 	isShiftKeyPressed,
 	pressedKeys
@@ -19,7 +19,7 @@ describe('Utils - Keyboard observer', () => {
 
 		await userEvent.keyboard('{/Control}');
 
-		expect(pressedKeys.Control).toBe(false);
+		expect(pressedKeys.Control).toBeUndefined();
 		expect(isControlKeyPressed()).toBe(false);
 
 		destroyKeyboardObserver();
@@ -31,12 +31,12 @@ describe('Utils - Keyboard observer', () => {
 		await userEvent.keyboard('{Alt>}');
 
 		expect(pressedKeys.Alt).toBe(true);
-		expect(isAltKeyPressed()).toBe(true);
+		expect(isAlternateKeyPressed()).toBe(true);
 
 		await userEvent.keyboard('{/Alt}');
 
-		expect(pressedKeys.Alt).toBe(false);
-		expect(isAltKeyPressed()).toBe(false);
+		expect(pressedKeys.Alt).toBeUndefined();
+		expect(isAlternateKeyPressed()).toBe(false);
 
 		destroyKeyboardObserver();
 	});
@@ -51,7 +51,7 @@ describe('Utils - Keyboard observer', () => {
 
 		await userEvent.keyboard('{/Shift}');
 
-		expect(pressedKeys.Shift).toBe(false);
+		expect(pressedKeys.Shift).toBeUndefined();
 		expect(isShiftKeyPressed()).toBe(false);
 
 		destroyKeyboardObserver();

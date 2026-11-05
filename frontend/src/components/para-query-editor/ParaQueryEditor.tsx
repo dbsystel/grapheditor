@@ -1,9 +1,13 @@
 import './ParaQueryEditor.scss';
-import { DBCustomSelect, DBInput } from '@db-ux/react-core-components';
+import { DBInput } from '@db-ux/react-core-components';
+import { CustomSelectOptionType } from '@db-ux/react-core-components/dist/components/custom-select/model';
 import clsx from 'clsx';
-import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { objectHasOwnProperty } from 'src/utils/helpers/general';
+import { useEffect, useRef, useState } from 'react';
+import { ComboBox } from 'src/components/combo-box/ComboBox';
+import { ParaQuery, ParaQueryParameterType, ParaQueryParameterValues } from 'src/models/paraquery';
+import { api } from 'src/utils/api/api';
+import { clone, objectHasOwnProperty } from 'src/utils/helpers/general';
+import { useDebounce } from 'src/utils/hooks/useDebounce';
 import { ParaQueryEditorProps } from './ParaQueryEditor.interfaces';
 
 const allowedTypes = ['string', 'integer'];
@@ -14,41 +18,76 @@ const allowedTypes = ['string', 'integer'];
 export const ParaQueryEditor = ({
 	paraQuery,
 	onParameterChange,
-	defaultParameterValues,
+	handleRef,
 	id,
 	className,
 	testId
 }: ParaQueryEditorProps) => {
-	const [paraQueryParameterKeys, setParaQueryParameterKeys] = useState<Array<string>>([]);
 	const rootElementRef = useRef<HTMLDivElement | null>(null);
+	const parameterValuesRef = useRef<ParaQueryParameterValues>({});
+	const [options, setOptions] = useState<Record<string, Array<CustomSelectOptionType>>>({});
+	const [tokens, setTokens] = useState<Array<string>>([]);
+	const delayedCallback = useDebounce(500);
 	const rootElementClassName = clsx('para-query-editor', className);
 
+	if (handleRef) {
+		handleRef.current.getParameterValues = () => {
+			return clone(parameterValuesRef.current);
+		};
+	}
+
 	useEffect(() => {
-		const rootElement = rootElementRef.current;
-
-		if (rootElement) {
-			// search for words starting with $ sign
-			const parametersInsideText = paraQuery.user_text.match(/\$\w+/gim);
-
-			if (parametersInsideText) {
-				const cleanParameterKeys: Array<string> = [];
-
-				/**
-				 * Replace words with $ sign with a HTML container (used later by React Portal).
-				 * This turned out to be a simple and effective method since we must preserve sentences
-				 * as they are, and only replace parameters with React components.
-				 */
-				rootElement.innerHTML = paraQuery.user_text.replaceAll(/\$\w+/gim, (match) => {
-					const cleanParameterKey = match.substring(1);
-					cleanParameterKeys.push(cleanParameterKey);
-
-					return `<div data-para-query-parameter="${cleanParameterKey}"></div>`;
-				});
-
-				setParaQueryParameterKeys(cleanParameterKeys);
-			}
-		}
+		initializeOptions();
+		initializeParameterValues();
+		initializeTokens();
 	}, [paraQuery]);
+
+	const initializeOptions = (paraQueryParameter?: ParaQuery) => {
+		const localParaQuery = paraQueryParameter || paraQuery;
+		const localOptions: Record<string, Array<CustomSelectOptionType>> = {};
+
+		Object.keys(localParaQuery.parameters).forEach((parameterKey) => {
+			// the "objectHasOwnProperty" check is (probably) not needed, since object keys are already resolved,
+			// but leave it so it becomes a habit of checking object keys existance
+			if (objectHasOwnProperty(localParaQuery.parameters, parameterKey)) {
+				const suggestions = localParaQuery.parameters[parameterKey].suggestions;
+
+				if (suggestions) {
+					localOptions[parameterKey] = [];
+
+					suggestions.forEach((suggestion) => {
+						localOptions[parameterKey].push({
+							label: suggestion.toString(),
+							value: suggestion.toString()
+						});
+					});
+				}
+			}
+		});
+
+		setOptions(localOptions);
+	};
+
+	const initializeParameterValues = () => {
+		parameterValuesRef.current = {};
+
+		Object.keys(paraQuery.parameters).forEach((parameterKey) => {
+			// the "objectHasOwnProperty" check is (probably) not needed, since object keys are already resolved,
+			// but leave it so it becomes a habit of checking object keys existance
+			if (objectHasOwnProperty(paraQuery.parameters, parameterKey)) {
+				const defaultValue = paraQuery.parameters[parameterKey].default_value;
+
+				parameterValuesRef.current[parameterKey] =
+					defaultValue !== undefined ? defaultValue : null;
+			}
+		});
+	};
+
+	const initializeTokens = () => {
+		// split while keeping delimiters: $variables, plain words, spaces, and punctuation
+		const tokens = paraQuery.user_text.match(/\$[a-zA-Z_]\w*|\w+|\s+|[^\w\s]/g);
+		setTokens(tokens || []);
+	};
 
 	const renderParameter = (parameterKey: string) => {
 		const parameter = objectHasOwnProperty(paraQuery.parameters, parameterKey || '')
@@ -61,49 +100,41 @@ export const ParaQueryEditor = ({
 
 		const type = parameter.type;
 		const isTypeInteger = type === 'integer';
-		const defaultValue = defaultParameterValues
-			? defaultParameterValues[parameterKey]
-			: parameter.default_value;
+		const value = parameterValuesRef.current[parameterKey]
+			? parameterValuesRef.current[parameterKey].toString()
+			: undefined;
 		const inputType = isTypeInteger ? 'number' : 'string';
 
 		// if parameter "suggestions" property defined, treat it as a dropdown, otherwise as regular input
 		if (parameter.suggestions) {
-			const options = parameter.suggestions
-				? parameter.suggestions.map((suggestion) => {
-						return {
-							label: suggestion,
-							value: suggestion
-						};
-					})
+			const comboBoxOptions = objectHasOwnProperty(options, parameterKey)
+				? options[parameterKey]
 				: [];
 
-			const onChange = (values: Array<string>) => {
-				onParameterChange(parameterKey, values.at(0) || '', type);
-			};
-
-			const value = defaultValue ? [defaultValue.toString()] : [];
-
 			return (
-				<DBCustomSelect
+				<ComboBox
+					key={parameterKey}
+					value={value}
 					label={parameter.help_text}
-					values={value}
-					options={options}
-					onOptionSelected={onChange}
-					validation="no-validation"
-					dropdownWidth="auto"
-					showNoResults={false}
+					options={comboBoxOptions}
+					onChange={(optionValue) => {
+						localOnChange(parameterKey, optionValue, type);
+					}}
+					onInputChange={(inputText) => {
+						localOnChange(parameterKey, inputText, type);
+					}}
+					showNoResults={true}
 				/>
 			);
 		} else {
-			const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-				onParameterChange(parameterKey, event.target.value, type);
-			};
-
 			return (
 				<DBInput
+					key={parameterKey}
 					label={parameter.help_text}
-					defaultValue={defaultValue}
-					onChange={onChange}
+					defaultValue={value}
+					onChange={(event) => {
+						localOnChange(parameterKey, event.target.value, type);
+					}}
 					dataList={parameter.suggestions}
 					validation="no-validation"
 					type={inputType}
@@ -112,22 +143,38 @@ export const ParaQueryEditor = ({
 		}
 	};
 
+	const localOnChange = (key: string, value: string, type: ParaQueryParameterType) => {
+		const valueToStore = type === 'integer' ? parseInt(value) : value;
+
+		parameterValuesRef.current[key] = valueToStore;
+
+		if (onParameterChange) {
+			onParameterChange(key, valueToStore, type);
+		}
+
+		delayedCallback(() => {
+			api.paraQueries.fetch
+				.postParaQuery({
+					paraQueryId: paraQuery.db_id,
+					parameters: parameterValuesRef.current
+				})
+				.then((response) => {
+					initializeOptions(response.data.paraquery);
+				});
+		});
+	};
+
+	const isTokenVariable = (token: string) => {
+		return token.startsWith('$') && token.length > 1;
+	};
+
 	return (
 		<div id={id} className={rootElementClassName} ref={rootElementRef} data-testid={testId}>
-			{paraQuery.user_text}
-			{paraQueryParameterKeys.map((parameterKey) => {
-				if (!rootElementRef.current) {
-					return null;
-				}
-
-				const targetElement = rootElementRef.current.querySelector(
-					`[data-para-query-parameter="${parameterKey}"]`
-				);
-
-				if (targetElement) {
-					return createPortal(renderParameter(parameterKey), targetElement);
+			{tokens.map((token, index) => {
+				if (isTokenVariable(token)) {
+					return renderParameter(token.substring(1));
 				} else {
-					return null;
+					return <span key={token + index}>{token}</span>;
 				}
 			})}
 		</div>

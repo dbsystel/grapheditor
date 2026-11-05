@@ -1,8 +1,5 @@
 .tab-panel {
-	// .db-tab-panel has "display:none" by default, and "display:block" once
-	// its radio is checked. In order to prevent long CSS overrides (.db-tab-panel
-	// visibility in version 0.5.1 is controlled by CSS, check node_modules/frontend/node_modules/@db-ui/components/build/components/tabs/tabs.css#L180)
-	// we used an internal wrapper for tab panel content
+	padding: var(--db-spacing-fixed-xs);
 
 	&__content-wrapper {
 		display: flex;
@@ -10,6 +7,8 @@
 
 	&__content {
 		flex-grow: 1;
+		padding: var(--db-spacing-fixed-xs);
+		margin-right: var(--db-spacing-fixed-xl);
 	}
 
 	.db-input,

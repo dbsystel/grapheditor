@@ -11,9 +11,10 @@ import { TableBody } from 'src/components/table-body/TableBody';
 import { TableCell } from 'src/components/table-cell/TableCell';
 import { TableRow } from 'src/components/table-row/TableRow';
 import { ItemProperty } from 'src/models/item';
-import { ITEM_PROPERTY_TYPE_OPTIONS_FLAT } from 'src/utils/constants';
+import { ITEM_PROPERTY_TYPE_OPTIONS_FLAT, NON_REMOVABLE_NODE_IDS } from 'src/utils/constants';
 import { isString } from 'src/utils/helpers/general';
 import { isItemPropertyOfValidShapeList } from 'src/utils/helpers/items';
+import { useDatabaseFeatures } from 'src/utils/hooks/useDatabaseFeatures';
 import { ItemPropertiesTableProps } from './ItemPropertiesTable.interfaces';
 
 export const ItemPropertiesTable = ({
@@ -39,6 +40,7 @@ export const ItemPropertiesTable = ({
 		},
 		className
 	);
+	const { hasFunctions, hasTriggers } = useDatabaseFeatures();
 
 	if (!entries.length) {
 		return null;
@@ -50,6 +52,9 @@ export const ItemPropertiesTable = ({
 				{entries.map((entry, index) => {
 					const [property, key, propertyNode, isTopEntry] = entry;
 					const isMissingProperty = isTopEntry && areTopEntriesMissingProperties;
+					const isRemovable =
+						!NON_REMOVABLE_NODE_IDS.includes(propertyNode.id) ||
+						!(hasFunctions && hasTriggers);
 					const isItemPropertyListEmpty =
 						isItemPropertyOfValidShapeList(property) && property.value.length === 0;
 					const itemPropertyValueKey = propertyKeyPrefix
@@ -87,12 +92,16 @@ export const ItemPropertiesTable = ({
 					};
 
 					const menuOptions: Array<MenuButtonOption> = [
-						{
-							title: t('item_properties_table_delete_property'),
-							onClick: localOnPropertyDelete,
-							icon: 'bin',
-							closeMenuOnClick: true
-						},
+						...(isRemovable
+							? [
+									{
+										title: t('item_properties_table_delete_property'),
+										onClick: localOnPropertyDelete,
+										icon: 'bin',
+										closeMenuOnClick: true
+									}
+								]
+							: []),
 						{
 							title: t('item_properties_table_change_data_type'),
 							options: ITEM_PROPERTY_TYPE_OPTIONS_FLAT.map((option) => {

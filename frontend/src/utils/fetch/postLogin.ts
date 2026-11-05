@@ -11,6 +11,7 @@ export type PostLoginParameters = {
 export type PostLoginResponse = {
 	host: string;
 	username: string;
+	tabId: string;
 };
 
 export const postLogin = ({ host, username, password }: PostLoginParameters) => {

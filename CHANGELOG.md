@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026.11.1
+
+- Initial import and export of nodes and relations
+- Improved metamodel documentation
+- Improved styling of nodes, prioritize properties sort order
+- Improved export and import
+- Improved metamodel documentation
+- Custom procedures to validate a graph against a metamodel
+- Paraqueries utilize the ComboBox component for parameters with suggestions
+- Paraqueries support parameter suggestions live filtering
+- Auto-panning of graph view when dragging nodes to the edge of the viewport
+- Functions to validate content according to metamodel
+
+
 ## 2026.9.1
 
 - Local development switched to Node.js v24.18.0
@@ -14,7 +28,6 @@ All notable changes to this project will be documented in this file.
   place those inferred by the selected opposite node and/or relation type and any corresponding
   restrictions available in the metamodel.
 - Stoppable requests (enables canceling requests on both client and server side)
-
 
 ## 2026.6.1
 

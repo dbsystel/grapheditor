@@ -21,13 +21,23 @@ node {
 
   caption*: """
     filtered_labels = sorted([l for l in [l.split("::")[-1] for l in o.labels] if l not in ['___tech_']])
-
     labelstring = '<br>'.join(filtered_labels)
     labelstring = labelstring and labelstring or f"# No labels # {o.id.split(':')[-1]}"
-
-    labelstring = f"{labelstring}<br/><br/><br/>{p.name or p.name__tech_ or p.name__dummy_}"
-    labelstring = labelstring + f"<br><br>({o.id.split(':')[-1]})"
+    labelstring = re.sub(r'(.+)(__\w+_)',r'<u>\1</u>\2', labelstring)
     labelstring = re.sub(r'(__\w+_)',r'<sub style="opacity: 0.6">\1</sub>',labelstring)
+    labelstring = labelstring + "<br>"
+    for k in sorted(p.keys(), key=Sorter(["name__","name"])):
+      if k.startswith('_'):
+        continue
+      v = str(p[k])
+      labelstring = labelstring + re.sub(r'(__\w+_)',r'<sub style="opacity: 0.6">\1</sub>',f"<br><div>{k}:</div> ")
+      labelstring = labelstring + f'<div style="padding-left: 0.7em">{v}</div>'
+    labelstring = labelstring + (f'<br><br>'
+                                 f'<div style="position: absolute; bottom: 0;font-size: 0.8em; width:100%;'
+                                 f'padding-right: 2.8px; text-align: right; font-style:italic; opacity: 0.6"'
+                                 f' title="id">'
+                                 f'{o.id.split(':')[-1]}'
+                                 f'</div>')
     labelstring
   """;
 }
@@ -39,7 +49,10 @@ relationship {
   text-color-external: #FFFFFF;
   text-color-internal: #000000;
   caption: "<type>";
-  caption*: "''+o.type.split('::')[-1]+''";
+  caption*: """
+    cstring = o.type.split('::')[-1]
+    cstring
+  """;
 }
 
 

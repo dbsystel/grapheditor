@@ -1,6 +1,6 @@
 export type DatabaseStatus = 'online' | 'offline';
 export type DatabaseType = 'system' | 'standard' | 'composite';
-export type DatabaseFeatures = 'Perspectives';
+export type DatabaseFeatures = 'Perspectives' | 'GraphEditorFunctions' | 'GraphEditorTriggers';
 
 export type Database = {
 	name: string;

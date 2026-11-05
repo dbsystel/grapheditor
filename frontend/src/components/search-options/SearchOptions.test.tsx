@@ -38,7 +38,7 @@ describe('Components - SearchOptions', () => {
 
 		const screen = await render(<SearchOptions />);
 
-		const selectedLabel = screen.getByRole('strong', {
+		const selectedLabel = screen.getByRole('strong').filter({
 			hasText: i18n.t('global_search_cypher_query')
 		});
 		expect(selectedLabel).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('Components - SearchOptions', () => {
 
 		const screen = await render(<SearchOptions />);
 
-		const selectedLabel = screen.getByRole('strong', {
+		const selectedLabel = screen.getByRole('strong').filter({
 			hasText: i18n.t('global_search_full_text')
 		});
 		expect(selectedLabel).toBeInTheDocument();

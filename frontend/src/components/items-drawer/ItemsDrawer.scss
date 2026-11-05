@@ -15,7 +15,8 @@
 		justify-content: end;
 
 		.breadcrumbs {
-			padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-sm) var(--db-spacing-fixed-sm) 0
+			padding: var(--db-spacing-fixed-xs) var(--db-spacing-fixed-sm)
+				var(--db-spacing-fixed-sm) 0;
 		}
 	}
 }

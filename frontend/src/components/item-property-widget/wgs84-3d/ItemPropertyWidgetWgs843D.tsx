@@ -27,9 +27,7 @@ export const ItemPropertyWidgetWgs843D = ({
 		const valueStateClone = clone(displayValue);
 		valueStateClone[key] = newValue;
 
-		if (!isControlled) {
-			setLocalValue(valueStateClone);
-		}
+		setLocalValue(valueStateClone);
 
 		if (onChange) {
 			onChange(valueStateClone);

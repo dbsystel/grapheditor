@@ -28,7 +28,7 @@ export const _001_loginAndChangeDatabase = async ({ page, i18n }: E2ETestFunctio
 
 	// select "E2E_NEO4J_SWITCH_TO_DATABASE" database for testing purposes
 	const customSelect = page.locator('.database-menu__selector');
-	await customSelect.waitFor({ state: 'visible', timeout: 15000 });
+	await customSelect.waitFor({ state: 'visible' });
 	await customSelect.click();
 
 	// fill database's dropdown search field
@@ -37,7 +37,7 @@ export const _001_loginAndChangeDatabase = async ({ page, i18n }: E2ETestFunctio
 		.locator(`input[type='search'][placeholder='${searchPlaceholder}']:visible`)
 		.first();
 
-	await searchBox.waitFor({ state: 'visible', timeout: 15000 });
+	await searchBox.waitFor({ state: 'visible' });
 	await searchBox.fill(E2E_NEO4J_SWITCH_TO_DATABASE);
 
 	// click list item by text (label/li is usually visible)
@@ -47,5 +47,5 @@ export const _001_loginAndChangeDatabase = async ({ page, i18n }: E2ETestFunctio
 	const notification = page.locator('.notifications__notification', {
 		hasText: i18n.t('notifications_success_user_database_change')
 	});
-	await notification.waitFor({ state: 'visible', timeout: 15000 });
+	await notification.waitFor({ state: 'visible' });
 };

@@ -9,6 +9,26 @@
       "description": "Updates the status of a specific order to 'shipped'."
     },
     {
+      "title": "Query group example",
+      "queries": [
+        {
+          "type": "full-text",
+          "query": "alice",
+          "title": "full-text example",
+          "description": "Updates the status of a specific order to 'shipped'."
+        },
+        {
+          "type": "para-query",
+          "queryParameters": {
+            "label": "MetaProperty__tech_"
+          },
+          "title": "para-query example",
+          "description": "Return all nodes of a certain type",
+          "nodeId": "id::4:bb368931-775e-4eb9-a9fd-a06c3b6efc14:25"
+        }
+      ]
+    },
+    {
       "type": "para-query",
       "queryParameters": {
         "label": "MetaProperty__tech_"

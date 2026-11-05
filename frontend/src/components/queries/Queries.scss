@@ -1,4 +1,6 @@
 .queries {
+	$this: &;
+
 	display: flex;
 	flex-direction: column;
 	gap: var(--db-spacing-fixed-sm);
@@ -7,5 +9,22 @@
 		display: flex;
 		gap: var(--db-spacing-fixed-md);
 		justify-content: space-between;
+	}
+
+	> #{$this}__group {
+		margin-bottom: var(--db-spacing-fixed-xl);
+	}
+
+	&__group-title {
+		padding: var(--db-spacing-fixed-sm);
+		background-color: var(--db-adaptive-bg-basic-transparent-semi-default);
+		border-radius: var(--db-border-radius-sm);
+	}
+
+	&__group-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--db-spacing-fixed-sm);
+		margin-left: var(--db-spacing-fixed-md);
 	}
 }

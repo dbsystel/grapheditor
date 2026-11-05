@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}
     network_mode: host
     container_name: "grapheditor-backend-e2e"
     volumes:

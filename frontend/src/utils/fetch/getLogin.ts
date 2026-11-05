@@ -4,6 +4,7 @@ import { endpoints } from 'src/utils/endpoints';
 type GetLoginResponse = {
 	host: string;
 	username: string;
+	tabId?: string;
 };
 
 export const getLogin = () => {

@@ -20,6 +20,19 @@ const resources = {
 	}
 };
 
+/**
+ * In the browser, a relative loadPath resolves against window.location and gets proxied to the
+ * backend (dev: vite proxy, prod: apache) - that's the normal case. This module is however also
+ * imported directly into the E2E suite's Node.js process (src/tests/e2e-setup.ts), where there is
+ * no window/location to resolve a relative URL against, so the fetch would never succeed there.
+ * Use an absolute URL pointing directly at the e2e backend in that case instead, so both the real
+ * app and the E2E suite's i18n fixture consistently apply the same backend-provided overrides.
+ */
+const loadPath =
+	typeof window === 'undefined'
+		? `http://localhost:${process.env.E2E_GUI_PORT || '5000'}/api/files/{{ns}}-{{lng}}.json`
+		: 'api/files/{{ns}}-{{lng}}.json';
+
 const supportedLanguages = ['de', 'en'];
 
 i18n.use(Backend)
@@ -39,7 +52,7 @@ i18n.use(Backend)
 		supportedLngs: supportedLanguages,
 		keySeparator: false,
 		backend: {
-			loadPath: 'api/files/{{ns}}-{{lng}}.json'
+			loadPath: loadPath
 		},
 		interpolation: {
 			escapeValue: false // not needed for react as it escapes by default

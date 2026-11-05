@@ -1,7 +1,7 @@
-import { HomepageQuery } from 'src/models/general';
+import { HomepageQueriesList, HomepageQuery } from 'src/models/homepage';
 import { GlobalComponentProps } from 'src/types/components';
 
 export type QueriesProp = GlobalComponentProps & {
-	queries: Array<HomepageQuery>;
+	queries: HomepageQueriesList;
 	onPlayClick: (query: HomepageQuery) => void;
 };

@@ -3,10 +3,10 @@
         create
           (alice:Person__dummy_ {name__dummy_:"Alice", _uuid__tech_:"alice"}),
           (bob:Person__dummy_ {name__dummy_:"Bob", _uuid__tech_:"bob"}),
-          (alices_car:Car__dummy_ {plate__dummy_:"abc123", brand:"VW", description__dummy_: "Lovely yellow beetle."}),
+          (alices_car:Car__dummy_ {plate__dummy_:"abc123", brand:"VW", description__dummy_: "Lovely yellow beetle.", _uuid_tech_:"car-abc123"}),
 
           (alice)-[:likes__dummy_ {since__dummy_:1998, _uuid__tech_:"alice-likes-bob"}]->(bob),
-          (alice)-[:owns__dummy_]->(alices_car),
+          (alice)-[:owns__dummy_ {_uuid__tech_:"alice-owns-alices-car"}]->(alices_car),
 
 
           (person:MetaLabel__tech_ {name__tech_:"Person__dummy_",description__tech_:"A living human", _uuid__tech_:"person"}),
@@ -28,10 +28,15 @@
           (person_likes_person)-[:restricts__tech_ {_uuid__tech_:"person_likes_person-restricts-likes"}]->(likes),
           (since)-[:prop__tech_ {_uuid__tech_:"since-prop-likes"}]->(likes),
 
+
+          (underscore:MetaLabel__tech_ {name__tech_:"___tech_", description__tech_:"- Steht für 'Unterstrich aus dem Namespace tech'.\n- Ein technisches Label, welches alle Knoten automatisch zugewiesen bekommen.\n  - [\_ft__tech_](#_ft__tech_)\n  - [\_uuid__tech_](#_uuid_tech_)"}),
+          (uuid:MetaProperty__tech_ {name__tech_:"_uuid__tech_", description__tech_:"- Alle Knoten bekommen automatisch eine UUID zugewiesen. Diese identifiziert den Knoten auch über Exporte hinweg.\n- Alle Kanten haben ebenfalls eine UUID.\n- Die UUID kennzeichnet einen Knoten/Relation fachlich (technisch wäre die interne Datenbankid).\n- Derselbe fachliche Knoten trägt in allen Datenbanken die gleiche UUID.\n- Dementsprechend kann die UUID als Referenz dienen, d.h. Teil einer URI werden. Somit kann man eine Brücke in die Welt von RDF schlagen, wo es Voraussetzung ist, dass alles eine URI hat.\n- Die UUID werden im Rahmen von [Perspectives](#perspectives) gebraucht."}),
+
           (person_owns_car:Restriction__tech_ {description__tech_:"Person owns a car", _uuid__tech_:"person_owns_a_car"}),
           (person)-[:source__tech_ {_uuid__tech_:"person-source-person_owns_car"}]->(person_owns_car),
           (car)-[:target__tech_ {_uuid__tech_:"car-target-person_owns_car"}]->(person_owns_car),
           (person_owns_car)-[:restricts__tech_ {_uuid__tech_:"person_owns_car-restricts-owns"}]->(owns),
+
 
           (metaname:MetaProperty__tech_ {name__tech_:"name__tech_",description__tech_:"the name of some MetaInfo", type__tech_:"string", _uuid__tech_:"metaname"}),
           (type:MetaProperty__tech_ {name__tech_:"type__tech_",description__tech_:"The type of the value of a property", type__tech_:"string", _uuid__tech_:"type"}),
@@ -91,7 +96,7 @@
           }),
           (paramLabel:Parameter__tech_ {
               help_text__tech_: "Selection of available node types.",
-              type__tech_: "string", selection__tech_: "call db.labels() yield label return label",
+              type__tech_: "string", selection__tech_: "call db.labels() yield label where $_params['label'] is null or toLower(label) contains toLower($_params['label']) return label",
               name__tech_: "parameter_label",
               _uuid__tech_: "paramLabel"
           }),
@@ -107,7 +112,8 @@
 
           (paramPropName:Parameter__tech_ {
               help_text__tech_: "Selection of available node properties.",
-              type__tech_: "string", selection__tech_: "match (a) unwind keys(a) as prop return distinct prop",
+              type__tech_: "string",
+	      selection__tech_: "match (a) unwind keys(a) as prop with prop where $_params['propertyName'] is null or toLower(prop) contains toLower($_params['propertyName']) return distinct prop",
               name__tech_: "parameter_property_name",
               _uuid__tech_: "paramPropName"
 

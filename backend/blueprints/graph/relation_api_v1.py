@@ -1,4 +1,4 @@
-from flask import abort, g, session, current_app
+from flask import abort, session, current_app
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
@@ -6,7 +6,7 @@ from blueprints.graph import relation_model
 from blueprints.maintenance.login_api import require_tab_id
 from database import mapper, id_handling
 from database.id_handling import parse_db_id
-from database.utils import abort_with_json
+from database.utils import abort_with_json, build_default_type_session_key
 from database.id_handling import compute_semantic_id, GraphEditorLabel
 from database.mapper import GraphEditorNode, GraphEditorRelation, prepare_relation_patch
 
@@ -284,9 +284,7 @@ class RelationsByNodeIds(MethodView):
         relations = [
             GraphEditorRelation.from_base_relation(base_rel)
             for base_rel in
-            current_app.graph_db.get_relations_by_node_ids(
-                raw_db_ids, exclude_relation_types
-            )
+            current_app.graph_db.get_relations_by_node_ids(raw_db_ids, exclude_relation_types)
         ]
         return relations
 
@@ -334,11 +332,9 @@ class RelationDefaultType(MethodView):
         Return a dummy default type in case none was set (see POST).
         """
 
-        default_type_id = None
-        try:
-            default_type_id = session["default_type"][g.tab_id]
-        except KeyError:
-            default_type_id = mapper.DEFAULT_RELATION_TYPE
+        default_type_id = session.get(
+            build_default_type_session_key(), mapper.DEFAULT_RELATION_TYPE
+        )
 
         base_node = current_app.graph_db.get_node_by_id(default_type_id)
         if base_node:
@@ -357,14 +353,11 @@ class RelationDefaultType(MethodView):
     @require_tab_id()
     def post(self, type_id):
         """Set the default relation type for relation creation."""
-
-        if "default_type" not in session:
-            session["default_type"] = {}
-
+        key = build_default_type_session_key()
         if type_id:
-            session["default_type"][g.tab_id] = type_id
-        elif g.tab_id in session["default_type"]:
+            session[key] = type_id
+        elif key in  session:
             # clear defalt_type when input is an empty string
-            del session["default_type"][g.tab_id]
+            del session[key]
 
         return "Default relation type set"

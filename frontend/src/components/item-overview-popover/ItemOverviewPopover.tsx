@@ -112,9 +112,7 @@ export const ItemOverviewPopover = ({
 			// at the moment, there is no reliable way to know once the SingleNode/SingleRelation API calls are done and
 			// everything is rendered inside those components, so we try our luck with this debounced function
 			delayedCallback(() => {
-				useItemOverviewPopoverStore
-					.getState()
-					.registerPopoverElementAndEvents(popoverElement);
+				useItemOverviewPopoverStore.getState().registerPopoverElement(popoverElement);
 
 				togglePopoverElementVisibility(popoverElement, 'show');
 			});

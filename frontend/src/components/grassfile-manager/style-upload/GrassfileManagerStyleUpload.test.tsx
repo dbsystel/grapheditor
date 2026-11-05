@@ -10,8 +10,8 @@ describe('GrassfileManagerStyleUpload', () => {
 		const label = i18n.t('file_upload_grass_button_label');
 
 		const fileInput = screen.getByLabelText(label).element();
-		const cancelButton = screen.getByRole('button', { name: 'cross' });
-		const uploadButton = screen.getByRole('button', { name: 'check ' });
+		const cancelButton = screen.getByRole('button').filter({ hasText: i18n.t('cancel') });
+		const uploadButton = screen.getByRole('button').filter({ hasText: i18n.t('upload') });
 
 		expect(fileInput).toBeInTheDocument();
 		expect(cancelButton).toBeInTheDocument();

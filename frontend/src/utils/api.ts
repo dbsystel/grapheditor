@@ -35,6 +35,18 @@ export const removeApiHeaderTabId = () => {
 	frontendApi.defaults.headers['x-tab-id'] = null;
 };
 
+/** Set the tabId currently used as a template for new tabId. Needed only for log in check process.
+ *
+ * @param templateTabId string
+ */
+export const setApiHeaderTemplateTabId = (templateTabId: string) => {
+	backendApi.defaults.headers['x-template-tab-id'] = templateTabId;
+};
+
+export const removeApiHeaderTemplateTabId = () => {
+	backendApi.defaults.headers['x-template-tab-id'] = null;
+};
+
 function registerStoppableRequestInterceptors(instance: AxiosInstance) {
 	instance.interceptors.request.use((request) => {
 		const { applicationStoppableRequest } = request;

@@ -9,7 +9,7 @@ import { GraphEditorSigma } from 'src/components/network-graph/NetworkGraph.inte
 import { Cartesian2D } from 'src/models/graph';
 import { Item } from 'src/models/item';
 import { Node, NodeId } from 'src/models/node';
-import { Relation } from 'src/models/relation';
+import { Relation, RelationId } from 'src/models/relation';
 import { useDrawerStore } from 'src/stores/drawer';
 import { useGraphStore } from 'src/stores/graph';
 import { useItemsStore } from 'src/stores/items';
@@ -35,7 +35,7 @@ import {
 	GRAPH_LAYOUT_RANDOM
 } from 'src/utils/constants';
 import { EventBusEvents } from 'src/utils/event-bus';
-import { objectHasOwnProperty } from 'src/utils/helpers/general';
+import { isNumber, objectHasOwnProperty } from 'src/utils/helpers/general';
 import { getNodeSemanticIdOrId, isNode } from 'src/utils/helpers/nodes';
 
 // disabling and enabling camera didn't work ¯\_(ツ)_/¯
@@ -76,8 +76,10 @@ export const getRelationColor = (relation: Relation) => {
 
 export const getNodeGraphData = (node: Node) => {
 	const style = node.style;
-	const x = parseFloat(style['x']) || seedrandom(node.id + 'x')();
-	const y = parseFloat(style['y']) || seedrandom(node.id + 'y')();
+	const parsedX = parseFloat(style['x']);
+	const parsedY = parseFloat(style['y']);
+	const x = isNumber(parsedX) ? parsedX : seedrandom(node.id + 'x')();
+	const y = isNumber(parsedY) ? parsedY : seedrandom(node.id + 'y')();
 	const color = style['color'] || GRAPH_DEFAULT_NODE_COLOR;
 	const nodeSize = calculateNodeGraphSize(parseFloat(style['diameter']));
 	const label = formatCaption(style['caption'] || node.title);
@@ -772,4 +774,278 @@ export const scaleNodeCoordinates = (axis: { x: number; y: number }) => {
 
 	// Reset custom bbox so sigma re-computes extent from actual positions
 	sigma.setCustomBBox(null);
+};
+
+export const getVisibleNodeAndRelationIds = (sigma: GraphEditorSigma) => {
+	const graph = sigma.getGraph();
+	const visibleNodeSet = new Set<NodeId>();
+	const relationIds: Array<RelationId> = [];
+
+	graph.forEachNode((nodeId, attributes) => {
+		if (!attributes.hidden) {
+			visibleNodeSet.add(nodeId);
+		}
+	});
+
+	graph.forEachEdge((edgeId, attributes, source, target) => {
+		if (attributes.hidden) {
+			return;
+		}
+
+		if (!visibleNodeSet.has(source) || !visibleNodeSet.has(target)) {
+			return;
+		}
+
+		relationIds.push(edgeId);
+	});
+
+	return {
+		nodeIds: Array.from(visibleNodeSet),
+		relationIds: relationIds
+	};
+};
+
+/** Tolerance used for floating-point orientation and boundary comparisons. */
+const EPSILON = 1e-9;
+
+/** Returns the scalar 2D cross product of two vectors. */
+const crossProduct = (vectorA: Cartesian2D, vectorB: Cartesian2D) => {
+	return vectorA.x * vectorB.y - vectorA.y * vectorB.x;
+};
+
+/** Returns the vector pointing from "pointB" to "pointA". */
+const subtractPoints = (pointA: Cartesian2D, pointB: Cartesian2D) => {
+	return { x: pointA.x - pointB.x, y: pointA.y - pointB.y };
+};
+
+/**
+ * Checks whether the supplied points can enclose an area.
+ *
+ * The check deliberately tests for non-collinearity instead of a nonzero
+ * signed area: a self-intersecting polygon can have a signed area of zero and
+ * still contain regions under the even-odd rule.
+ */
+const isPolygonValid = (polygon: Array<Cartesian2D>) => {
+	if (polygon.length < 3) {
+		return false;
+	}
+
+	const origin = polygon[0];
+	const firstDistinctPoint = polygon.find(
+		(point) => Math.hypot(point.x - origin.x, point.y - origin.y) > EPSILON
+	);
+
+	if (!firstDistinctPoint) {
+		return false;
+	}
+
+	const firstVector = subtractPoints(firstDistinctPoint, origin);
+
+	return polygon.some((point) => {
+		const currentVector = subtractPoints(point, origin);
+		const crossProductScale = Math.max(
+			1,
+			Math.hypot(firstVector.x, firstVector.y) * Math.hypot(currentVector.x, currentVector.y)
+		);
+
+		return Math.abs(crossProduct(firstVector, currentVector)) > EPSILON * crossProductScale;
+	});
+};
+
+/** Returns whether "point" lies on the closed line segment, within "EPSILON". */
+const isPointOnSegment = (
+	point: Cartesian2D,
+	segmentStart: Cartesian2D,
+	segmentEnd: Cartesian2D
+) => {
+	const segment = subtractPoints(segmentEnd, segmentStart);
+	const pointFromStart = subtractPoints(point, segmentStart);
+	const coordinateScale = Math.max(
+		1,
+		Math.abs(segment.x),
+		Math.abs(segment.y),
+		Math.abs(pointFromStart.x),
+		Math.abs(pointFromStart.y)
+	);
+
+	if (Math.abs(crossProduct(segment, pointFromStart)) > EPSILON * coordinateScale) {
+		return false;
+	}
+
+	return (
+		point.x >= Math.min(segmentStart.x, segmentEnd.x) - EPSILON &&
+		point.x <= Math.max(segmentStart.x, segmentEnd.x) + EPSILON &&
+		point.y >= Math.min(segmentStart.y, segmentEnd.y) - EPSILON &&
+		point.y <= Math.max(segmentStart.y, segmentEnd.y) + EPSILON
+	);
+};
+
+/**
+ * Applies an even-odd horizontal-ray test to an already validated polygon.
+ * Polygon boundary points are treated as inside.
+ */
+const isPointInsideValidPolygon = (point: Cartesian2D, polygon: Array<Cartesian2D>) => {
+	let isInside = false;
+
+	for (let index = 0; index < polygon.length; index++) {
+		const currentPoint = polygon[index];
+		const nextPoint = polygon[(index + 1) % polygon.length];
+
+		if (isPointOnSegment(point, currentPoint, nextPoint)) {
+			return true;
+		}
+
+		const crossesHorizontalRay =
+			currentPoint.y > point.y !== nextPoint.y > point.y &&
+			point.x <
+				((nextPoint.x - currentPoint.x) * (point.y - currentPoint.y)) /
+					(nextPoint.y - currentPoint.y) +
+					currentPoint.x;
+
+		if (crossesHorizontalRay) {
+			isInside = !isInside;
+		}
+	}
+
+	return isInside;
+};
+
+/**
+ * Returns whether a point is inside or on the boundary of a lasso polygon.
+ * Invalid polygons containing fewer than three points or only collinear points
+ * never contain a point.
+ */
+export const isPointInsidePolygon = (point: Cartesian2D, polygon: Array<Cartesian2D>) => {
+	return isPolygonValid(polygon) && isPointInsideValidPolygon(point, polygon);
+};
+
+/**
+ * Finds where a segment meets one polygon edge.
+ *
+ * Returned values are parameters in "[0, 1]" for the segment equation
+ * "segmentStart + parameter * (segmentEnd - segmentStart)". A regular
+ * intersection returns one value, a collinear overlap returns its two limits,
+ * and disjoint segments return an empty array.
+ */
+const getSegmentIntersectionParameters = (
+	segmentStart: Cartesian2D,
+	segmentEnd: Cartesian2D,
+	polygonEdgeStart: Cartesian2D,
+	polygonEdgeEnd: Cartesian2D
+) => {
+	const segment = subtractPoints(segmentEnd, segmentStart);
+	const polygonEdge = subtractPoints(polygonEdgeEnd, polygonEdgeStart);
+	const edgeFromSegmentStart = subtractPoints(polygonEdgeStart, segmentStart);
+	const segmentCrossEdge = crossProduct(segment, polygonEdge);
+	const crossProductScale = Math.max(
+		1,
+		Math.hypot(segment.x, segment.y) * Math.hypot(polygonEdge.x, polygonEdge.y)
+	);
+
+	if (Math.abs(segmentCrossEdge) <= EPSILON * crossProductScale) {
+		const collinearityScale = Math.max(
+			1,
+			Math.hypot(edgeFromSegmentStart.x, edgeFromSegmentStart.y) *
+				Math.hypot(segment.x, segment.y)
+		);
+
+		if (Math.abs(crossProduct(edgeFromSegmentStart, segment)) > EPSILON * collinearityScale) {
+			return [];
+		}
+
+		const segmentLengthSquared = segment.x * segment.x + segment.y * segment.y;
+		const edgeStartParameter =
+			(edgeFromSegmentStart.x * segment.x + edgeFromSegmentStart.y * segment.y) /
+			segmentLengthSquared;
+		const edgeEndFromSegmentStart = subtractPoints(polygonEdgeEnd, segmentStart);
+		const edgeEndParameter =
+			(edgeEndFromSegmentStart.x * segment.x + edgeEndFromSegmentStart.y * segment.y) /
+			segmentLengthSquared;
+		const overlapStart = Math.max(0, Math.min(edgeStartParameter, edgeEndParameter));
+		const overlapEnd = Math.min(1, Math.max(edgeStartParameter, edgeEndParameter));
+
+		return overlapStart <= overlapEnd + EPSILON ? [overlapStart, overlapEnd] : [];
+	}
+
+	const segmentParameter = crossProduct(edgeFromSegmentStart, polygonEdge) / segmentCrossEdge;
+	const edgeParameter = crossProduct(edgeFromSegmentStart, segment) / segmentCrossEdge;
+
+	if (
+		segmentParameter < -EPSILON ||
+		segmentParameter > 1 + EPSILON ||
+		edgeParameter < -EPSILON ||
+		edgeParameter > 1 + EPSILON
+	) {
+		return [];
+	}
+
+	return [Math.min(1, Math.max(0, segmentParameter))];
+};
+
+/**
+ * Returns whether an entire closed line segment is contained by a lasso.
+ *
+ * Checking only the endpoints is insufficient for concave polygons because a
+ * segment can leave and later re-enter the lasso. The segment is therefore
+ * split at every polygon-boundary intersection. Each resulting open interval
+ * has a constant inside/outside state, so testing its midpoint proves whether
+ * that complete interval is enclosed. Segments on the boundary are accepted.
+ */
+export const isSegmentInsidePolygon = (
+	segmentStart: Cartesian2D,
+	segmentEnd: Cartesian2D,
+	polygon: Array<Cartesian2D>
+) => {
+	if (
+		!isPolygonValid(polygon) ||
+		!isPointInsideValidPolygon(segmentStart, polygon) ||
+		!isPointInsideValidPolygon(segmentEnd, polygon)
+	) {
+		return false;
+	}
+
+	const segment = subtractPoints(segmentEnd, segmentStart);
+	const segmentLengthSquared = segment.x * segment.x + segment.y * segment.y;
+
+	if (segmentLengthSquared <= EPSILON * EPSILON) {
+		return true;
+	}
+
+	const intersectionParameters = [0, 1];
+
+	for (let index = 0; index < polygon.length; index++) {
+		intersectionParameters.push(
+			...getSegmentIntersectionParameters(
+				segmentStart,
+				segmentEnd,
+				polygon[index],
+				polygon[(index + 1) % polygon.length]
+			)
+		);
+	}
+
+	// Boundary intersections partition the segment into intervals whose
+	// inside/outside state cannot change between adjacent parameters.
+	intersectionParameters.sort((parameterA, parameterB) => parameterA - parameterB);
+
+	for (let index = 1; index < intersectionParameters.length; index++) {
+		const previousParameter = intersectionParameters[index - 1];
+		const currentParameter = intersectionParameters[index];
+
+		if (currentParameter - previousParameter <= EPSILON) {
+			continue;
+		}
+
+		const middleParameter = (previousParameter + currentParameter) / 2;
+		const middlePoint = {
+			x: segmentStart.x + segment.x * middleParameter,
+			y: segmentStart.y + segment.y * middleParameter
+		};
+
+		if (!isPointInsideValidPolygon(middlePoint, polygon)) {
+			return false;
+		}
+	}
+
+	return true;
 };

@@ -18,7 +18,6 @@ const neo4jContainer = 'neo4j-enterprise-e2e';
 const defaultDatabase = 'neo4j';
 const logTailLength = 100;
 const additionalDatabase = 'testdatabase'; // "neo4j" database is created by default, leave the database name lowercase and without special characters
-const xTabId = 'e2e-setup';
 // The dotenv library does not resolve variable references like ${...} — it reads them as literal strings. Another solution would be to use dotenv-expand package.
 const neo4jBolt = env.E2E_NEO4J_BOLT_LISTEN_ADDRESS;
 const host = env.E2E_GUI_NEO4J.replace('${E2E_NEO4J_BOLT_LISTEN_ADDRESS}', neo4jBolt);
@@ -125,7 +124,6 @@ export default async function globalSetup(config: FullConfig) {
 		const loginResponse = await fetch(`${apiEndpoint}${endpoints.getLoginPath()}`, {
 			method: 'POST',
 			headers: {
-				'x-tab-id': xTabId,
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
@@ -139,12 +137,18 @@ export default async function globalSetup(config: FullConfig) {
 			throw new Error(`Login failed: ${loginResponse.status} ${await loginResponse.text()}`);
 		}
 
+		const body = await loginResponse.json();
+		const tabId = body.tabId; // server always generates its own tab id
+
+		// getSetCookie() returns each Set-Cookie header individually (Node/undici >= 18.14)
+		const setCookies = loginResponse.headers.getSetCookie?.() ?? [];
+		const cookiePairs = setCookies.map((cookie) => cookie.split(';')[0]);
+
 		// store the session cookie for subsequent requests
-		const setCookie = loginResponse.headers.get('set-cookie');
 		sessionHeaders = {
-			'x-tab-id': xTabId,
+			'x-tab-id': tabId,
 			'Content-Type': 'application/json',
-			...(setCookie ? { Cookie: setCookie.split(';')[0] } : {})
+			...(cookiePairs.length ? { Cookie: cookiePairs.join('; ') } : {})
 		};
 
 		writeDone();

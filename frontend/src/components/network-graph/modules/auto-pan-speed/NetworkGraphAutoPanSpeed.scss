@@ -1,0 +1,20 @@
+@use '../../NetworkGraph.variables';
+
+#{NetworkGraph.$network-graph-root-element-selector} {
+	&__auto-pan-speed-title {
+		display: flex;
+		justify-content: space-between;
+		font: var(--db-type-body-xs);
+	}
+	&__auto-pan-speed-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: var(--db-spacing-fixed-md);
+
+		input {
+			flex-grow: 1;
+			cursor: pointer;
+		}
+	}
+}

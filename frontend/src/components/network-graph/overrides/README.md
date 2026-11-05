@@ -5,8 +5,9 @@ Long time ago, we talked about implementing square nodes. At that time, Sigma.js
 such possibility so we waited until it did.
 
 But using square nodes package meant other things were broken, such as:
+
 - straight and curved relation heads (arrows) were, when dragged around node, circling around the node, instead of following the
-node's square shape
+  node's square shape
 - node border was round and not square
 - node shadow on hover was round and not square
 

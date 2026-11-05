@@ -3,11 +3,13 @@ import { useSearchStore } from 'src/stores/search';
 import { api } from 'src/utils/api/api';
 import { getParaQueries } from 'src/utils/fetch/getParaQueries';
 import { getParaQuery } from 'src/utils/fetch/getParaQuery';
+import { postParaQuery } from 'src/utils/fetch/postParaQuery';
 
 export const paraQueriesApi = {
 	fetch: {
 		getParaQueries: getParaQueries,
-		getParaQuery: getParaQuery
+		getParaQuery: getParaQuery,
+		postParaQuery: postParaQuery
 	},
 	actions: {
 		executeParaQuery: async (

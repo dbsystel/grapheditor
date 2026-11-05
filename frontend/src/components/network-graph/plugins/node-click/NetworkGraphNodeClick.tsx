@@ -15,14 +15,14 @@ export const NetworkGraphNodeClick = () => {
 
 	useEffect(() => {
 		// open node details on node click
-		StateManager.getInstance().subscribe('nodeClick', enableNodeDetailsOnClick);
+		StateManager.getInstance().subscribe('nodeClick', onNodeClick);
 
 		return () => {
-			StateManager.getInstance().unsubscribe('nodeClick', enableNodeDetailsOnClick);
+			StateManager.getInstance().unsubscribe('nodeClick', onNodeClick);
 		};
 	}, []);
 
-	const enableNodeDetailsOnClick = (eventPayload: SigmaNodeEventPayload) => {
+	const onNodeClick = (eventPayload: SigmaNodeEventPayload) => {
 		const node = getStoreNode(eventPayload.node);
 
 		if (node) {

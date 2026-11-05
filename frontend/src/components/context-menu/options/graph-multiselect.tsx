@@ -1,6 +1,7 @@
 import { AddLabelsAction } from 'src/components/context-menu/actions/add-labels';
 import { AddPropertiesAction } from 'src/components/context-menu/actions/add-properties';
 import { applyLayoutAction } from 'src/components/context-menu/actions/apply-layout';
+import { exportNodesAndRelationsAction } from 'src/components/context-menu/actions/export-nodes-and-relations';
 import { RemoveLabelsAction } from 'src/components/context-menu/actions/remove-labels';
 import i18n from 'src/i18n';
 import { useContextMenuStore } from 'src/stores/context-menu';
@@ -147,6 +148,15 @@ export const graphMultiselectOptions = (): Partial<
 					label: 'JPEG',
 					onClick: () => {
 						exportNodesAndTheirRelationsAsImageAction(nodeIds, 'image/jpeg');
+					}
+				},
+				{
+					label: i18n.t('context_menu_export_data'),
+					onClick: () => {
+						exportNodesAndRelationsAction({
+							defaultNodeMode: 'all_selected',
+							defaultRelationMode: 'between_selected_nodes'
+						});
 					}
 				}
 			]

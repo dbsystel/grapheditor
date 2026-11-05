@@ -1,8 +1,9 @@
 import './Header.scss';
-import { DBButton, DBDivider, DBSection } from '@db-ux/react-core-components';
+import { DBButton, DBDivider, DBSection, DBTooltip } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ApplicationLoadingIndicator } from 'src/components/application-loading-indicator/ApplicationLoadingIndicator';
 import { DatabaseMenu } from 'src/components/database-menu/DatabaseMenu';
 import { GlobalSearch } from 'src/components/global-search/GlobalSearch';
 import { GlobalSearchRef } from 'src/components/global-search/GlobalSearch.interfaces';
@@ -57,6 +58,10 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 		}
 	};
 
+	const openCurrentUrlInNewTab = () => {
+		window.open(location.href, '_blank');
+	};
+
 	// Depending on which SearchType the user selected we show a different component
 	const isFullTextOrCypherQuery = isCypherQueryOrFullText(searchType);
 	const isPerspective = searchType === GLOBAL_SEARCH_TYPE_VALUE_PERSPECTIVE;
@@ -95,7 +100,16 @@ export const Header = ({ id, className, testId }: HeaderProps) => {
 					{isPerspective && <HeaderPerspectivePopover />}
 				</div>
 				<div className="header__block">
-					<DatabaseMenu />
+					<div className="header__block-info">
+						<DBButton type="button" size="small" onClick={openCurrentUrlInNewTab}>
+							{t('header_new_tab_button')}
+							<DBTooltip>{t('header_new_tab_button_tooltip')}</DBTooltip>
+						</DBButton>
+
+						<ApplicationLoadingIndicator />
+
+						<DatabaseMenu />
+					</div>
 
 					<DBDivider variant="vertical" emphasis="weak" className="header__divider" />
 

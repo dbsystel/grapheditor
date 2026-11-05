@@ -1,0 +1,33 @@
+.import-export-modals {
+	.modal__content {
+		.db-card {
+			gap: var(--db-spacing-fixed-sm);
+		}
+
+		input[type=file] {
+			padding: 0;
+		}
+
+		.db-input label,
+		fieldset legend {
+			padding: 0;
+			margin-block-end: var(--db-spacing-fixed-md);
+		}
+	}
+
+	&__export-modal {
+		.modal__content {
+			width: 100%;
+			max-width: 550px;
+			/* enable for resize to take effect */
+			//overflow: auto;   /* required for resize to take effect */
+			//resize: both;
+		}
+	}
+
+	&__cypher-export {
+		.modal__content {
+			max-width: 850px;
+		}
+	}
+}

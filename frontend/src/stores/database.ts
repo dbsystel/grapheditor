@@ -7,9 +7,20 @@ type DatabaseStore = {
 	isLoading: boolean;
 	setIsLoading: (isLoading: boolean) => void;
 	reset: () => void;
+	databaseSupportsPerspectives: (database: Database) => boolean;
+	databaseSupportsTriggers: (database: Database) => boolean;
+	databaseSupportsFunctions: (database: Database) => boolean;
 };
 
-type InitialState = Omit<DatabaseStore, 'setCurrentDatabase' | 'setIsLoading' | 'reset'>;
+type InitialState = Omit<
+	DatabaseStore,
+	| 'setCurrentDatabase'
+	| 'setIsLoading'
+	| 'reset'
+	| 'databaseSupportsPerspectives'
+	| 'databaseSupportsTriggers'
+	| 'databaseSupportsFunctions'
+>;
 
 const getInitialState: () => InitialState = () => {
 	return {
@@ -31,5 +42,14 @@ export const useDatabaseStore = create<DatabaseStore>((set) => ({
 	},
 	reset: () => {
 		set(getInitialState());
+	},
+	databaseSupportsPerspectives: (database) => {
+		return !!database.features?.includes('Perspectives');
+	},
+	databaseSupportsTriggers: (database) => {
+		return !!database.features?.includes('GraphEditorTriggers');
+	},
+	databaseSupportsFunctions: (database) => {
+		return !!database.features?.includes('GraphEditorFunctions');
 	}
 }));

@@ -2,6 +2,7 @@
 
 Authors of content within this repo:
 
+- Georg.G.Schwarz@deutschebahn.com
 - Hanna-Stephania.Hahn@deutschebahn.com
 - Joerg.Baach@deutschebahn.com
 - Mihajlo.Lazar@deutschebahn.com
@@ -15,7 +16,6 @@ Thanks for the work on concepts, testing, feedback, general help, making it poss
 
 - Daniel.Kilb@deutschebahn.com
 - Frederik.Leclaire@deutschebahn.com
-- Georg.G.Schwarz@deutschebahn.com
 - Klaus.Bermuth@deutschebahn.com
 - Tim.Limmer@deutschebahn.com
 - The parent unit of team IGA: Data Management Infrastructure (DMI) of DB Systel 

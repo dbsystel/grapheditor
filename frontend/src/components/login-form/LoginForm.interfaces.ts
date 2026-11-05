@@ -7,3 +7,11 @@ export type LoginFormData = {
 	username: string;
 	password: string;
 };
+
+export type LoginFormType = 'username-password' | 'sso';
+export type LoginFormTypeOption = {
+	[K in LoginFormType]: {
+		label: K extends 'username-password' ? 'Username / Password' : 'Single Sign On';
+		value: K;
+	};
+}[LoginFormType];

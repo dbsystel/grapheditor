@@ -5,9 +5,9 @@ class QueryPostSchema(Schema):
     querytext = fields.Str(metadata={"description": "The text of the query"})
     parameters = fields.Dict(
         keys=fields.Str(),
-        values=fields.Raw(),
+        values=fields.Raw(allow_none=True),
         metadata={
-            "description": "Optional map of parameter names to their values."
+            "description": "Optional map of parameter names to their values. "
         },
         required=False
     )

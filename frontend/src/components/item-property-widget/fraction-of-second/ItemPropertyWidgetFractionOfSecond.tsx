@@ -1,4 +1,4 @@
-import { DBInput } from '@db-ux/react-core-components';
+import { DBInfotext, DBInput } from '@db-ux/react-core-components';
 import clsx from 'clsx';
 import { ChangeEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,14 +52,14 @@ export const ItemPropertyWidgetFractionOfSecond = ({
 	};
 
 	const triggerStateUpdateAndOnChange = (newState: string) => {
-		if (!isControlled) {
-			setLocalValue(newState);
-		}
+		setLocalValue(newState);
 
 		if (onChange) {
 			onChange(newState);
 		}
 	};
+
+	const isValid = displayValue === '' || /^\d+$/.test(String(displayValue));
 
 	return (
 		<div id={id} className={rootElementClassName} data-testid={testId}>
@@ -71,6 +71,16 @@ export const ItemPropertyWidgetFractionOfSecond = ({
 					value={displayValue}
 					label={t('item_property_widget_fraction_of_second_label')}
 					onChange={localOnChange}
+					validation="no-validation"
+				/>
+			)}
+			{!isValid && (
+				<DBInfotext
+					semantic="warning"
+					text={t('item_property_widget_fraction_of_second_invalid_message', {
+						context: displayValue ? 'with_value' : undefined,
+						value: displayValue
+					})}
 				/>
 			)}
 		</div>
